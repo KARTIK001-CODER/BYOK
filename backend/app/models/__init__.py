@@ -1,8 +1,7 @@
-"""
-SQLAlchemy ORM models package.
-"""
-
 from app.db.base import Base
+from app.models.document import Document, DocumentStatus
+from app.models.document_version import DocumentVersion
+from app.models.knowledge_base import KnowledgeBase
 from app.models.membership import OrganizationMembership, OrganizationRole
 from app.models.organization import Organization
 from app.models.provider_credential import ProviderCredential
@@ -11,10 +10,14 @@ from app.models.user import User
 
 __all__ = [
     "Base",
-    "User",
+    "Document",
+    "DocumentStatus",
+    "DocumentVersion",
+    "KnowledgeBase",
     "Organization",
     "OrganizationMembership",
     "OrganizationRole",
-    "RefreshToken",
     "ProviderCredential",
+    "RefreshToken",
+    "User",
 ]

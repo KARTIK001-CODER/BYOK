@@ -6,6 +6,8 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 
 if TYPE_CHECKING:
+    from app.models.document import Document
+    from app.models.knowledge_base import KnowledgeBase
     from app.models.membership import OrganizationMembership
     from app.models.provider_credential import ProviderCredential
 
@@ -38,4 +40,14 @@ class Organization(Base, UUIDPrimaryKeyMixin, TimestampMixin):
         back_populates="organization",
         cascade="all, delete-orphan",
         lazy="selectin",
+    )
+    knowledge_bases: Mapped[list["KnowledgeBase"]] = relationship(
+        "KnowledgeBase",
+        back_populates="organization",
+        cascade="all, delete-orphan",
+    )
+    documents: Mapped[list["Document"]] = relationship(
+        "Document",
+        back_populates="organization",
+        cascade="all, delete-orphan",
     )
