@@ -4,123 +4,135 @@ RAGForge is a production-grade, modular Retrieval-Augmented Generation (RAG) pla
 
 ---
 
-## Phase 2 Implemented Architecture: Authentication & Multi-Tenancy
-
-Phase 2 establishes the secure identity, multi-tenant isolation, and authorization foundation for RAGForge.
-
-```
-Client (HTTP / REST)
-       │
-       ▼ [Authorization: Bearer <JWT>] [X-Request-ID Header]
-┌───────────────────────────────────────────────────────────┐
-│                      FastAPI Gateway                      │
-│                                                           │
-│  ├── Request ID & Access Logging Middleware               │
-│  ├── Configurable CORS Middleware                         │
-│  └── Centralized Exception Handling                       │
-└─────────────────────────────┬─────────────────────────────┘
-                              │
-                              ▼
-┌───────────────────────────────────────────────────────────┐
-│                 Authentication & RBAC Layer               │
-│                                                           │
-│  ├── get_current_user (JWT Validation: sub, exp, type)    │
-│  ├── require_organization_membership (Tenant Isolation)   │
-│  └── require_role (RBAC: OWNER > ADMIN > MEMBER)          │
-└─────────────────────────────┬─────────────────────────────┘
-                              │
-                              ▼
-┌───────────────────────────────────────────────────────────┐
-│                      API Layer (/api/v1)                  │
-│                                                           │
-│  ├── /auth/register   (User + Default Workspace creation)│
-│  ├── /auth/login      (Argon2id verification + Tokens)   │
-│  ├── /auth/refresh    (Rotating Refresh Token + Reuse Det)│
-│  ├── /auth/logout     (Idempotent Token Revocation)       │
-│  ├── /auth/me         (Safe profile info)                 │
-│  ├── /organizations   (List & Create Tenant Workspaces)   │
-│  └── /health, /ready  (Infrastructure probes)             │
-└─────────────────────────────┬─────────────────────────────┘
-                              │
-                              ▼
-┌───────────────────────────────────────────────────────────┐
-│                      Service Layer                        │
-│                                                           │
-│  ├── AuthService        (Registration, Login, Tokens)     │
-│  ├── UserService        (User lookup, email normalization)│
-│  ├── OrganizationService(Slug generation, memberships)    │
-│  ├── TokenService       (Rotation, SHA-256 hash, reuse)   │
-│  └── PasswordService    (Argon2id hashing & verification) │
-└─────────────────────────────┬─────────────────────────────┘
-                              │
-                              ▼
-┌───────────────────────────────────────────────────────────┐
-│                      Database Layer                       │
-│                                                           │
-│  ├── users (UUID PK, normalized email, password_hash)     │
-│  ├── organizations (UUID PK, unique slug, tenant root)    │
-│  ├── organization_memberships (User <-> Org, RBAC role)   │
-│  ├── refresh_tokens (SHA-256 hash, rotation linkage)      │
-│  └── provider_credentials (BYOK DB ciphertext preparation)│
-└─────────────────────────────┬─────────────────────────────┘
-                              │
-                              ▼
-┌───────────────────────────────────────────────────────────┐
-│                   PostgreSQL 16 + pgvector                │
-└───────────────────────────────────────────────────────────┘
-```
-
----
-
-## Multi-Tenancy & Tenant Isolation
-
-Multi-tenancy in RAGForge is structured around the `Organization` entity:
+## Phase 3 Implemented Architecture: Knowledge Bases & Document Management
 
 ```text
-User
- │
- ├── Organization A (Role: OWNER)
- │      ├── Knowledge Bases (Future)
- │      ├── Documents (Future)
- │      └── Provider Credentials (BYOK DB Ready)
- │
- └── Organization B (Role: MEMBER)
-        ├── Knowledge Bases (Future)
-        ├── Documents (Future)
-        └── Provider Credentials (BYOK DB Ready)
+                    Organization
+                         │
+             ┌───────────┴───────────┐
+             │                       │
+             ▼                       ▼
+      Knowledge Base A       Knowledge Base B
+             │                       │
+             ▼                       ▼
+        Documents               Documents
+             │
+             ▼
+       Object Storage
+             │
+             ▼
+     (Future Ingestion)
+             │
+       ┌─────┴─────┐
+       ▼           ▼
+     Chunks     Embeddings
+                    │
+                    ▼
+                pgvector
 ```
 
-### Invariants:
-1. **Server-Side Verification**: Route handlers never rely on client-supplied organization identifiers without executing `require_organization_membership`.
-2. **Access Rejection**: If a user attempts to read or modify resources in an organization they do not belong to, the request is immediately rejected (`403 Forbidden` / `404 Not Found`).
-3. **Cascading Deletions**: Deleting an organization cascades to all memberships, knowledge bases, documents, and credentials associated with that organization.
+---
+
+## Data Model & Tenancy Scoping
+
+```
+┌──────────────────────────┐         ┌──────────────────────────┐
+│          users           │         │      organizations       │
+├──────────────────────────┤         ├──────────────────────────┤
+│ id (PK, UUID)            │◄──┐ ┌──►│ id (PK, UUID)            │
+│ email (UNIQUE, INDEX)    │   │ │   │ name                     │
+│ password_hash            │   │ │   │ slug (UNIQUE, INDEX)     │
+└────────────┬─────────────┘   │ │   └─────────────┬────────────┘
+             │                 │ │                 │
+             │                 │ │                 │ 1:N (CASCADE)
+             │                 │ │                 ▼
+             │                 │ │   ┌──────────────────────────┐
+             │                 │ │   │     knowledge_bases      │
+             │                 │ │   ├──────────────────────────┤
+             │                 │ │   │ id (PK, UUID)            │
+             │                 │ │   │ organization_id (FK)     │
+             │                 │ │   │ name                     │
+             │                 │ │   │ slug (INDEX)             │
+             │                 │ │   │ description              │
+             │                 │ │   │ is_active                │
+             │                 │ │   │ created_by (FK -> users) │
+             │                 │ │   │ UQ(org_id, slug)         │
+             │                 │ │   └─────────────┬────────────┘
+             │                 │ │                 │
+             │                 │ │                 │ 1:N (CASCADE)
+             │                 │ │                 ▼
+             │                 │ │   ┌──────────────────────────┐
+             │                 │ └───┤        documents         │
+             │                 │     ├──────────────────────────┤
+             │                 │     │ id (PK, UUID)            │
+             │                 │     │ knowledge_base_id (FK)   │
+             │                 └────►│ organization_id (FK)     │
+             │                       │ uploaded_by (FK -> users)│
+             │                       │ name                     │
+             │                       │ original_filename        │
+             │                       │ content_type, file_size  │
+             │                       │ storage_key              │
+             │                       │ checksum (SHA-256, INDEX)│
+             │                       │ status (UPLOADED, etc.)  │
+             │                       │ current_version (INT)    │
+             │                       │ deleted_at (TIMESTAMP)   │
+             │                       └─────────────┬────────────┘
+             │                                     │
+             │                                     │ 1:N (CASCADE)
+             │                                     ▼
+             │                       ┌──────────────────────────┐
+             │                       │    document_versions     │
+             │                       ├──────────────────────────┤
+             │                       │ id (PK, UUID)            │
+             │                       │ document_id (FK)         │
+             │                       │ version_number (INT)     │
+             │                       │ storage_key              │
+             │                       │ checksum (SHA-256)       │
+             │                       │ file_size, content_type  │
+             │                       │ uploaded_by (FK -> users)│
+             │                       │ UQ(doc_id, version_num)  │
+             └──────────────────────►└──────────────────────────┘
+```
 
 ---
 
-## Authentication & Token Lifecycle
+## Storage & Database Boundary
 
-### 1. Registration Flow
-1. User provides `email`, `password`, `full_name`.
-2. Email is normalized to lowercase and checked for uniqueness.
-3. Password is validated for minimum strength and hashed using Argon2id.
-4. An `Organization` is created with a unique slug (e.g. `user-workspace`).
-5. An `OrganizationMembership` is created with `Role.OWNER`.
-6. Access token (15m) and rotating refresh token (7d) are issued.
-7. Atomic commit; on failure, transaction is rolled back completely.
-
-### 2. Refresh Token Rotation & Reuse Detection
-- Raw refresh tokens are 64-character cryptographically secure random strings.
-- Only the SHA-256 digest (`token_hash`) is stored in the database.
-- Upon refresh:
-  - If valid: Old token is revoked (`revoked_at = now()`), new token is issued, and `old_token.replaced_by_token_id = new_token.id`.
-  - If a revoked token is presented again (indicating token compromise or replay): The server logs `[SECURITY_EVENT] Refresh token reuse detected` and revokes all active refresh tokens for the user.
+1. **PostgreSQL / Neon PostgreSQL**:
+   - Stores metadata, structured records, foreign keys, timestamps, cryptographic SHA-256 checksums, and storage references (`storage_key`).
+   - Never stores raw binary file contents.
+2. **Object Storage (`StorageService`)**:
+   - Stores binary file contents under deterministic, structured keys:
+     `org/{org_id}/kb/{kb_id}/documents/{document_id}/v{version_number}/{sanitized_filename}`
+   - Abstract protocol currently implemented as `LocalStorageService` for local dev/testing, with path traversal prevention.
+   - Future cloud drivers (AWS S3, Cloudflare R2, Google Cloud Storage) implement the same interface without altering domain business logic.
 
 ---
 
-## Bring Your Own Key (BYOK) Database Foundation
+## Document Lifecycle State Machine
 
-The `provider_credentials` table prepares the database for future multi-provider AI credentials (Groq, OpenAI, Gemini, Cohere):
-- Scoped strictly per `organization_id`.
-- Stores `encrypted_api_key` (reserved for future AES-256-GCM ciphertext).
-- Encryption key will use `API_KEY_ENCRYPTION_KEY`, completely separated from `JWT_SECRET_KEY`.
-- *Note: Actual key submission, encryption/decryption, and model provider SDKs are intentionally deferred to future phases.*
+```text
+Upload ➔ Validate ➔ Checksum ➔ Stored
+                                  ↓
+                              UPLOADED ◄── (Phase 3 Terminal State)
+                                  ↓
+                        (Phase 4: Ingestion)
+                                  ↓
+                              PROCESSING
+                                ┌──┴──┐
+                                ▼     ▼
+                              READY  FAILED
+                                │
+                                ▼
+                             ARCHIVED
+```
+
+---
+
+## Security Decisions
+
+1. **Strict Multi-Tenant Scoping**: All Knowledge Bases and Documents are bound to `organization_id`. Route dependencies reject cross-tenant access (`403 Forbidden` / `404 Not Found`).
+2. **Magic Bytes Inspection**: Files are validated not only by extension and headers, but by inspectable binary headers (`%PDF` for PDF, `PK\x03\x04` for DOCX).
+3. **Cryptographic Checksumming**: SHA-256 digest is generated for each uploaded document. Duplicates in the same Knowledge Base are detected and rejected (`409 Conflict`).
+4. **Path Traversal Protection**: User-supplied filenames are sanitized (`sanitize_filename`), removing `..`, `/`, and dangerous characters before generating storage keys.
+5. **Configurable Limits**: Upload file size is strictly capped by `MAX_UPLOAD_SIZE_MB` (default: 25MB).

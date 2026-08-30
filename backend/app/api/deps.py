@@ -4,11 +4,15 @@ from fastapi import Depends
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import ForbiddenException, UnauthorizedException
+from app.core.exceptions import ForbiddenException, NotFoundException, UnauthorizedException
 from app.core.security import decode_access_token
 from app.db.session import get_db
+from app.models.document import Document
+from app.models.knowledge_base import KnowledgeBase
 from app.models.membership import OrganizationMembership, OrganizationRole
 from app.models.user import User
+from app.services.documents.service import DocumentService
+from app.services.knowledge_bases.service import KnowledgeBaseService
 from app.services.organizations.service import OrganizationService
 from app.services.users.service import UserService
 
@@ -63,7 +67,6 @@ async def require_organization_membership(
         user_id=current_user.id,
     )
     if membership is None:
-        # Prevent information leakage by returning 404 or 403
         raise ForbiddenException(
             message="Access denied: You are not a member of this organization."
         )
@@ -89,3 +92,37 @@ def require_role(min_role: OrganizationRole) -> Callable:
         return membership
 
     return role_checker
+
+
+async def get_knowledge_base_or_404(
+    kb_id: str,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> tuple[KnowledgeBase, OrganizationMembership]:
+    """Retrieve KnowledgeBase and verify caller has organization access."""
+    kb = await KnowledgeBaseService.get_by_id(session, kb_id)
+    membership = await OrganizationService.get_membership(
+        session=session,
+        organization_id=kb.organization_id,
+        user_id=current_user.id,
+    )
+    if membership is None:
+        raise NotFoundException(message="Knowledge Base not found.")
+    return kb, membership
+
+
+async def get_document_or_404(
+    document_id: str,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> tuple[Document, OrganizationMembership]:
+    """Retrieve Document and verify caller has organization access."""
+    doc = await DocumentService.get_by_id(session, document_id)
+    membership = await OrganizationService.get_membership(
+        session=session,
+        organization_id=doc.organization_id,
+        user_id=current_user.id,
+    )
+    if membership is None:
+        raise NotFoundException(message="Document not found.")
+    return doc, membership

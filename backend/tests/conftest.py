@@ -1,4 +1,5 @@
 from collections.abc import AsyncGenerator
+from pathlib import Path
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -8,17 +9,23 @@ from app.core.config import Settings, get_settings
 from app.db.base import Base
 from app.db.session import get_db
 from app.main import app
+from app.models.knowledge_base import KnowledgeBase
 from app.models.membership import OrganizationMembership, OrganizationRole
 from app.models.organization import Organization
 from app.models.user import User
 from app.services.auth.password import PasswordService
 from app.services.auth.tokens import TokenService
+from app.services.documents.storage import LocalStorageService, set_storage_service
 
 
-def get_test_settings() -> Settings:
-    """Return test-specific settings."""
-    return Settings(
-        APP_ENV="testing",
+@pytest.fixture(autouse=True)
+def override_settings(tmp_path: Path) -> None:
+    """Override application settings with test settings for all tests."""
+    storage_dir = tmp_path / "storage"
+    storage_dir.mkdir(parents=True, exist_ok=True)
+
+    test_settings = Settings(
+        APP_ENV="test",
         APP_NAME="RAGForge-Test",
         DEBUG=True,
         LOG_LEVEL="DEBUG",
@@ -28,14 +35,12 @@ def get_test_settings() -> Settings:
         JWT_ALGORITHM="HS256",
         ACCESS_TOKEN_EXPIRE_MINUTES=15,
         REFRESH_TOKEN_EXPIRE_DAYS=7,
+        STORAGE_BACKEND="local",
+        STORAGE_LOCAL_DIR=str(storage_dir),
+        MAX_UPLOAD_SIZE_MB=25,
     )
-
-
-@pytest.fixture(autouse=True)
-def override_settings() -> None:
-    """Override application settings with test settings for all tests."""
-    test_settings = get_test_settings()
     app.dependency_overrides[get_settings] = lambda: test_settings
+    set_storage_service(LocalStorageService(base_dir=storage_dir))
 
 
 @pytest.fixture
@@ -111,3 +116,23 @@ async def test_user_and_org(db_session: AsyncSession) -> dict[str, object]:
         "raw_refresh_token": raw_refresh,
         "password": "StrongPassword123!",
     }
+
+
+@pytest.fixture
+async def test_kb(db_session: AsyncSession, test_user_and_org: dict) -> KnowledgeBase:
+    """Create a test knowledge base belonging to test_user_and_org's organization."""
+    user: User = test_user_and_org["user"]
+    org: Organization = test_user_and_org["org"]
+
+    kb = KnowledgeBase(
+        organization_id=org.id,
+        name="Research Docs",
+        slug="research-docs",
+        description="Core research documents",
+        created_by=user.id,
+        is_active=True,
+    )
+    db_session.add(kb)
+    await db_session.commit()
+    await db_session.refresh(kb)
+    return kb
