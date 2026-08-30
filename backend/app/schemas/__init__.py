@@ -6,30 +6,47 @@ from app.schemas.auth import (
     RegisterRequest,
     TokenResponse,
 )
+from app.schemas.common import PaginatedResponse
+from app.schemas.documents import (
+    DocumentResponse,
+    DocumentUpdate,
+    DocumentUploadResponse,
+    DocumentVersionResponse,
+)
 from app.schemas.health import HealthResponse, ReadinessResponse, SystemInfoResponse
+from app.schemas.knowledge_bases import (
+    KnowledgeBaseCreate,
+    KnowledgeBaseResponse,
+    KnowledgeBaseUpdate,
+)
 from app.schemas.organizations import (
     MembershipResponse,
-    OrganizationBase,
     OrganizationCreate,
     OrganizationResponse,
 )
-from app.schemas.users import UserBase, UserResponse, UserSummary
+from app.schemas.users import UserResponse, UserSummary
 
 __all__ = [
+    "AuthResponse",
+    "DocumentResponse",
+    "DocumentUpdate",
+    "DocumentUploadResponse",
+    "DocumentVersionResponse",
     "HealthResponse",
-    "ReadinessResponse",
-    "SystemInfoResponse",
-    "UserBase",
-    "UserResponse",
-    "UserSummary",
-    "OrganizationBase",
+    "KnowledgeBaseCreate",
+    "KnowledgeBaseResponse",
+    "KnowledgeBaseUpdate",
+    "LoginRequest",
+    "LogoutRequest",
+    "MembershipResponse",
     "OrganizationCreate",
     "OrganizationResponse",
-    "MembershipResponse",
-    "RegisterRequest",
-    "LoginRequest",
-    "TokenResponse",
+    "PaginatedResponse",
+    "ReadinessResponse",
     "RefreshRequest",
-    "LogoutRequest",
-    "AuthResponse",
+    "RegisterRequest",
+    "SystemInfoResponse",
+    "TokenResponse",
+    "UserResponse",
+    "UserSummary",
 ]
