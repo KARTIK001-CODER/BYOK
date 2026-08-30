@@ -4,135 +4,146 @@ RAGForge is a production-grade, modular Retrieval-Augmented Generation (RAG) pla
 
 ---
 
-## Phase 3 Implemented Architecture: Knowledge Bases & Document Management
+## High-Level System Architecture
 
 ```text
-                    Organization
-                         │
-             ┌───────────┴───────────┐
-             │                       │
-             ▼                       ▼
-      Knowledge Base A       Knowledge Base B
-             │                       │
-             ▼                       ▼
-        Documents               Documents
-             │
-             ▼
-       Object Storage
-             │
-             ▼
-     (Future Ingestion)
-             │
-       ┌─────┴─────┐
-       ▼           ▼
-     Chunks     Embeddings
-                    │
-                    ▼
-                pgvector
+                    Organization (Tenant Boundary)
+                               │
+             ┌─────────────────┴─────────────────┐
+             │                                   │
+             ▼                                   ▼
+      Knowledge Base A                    Knowledge Base B
+             │                                   │
+             ▼                                   ▼
+        Documents                           Documents
+             │                                   │
+             ▼                                   ▼
+       Object Storage                     Object Storage
+             │                                   │
+             ▼                                   ▼
+     Ingestion Pipeline                  Ingestion Pipeline
+             │                                   │
+       ┌─────┴─────┐                       ┌─────┴─────┐
+       ▼           ▼                       ▼           ▼
+   Extraction  Normalization           Extraction  Normalization
+       │           │                       │           │
+       └─────┬─────┘                       └─────┬─────┘
+             ▼                                   ▼
+          Chunking                            Chunking
+             │                                   │
+             ▼                                   ▼
+      Document Chunks                     Document Chunks
+             │                                   │
+             ▼                                   ▼
+  (Future Phase 5: Embeddings)        (Future Phase 5: Embeddings)
+             │                                   │
+             ▼                                   ▼
+          pgvector                            pgvector
 ```
 
 ---
 
-## Data Model & Tenancy Scoping
+## Data Model & Tenancy Hierarchy
 
 ```
-┌──────────────────────────┐         ┌──────────────────────────┐
-│          users           │         │      organizations       │
-├──────────────────────────┤         ├──────────────────────────┤
-│ id (PK, UUID)            │◄──┐ ┌──►│ id (PK, UUID)            │
-│ email (UNIQUE, INDEX)    │   │ │   │ name                     │
-│ password_hash            │   │ │   │ slug (UNIQUE, INDEX)     │
-└────────────┬─────────────┘   │ │   └─────────────┬────────────┘
-             │                 │ │                 │
-             │                 │ │                 │ 1:N (CASCADE)
-             │                 │ │                 ▼
-             │                 │ │   ┌──────────────────────────┐
-             │                 │ │   │     knowledge_bases      │
-             │                 │ │   ├──────────────────────────┤
-             │                 │ │   │ id (PK, UUID)            │
-             │                 │ │   │ organization_id (FK)     │
-             │                 │ │   │ name                     │
-             │                 │ │   │ slug (INDEX)             │
-             │                 │ │   │ description              │
-             │                 │ │   │ is_active                │
-             │                 │ │   │ created_by (FK -> users) │
-             │                 │ │   │ UQ(org_id, slug)         │
-             │                 │ │   └─────────────┬────────────┘
-             │                 │ │                 │
-             │                 │ │                 │ 1:N (CASCADE)
-             │                 │ │                 ▼
-             │                 │ │   ┌──────────────────────────┐
-             │                 │ └───┤        documents         │
-             │                 │     ├──────────────────────────┤
-             │                 │     │ id (PK, UUID)            │
-             │                 │     │ knowledge_base_id (FK)   │
-             │                 └────►│ organization_id (FK)     │
-             │                       │ uploaded_by (FK -> users)│
-             │                       │ name                     │
-             │                       │ original_filename        │
-             │                       │ content_type, file_size  │
-             │                       │ storage_key              │
-             │                       │ checksum (SHA-256, INDEX)│
-             │                       │ status (UPLOADED, etc.)  │
-             │                       │ current_version (INT)    │
-             │                       │ deleted_at (TIMESTAMP)   │
-             │                       └─────────────┬────────────┘
-             │                                     │
-             │                                     │ 1:N (CASCADE)
-             │                                     ▼
-             │                       ┌──────────────────────────┐
-             │                       │    document_versions     │
-             │                       ├──────────────────────────┤
-             │                       │ id (PK, UUID)            │
-             │                       │ document_id (FK)         │
-             │                       │ version_number (INT)     │
-             │                       │ storage_key              │
-             │                       │ checksum (SHA-256)       │
-             │                       │ file_size, content_type  │
-             │                       │ uploaded_by (FK -> users)│
-             │                       │ UQ(doc_id, version_num)  │
-             └──────────────────────►└──────────────────────────┘
+┌─────────────────────────────────┐
+│          organizations          │ (Tenant Boundary)
+└───────────────┬─────────────────┘
+                │ 1:N (CASCADE)
+                ├─────────────────────────────────────────────────┐
+                ▼                                                 ▼
+┌─────────────────────────────────┐               ┌─────────────────────────────────┐
+│         knowledge_bases         │               │         ingestion_jobs          │
+├─────────────────────────────────┤               ├─────────────────────────────────┤
+│ id (PK, UUID)                   │               │ id (PK, UUID)                   │
+│ organization_id (FK, INDEX)     │               │ document_id (FK, INDEX)         │
+│ name, slug (INDEX, UQ(org,slug))│               │ document_version_id (FK, INDEX) │
+│ description, is_active          │               │ organization_id (FK, INDEX)     │
+│ created_by (FK -> users)        │               │ status (PENDING, etc., INDEX)   │
+└───────────────┬─────────────────┘               │ attempt_count (INT)             │
+                │ 1:N (CASCADE)                   │ started_at, completed_at        │
+                ▼                                 │ failed_at, error_code, msg      │
+┌─────────────────────────────────┐               └─────────────────────────────────┘
+│            documents            │
+├─────────────────────────────────┤
+│ id (PK, UUID)                   │
+│ knowledge_base_id (FK, INDEX)   │
+│ organization_id (FK, INDEX)     │ ◄── Explicit Tenant Scoping Column
+│ uploaded_by (FK -> users)       │
+│ name, original_filename         │
+│ content_type, file_size         │
+│ storage_key, checksum (SHA-256) │
+│ status (UPLOADED, READY, etc.)  │
+│ current_version (INT)           │
+│ deleted_at (TIMESTAMP)          │
+└───────────────┬─────────────────┘
+                │ 1:N (CASCADE)
+                ├─────────────────────────────────────────────────┐
+                ▼                                                 ▼
+┌─────────────────────────────────┐               ┌─────────────────────────────────┐
+│        document_versions        │               │         document_chunks         │
+├─────────────────────────────────┤               ├─────────────────────────────────┤
+│ id (PK, UUID)                   │               │ id (PK, UUID)                   │
+│ document_id (FK, INDEX)         │               │ document_id (FK, INDEX)         │
+│ version_number (INT)            │               │ document_version_id (FK, INDEX) │
+│ storage_key, checksum           │               │ organization_id (FK, INDEX)     │
+│ file_size, content_type         │               │ knowledge_base_id (FK, INDEX)   │
+│ uploaded_by (FK -> users)       │               │ chunk_index (INT, INDEX)        │
+│ UQ(doc_id, version_number)      │               │ content (TEXT)                  │
+└───────────────┬─────────────────┘               │ character_count, word_count     │
+                │                                 │ page_number, section_title      │
+                │ 1:N (CASCADE)                   │ chunk_metadata (JSON)           │
+                └────────────────────────────────►│ UQ(version_id, chunk_index)     │
+                                                  └─────────────────────────────────┘
 ```
 
 ---
 
-## Storage & Database Boundary
+## Document Ingestion & Chunking Pipeline (Phase 4)
 
-1. **PostgreSQL / Neon PostgreSQL**:
-   - Stores metadata, structured records, foreign keys, timestamps, cryptographic SHA-256 checksums, and storage references (`storage_key`).
-   - Never stores raw binary file contents.
-2. **Object Storage (`StorageService`)**:
-   - Stores binary file contents under deterministic, structured keys:
-     `org/{org_id}/kb/{kb_id}/documents/{document_id}/v{version_number}/{sanitized_filename}`
-   - Abstract protocol currently implemented as `LocalStorageService` for local dev/testing, with path traversal prevention.
-   - Future cloud drivers (AWS S3, Cloudflare R2, Google Cloud Storage) implement the same interface without altering domain business logic.
+### 1. Extractor Layer (`services/ingestion/extractors/`)
+- **PDFExtractor**: Uses `pypdf.PdfReader` with memory-safe `io.BytesIO`. Captures `page_number` per extracted text block and detects unextractable/empty documents.
+- **DOCXExtractor**: Uses `python-docx` to extract text from headings and paragraphs, capturing `section_title` provenance from heading styles.
+- **MarkdownExtractor**: Parses Markdown documents, detecting `#`, `##`, `###` headings to delineate section boundaries and associate `section_title` metadata.
+- **TextExtractor**: Decodes plain text using UTF-8, falling back safely to `latin-1` or `cp1252`.
+
+### 2. Normalization Layer (`services/ingestion/normalization.py`)
+- Standardizes line endings (`\r\n` ➔ `\n`).
+- Strips null bytes (`\x00`) and invisible non-printable control characters.
+- Collapses excessive blank lines (`\n{3,}` ➔ `\n\n`) and trailing whitespace while preserving markdown structure, code blocks, URLs, and punctuation.
+
+### 3. Recursive Chunking Layer (`services/ingestion/chunking/recursive.py`)
+- Smart boundary splitting hierarchy: `["\n\n", "\n", ". ", "! ", "? ", "; ", " ", ""]`.
+- Configured by `CHUNK_SIZE` (default 1000 characters) and `CHUNK_OVERLAP` (default 150 characters).
+- Preserves contextual continuity between adjacent chunks.
+- Retains rich provenance: `chunk_index` (0-indexed deterministic sequence), `page_number`, `section_title`, `character_count`, and `word_count`.
+
+### 4. Idempotency & Ingestion Job Lifecycle (`services/ingestion/service.py`)
+- Extraction and chunking happen **outside** database transactions to avoid long-running locks.
+- **Atomic Persistence**:
+  1. Deletes previous `DocumentChunk` records for the target `document_version_id`.
+  2. Inserts new `DocumentChunk` records.
+  3. Updates `Document.status = DocumentStatus.READY`.
+  4. Updates `IngestionJob.status = IngestionJobStatus.COMPLETED`.
+- **Failure Handling**: On extraction or chunking error, `Document.status` is set to `FAILED`, `IngestionJob.status = FAILED`, recording `error_code` and sanitized `error_message`, while incrementing `attempt_count`.
 
 ---
 
-## Document Lifecycle State Machine
+## Future Vector & Retrieval Pipeline
 
 ```text
-Upload ➔ Validate ➔ Checksum ➔ Stored
-                                  ↓
-                              UPLOADED ◄── (Phase 3 Terminal State)
-                                  ↓
-                        (Phase 4: Ingestion)
-                                  ↓
-                              PROCESSING
-                                ┌──┴──┐
-                                ▼     ▼
-                              READY  FAILED
-                                │
-                                ▼
-                             ARCHIVED
+Phase 4 (Completed)
+Normalized Chunks + Provenance
+        │
+        ▼
+Phase 5 (Next)
+Batch Embeddings ➔ pgvector Storage (HNSW / IVFFlat Indexing)
+        │
+        ▼
+Phase 6
+Hybrid Retrieval (Vector Search + BM25 Full-Text Search + RRF + Cross-Encoder Reranking)
+        │
+        ▼
+Phase 7
+RAG Generation (Grounding Context + Citations + LLM Provider Integration)
 ```
-
----
-
-## Security Decisions
-
-1. **Strict Multi-Tenant Scoping**: All Knowledge Bases and Documents are bound to `organization_id`. Route dependencies reject cross-tenant access (`403 Forbidden` / `404 Not Found`).
-2. **Magic Bytes Inspection**: Files are validated not only by extension and headers, but by inspectable binary headers (`%PDF` for PDF, `PK\x03\x04` for DOCX).
-3. **Cryptographic Checksumming**: SHA-256 digest is generated for each uploaded document. Duplicates in the same Knowledge Base are detected and rejected (`409 Conflict`).
-4. **Path Traversal Protection**: User-supplied filenames are sanitized (`sanitize_filename`), removing `..`, `/`, and dangerous characters before generating storage keys.
-5. **Configurable Limits**: Upload file size is strictly capped by `MAX_UPLOAD_SIZE_MB` (default: 25MB).
