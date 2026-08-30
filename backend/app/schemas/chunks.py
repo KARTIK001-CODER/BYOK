@@ -21,5 +21,9 @@ class DocumentChunkResponse(BaseModel):
     page_number: int | None = None
     section_title: str | None = None
     chunk_metadata: dict[str, Any] | None = None
+    embedding_model: str | None = None
+    embedding_provider: str | None = None
+    embedding_dimension: int | None = None
+    embedded_at: datetime | None = None
     created_at: datetime
     updated_at: datetime

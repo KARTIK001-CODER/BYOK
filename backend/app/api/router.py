@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from app.api.v1.auth import router as auth_v1_router
 from app.api.v1.documents import router as documents_v1_router
+from app.api.v1.embeddings import router as embeddings_v1_router
 from app.api.v1.health import router as health_v1_router
 from app.api.v1.ingestion import router as ingestion_v1_router
 from app.api.v1.knowledge_bases import router as knowledge_bases_v1_router
@@ -16,6 +17,7 @@ api_router.include_router(organizations_v1_router, prefix="", tags=["Multi-Tenan
 api_router.include_router(knowledge_bases_v1_router, prefix="", tags=["Knowledge Bases"])
 api_router.include_router(documents_v1_router, prefix="", tags=["Documents"])
 api_router.include_router(ingestion_v1_router, prefix="", tags=["Document Ingestion"])
+api_router.include_router(embeddings_v1_router, prefix="", tags=["Vector Embeddings"])
 
 # Future Phase Routers will be registered here:
 # - retrieval_v1_router (/retrieval - Search & Rerank)

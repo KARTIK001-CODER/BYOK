@@ -28,8 +28,10 @@ from app.schemas.documents import (
     DocumentUploadResponse,
     DocumentVersionResponse,
 )
+from app.schemas.embeddings import EmbeddingTriggerResponse
 from app.schemas.ingestion import IngestionTriggerResponse
 from app.services.documents.service import DocumentService
+from app.services.embeddings.service import EmbeddingService
 from app.services.ingestion.service import IngestionService
 
 router = APIRouter(tags=["Documents"])
@@ -239,4 +241,38 @@ async def list_document_chunks(
         total=total,
         limit=limit,
         offset=offset,
+    )
+
+
+@router.post(
+    "/documents/{document_id}/embed",
+    response_model=EmbeddingTriggerResponse,
+    summary="Trigger Document Embedding Generation",
+    description="Generates dense vector embeddings and stores in pgvector (requires ADMIN/OWNER).",
+)
+async def embed_document(
+    doc_and_membership: tuple[Document, OrganizationMembership] = Depends(get_document_or_404),
+    session: AsyncSession = Depends(get_db),
+) -> EmbeddingTriggerResponse:
+    doc, membership = doc_and_membership
+
+    user_level = ROLE_HIERARCHY.get(membership.role, 0)
+    if user_level < ROLE_HIERARCHY[OrganizationRole.ADMIN]:
+        raise ForbiddenException(
+            message="Insufficient permissions: Embedding requires ADMIN or OWNER role."
+        )
+
+    job = await EmbeddingService.process_document_embeddings(
+        session=session,
+        document=doc,
+    )
+
+    return EmbeddingTriggerResponse(
+        job_id=job.id,
+        document_id=doc.id,
+        status=job.status,
+        total_chunks=job.total_chunks,
+        processed_chunks=job.processed_chunks,
+        embedding_model=job.embedding_model,
+        message="Document embeddings generated and stored in pgvector successfully.",
     )
