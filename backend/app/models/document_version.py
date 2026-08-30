@@ -15,6 +15,7 @@ from app.db.base import Base, UUIDPrimaryKeyMixin
 
 if TYPE_CHECKING:
     from app.models.document import Document
+    from app.models.document_chunk import DocumentChunk
     from app.models.user import User
 
 
@@ -72,4 +73,10 @@ class DocumentVersion(Base, UUIDPrimaryKeyMixin):
     uploader: Mapped["User | None"] = relationship(
         "User",
         foreign_keys=[uploaded_by],
+    )
+    chunks: Mapped[list["DocumentChunk"]] = relationship(
+        "DocumentChunk",
+        back_populates="document_version",
+        cascade="all, delete-orphan",
+        order_by="DocumentChunk.chunk_index.asc()",
     )
