@@ -10,14 +10,14 @@ RAGForge is a production-oriented, multi-tenant Retrieval-Augmented Generation (
 - [x] **Phase 2: Auth, Multi-Tenancy & BYOK Schema** (Argon2id, JWT + Refresh Token Rotation, Organizations, RBAC `OWNER > ADMIN > MEMBER`, BYOK Schema)
 - [x] **Phase 3: Knowledge Bases & Document Management** (Knowledge Bases, Document Lifecycle `UPLOADED ➔ PROCESSING ➔ READY ➔ FAILED ➔ ARCHIVED`, Storage Abstraction, Magic Byte Inspection, Duplicate Detection)
 - [x] **Phase 4: Document Ingestion & Processing Pipeline** (Multi-Format Extraction [PDF, TXT, MD, DOCX], Text Normalization, Recursive Chunking, Ingestion Jobs, Provenance Chunks)
-- [ ] **Phase 5: Embeddings & Vector Storage** (Embedding Pipeline, Batch Vector Generation, pgvector indexing)
+- [x] **Phase 5: Embeddings & Vector Storage** (Embedding Provider Abstraction, FastEmbed `BAAI/bge-small-en-v1.5`, Native `pgvector` Vector Storage, HNSW Cosine Index, Resumable Batching)
 - [ ] **Phase 6: Retrieval & Reranking Engine** (Vector Search, BM25 Hybrid Retrieval, RRF, Cross-Encoder Reranking)
 - [ ] **Phase 7: RAG Generation & LLM Orchestration** (Prompt Engineering, Context Synthesis, Grounding & Citations)
 - [ ] **Phase 8: BYOK Vault & Provider Integrations** (AES-256-GCM Key Vault, Groq, OpenAI, Anthropic, Gemini)
 
 ---
 
-## Document Ingestion & Chunking Pipeline (Phase 4)
+## End-to-End Pipeline (Phases 1–5)
 
 ```text
 Uploaded File (PDF / TXT / MD / DOCX)
@@ -38,7 +38,13 @@ Recursive Text Chunking (Hierarchy: \n\n ➔ \n ➔ Sentence ➔ Word ➔ Char)
 Provenance Attachment (chunk_index, page_number, section_title, character/word count)
      │
      ▼
-Atomic Persistence in PostgreSQL / Neon (Idempotent upsert via IngestionJob)
+Document Chunks in PostgreSQL / Neon
+     │
+     ▼
+Embedding Generation (BAAI/bge-small-en-v1.5, 384 dimensions)
+     │
+     ▼
+Dense Vector Storage in pgvector (HNSW Cosine Vector Index)
 ```
 
 ---

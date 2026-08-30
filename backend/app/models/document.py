@@ -17,6 +17,7 @@ from app.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 if TYPE_CHECKING:
     from app.models.document_chunk import DocumentChunk
     from app.models.document_version import DocumentVersion
+    from app.models.embedding_job import EmbeddingJob
     from app.models.ingestion_job import IngestionJob
     from app.models.knowledge_base import KnowledgeBase
     from app.models.organization import Organization
@@ -32,6 +33,15 @@ class DocumentStatus(enum.StrEnum):
     READY = "READY"
     FAILED = "FAILED"
     ARCHIVED = "ARCHIVED"
+
+
+class EmbeddingStatus(enum.StrEnum):
+    """Embedding generation lifecycle state."""
+
+    PENDING = "PENDING"
+    PROCESSING = "PROCESSING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
 
 
 class Document(Base, UUIDPrimaryKeyMixin, TimestampMixin):
@@ -93,6 +103,15 @@ class Document(Base, UUIDPrimaryKeyMixin, TimestampMixin):
         index=True,
         nullable=False,
     )
+    embedding_status: Mapped[EmbeddingStatus | None] = mapped_column(
+        Enum(
+            EmbeddingStatus,
+            name="embedding_status_enum",
+            values_callable=lambda obj: [e.value for e in obj],
+            native_enum=False,
+        ),
+        nullable=True,
+    )
     current_version: Mapped[int] = mapped_column(
         Integer,
         default=1,
@@ -127,6 +146,12 @@ class Document(Base, UUIDPrimaryKeyMixin, TimestampMixin):
         back_populates="document",
         cascade="all, delete-orphan",
         order_by="IngestionJob.created_at.desc()",
+    )
+    embedding_jobs: Mapped[list["EmbeddingJob"]] = relationship(
+        "EmbeddingJob",
+        back_populates="document",
+        cascade="all, delete-orphan",
+        order_by="EmbeddingJob.created_at.desc()",
     )
     chunks: Mapped[list["DocumentChunk"]] = relationship(
         "DocumentChunk",

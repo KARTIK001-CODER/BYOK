@@ -1,7 +1,10 @@
+from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     JSON,
+    DateTime,
     ForeignKey,
     Integer,
     String,
@@ -20,7 +23,7 @@ if TYPE_CHECKING:
 
 
 class DocumentChunk(Base, UUIDPrimaryKeyMixin, TimestampMixin):
-    """Normalized, provenance-aware text chunk for vector embedding and retrieval."""
+    """Normalized, provenance-aware text chunk with vector embeddings for semantic retrieval."""
 
     __tablename__ = "document_chunks"
     __table_args__ = (
@@ -82,6 +85,28 @@ class DocumentChunk(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     )
     chunk_metadata: Mapped[dict[str, Any] | None] = mapped_column(
         JSON,
+        nullable=True,
+    )
+
+    # Vector Embedding Columns
+    embedding: Mapped[list[float] | None] = mapped_column(
+        Vector(384),
+        nullable=True,
+    )
+    embedding_model: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True,
+    )
+    embedding_provider: Mapped[str | None] = mapped_column(
+        String(50),
+        nullable=True,
+    )
+    embedding_dimension: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+    )
+    embedded_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
         nullable=True,
     )
 

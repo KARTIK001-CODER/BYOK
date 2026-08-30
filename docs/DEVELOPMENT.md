@@ -46,6 +46,7 @@ alembic upgrade head --sql
 - `0002_auth_and_multitenancy`: Creates users, organizations, memberships, refresh tokens, and provider credentials tables.
 - `0003_knowledge_bases_and_documents`: Creates knowledge bases, documents, and document versions tables.
 - `0004_ingestion_jobs_and_chunks`: Creates ingestion jobs and document chunks tables.
+- `0005_embeddings_and_vector_storage`: Adds vector embedding column, embedding metadata, embedding jobs table, and HNSW cosine index.
 
 ---
 
@@ -76,17 +77,21 @@ pytest -v
 
 ---
 
-## 5. Document Ingestion Configuration
+## 5. Embedding & Ingestion Configuration
 
 Configurable environment variables in `.env`:
 ```env
-# Chunk size in characters
+# Ingestion Chunking
 CHUNK_SIZE=1000
-
-# Overlap size in characters
 CHUNK_OVERLAP=150
-
-# Safeguards
 MAX_EXTRACTED_TEXT_CHARS=5000000
 MAX_CHUNKS_PER_DOCUMENT=10000
+
+# Vector Embeddings
+EMBEDDING_PROVIDER=local
+EMBEDDING_MODEL=BAAI/bge-small-en-v1.5
+EMBEDDING_DIMENSION=384
+EMBEDDING_BATCH_SIZE=32
+EMBEDDING_DEVICE=cpu
+MAX_EMBEDDING_CHUNKS_PER_JOB=10000
 ```

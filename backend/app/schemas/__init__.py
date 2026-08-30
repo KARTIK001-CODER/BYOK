@@ -14,6 +14,10 @@ from app.schemas.documents import (
     DocumentUploadResponse,
     DocumentVersionResponse,
 )
+from app.schemas.embeddings import (
+    EmbeddingJobResponse,
+    EmbeddingTriggerResponse,
+)
 from app.schemas.health import HealthResponse, ReadinessResponse, SystemInfoResponse
 from app.schemas.ingestion import (
     IngestionJobResponse,
@@ -38,6 +42,8 @@ __all__ = [
     "DocumentUpdate",
     "DocumentUploadResponse",
     "DocumentVersionResponse",
+    "EmbeddingJobResponse",
+    "EmbeddingTriggerResponse",
     "HealthResponse",
     "IngestionJobResponse",
     "IngestionTriggerResponse",
