@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.5.0] - 2026-08-30
+
+### Added
+- **Embedding Provider Abstraction**: `BaseEmbeddingProvider` protocol defining unified interfaces for passage chunk embeddings (`embed_documents`), search query embeddings (`embed_query`), and model dimensions.
+- **Local Embedding Provider**: `LocalEmbeddingProvider` using `fastembed` with `BAAI/bge-small-en-v1.5` (dimension: 384, cosine distance metric), loaded as a cached singleton for fast, local, CPU-based execution without paid API keys.
+- **Vector Storage & PostgreSQL pgvector**: Extended `document_chunks` table with native `embedding vector(384)`, `embedding_model`, `embedding_provider`, `embedding_dimension`, and `embedded_at`.
+- **HNSW Vector Indexing**: Configured HNSW cosine vector index (`vector_cosine_ops`, `m=16`, `ef_construction=64`) in PostgreSQL / Neon PostgreSQL.
+- **Embedding Job Model**: `EmbeddingJob` tracking batch progress (`processed_chunks / total_chunks`), model version metadata, timestamps, and error codes.
+- **Batching & Resumable Idempotency**: Configurable batch embedding (`EMBEDDING_BATCH_SIZE=32`) with atomic batch-level commits, model-aware idempotency, and retry resumption.
+- **Database Migration 0005**: Alembic migration `0005_embeddings_and_vector_storage.py` adding vector columns, `embedding_status` to documents, `embedding_jobs` table, and the HNSW vector index.
+- **API Endpoints**:
+  - `POST /api/v1/documents/{document_id}/embed`: Generates dense vector embeddings and stores in pgvector (requires `ADMIN` or `OWNER`).
+  - `GET /api/v1/embedding-jobs/{job_id}`: Retrieves embedding progress, batch stats, and status.
+  - `POST /api/v1/embedding-jobs/{job_id}/retry`: Resumes a failed or incomplete embedding job.
+- **Automated Test Suite**: 73 automated tests verifying all Phase 1–5 capabilities, including model initialization, dimension correctness, query instruction prefixes, batching, idempotency, retries, and cross-tenant isolation.
+
+---
+
 ## [0.4.0] - 2026-08-30
 
 ### Added
@@ -22,7 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `POST /api/v1/documents/{document_id}/ingest`: Triggers document extraction, normalization, and chunking (requires `ADMIN` or `OWNER`).
   - `GET /api/v1/ingestion-jobs/{job_id}`: Retrieves job execution status, attempt counts, and error metadata.
   - `GET /api/v1/documents/{document_id}/chunks`: Lists paginated provenance-aware text chunks.
-- **Automated Test Suite**: 63 automated tests verifying all Phase 1–4 capabilities, including multi-format extractors, normalizer, chunker boundaries, idempotency, retries, and cross-tenant isolation.
+- **Automated Test Suite**: 63 automated tests verifying all Phase 1–4 capabilities.
 
 ---
 
@@ -35,7 +53,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **File Validation & Magic Bytes Inspection**: Validates `.pdf` (`%PDF`), `.txt`, `.md`, and `.docx` (`PK\x03\x04`) files with configurable `MAX_UPLOAD_SIZE_MB`.
 - **SHA-256 Checksumming & Duplicate Detection**: Computes cryptographic checksums on upload and returns `409 Conflict` if duplicate file is uploaded to the same Knowledge Base.
 - **Database Migration 0003**: Alembic migration `0003_knowledge_bases_and_documents.py` creating `knowledge_bases`, `documents`, and `document_versions` tables.
-- **Automated Test Suite**: 47 automated tests covering document uploads, magic byte rejection, duplicate conflicts, tenant isolation, and pagination.
 
 ---
 
@@ -47,18 +64,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Multi-Tenancy & Organizations**: `Organization` tenant isolation and `OrganizationMembership` supporting `OWNER > ADMIN > MEMBER` RBAC.
 - **BYOK-Ready Provider Schema**: `ProviderCredential` model prepared for future encrypted API key vaults.
 - **Database Migration 0002**: Alembic migration `0002_auth_and_multitenancy.py`.
-- **API Endpoints**: `/api/v1/auth/register`, `/api/v1/auth/login`, `/api/v1/auth/refresh`, `/api/v1/auth/logout`, `/api/v1/auth/me`, `/api/v1/organizations`.
 
 ---
 
 ## [0.1.0] - 2026-08-30
 
 ### Added
-- Initial project architecture and directory layout.
-- FastAPI application factory with lifespan management and structured CORS.
+- Initial project architecture and FastAPI factory.
 - Async SQLAlchemy 2.0 database engine with connection pooling and PostgreSQL/Neon support.
 - `pgvector` extension activation migration (`0001_enable_pgvector.py`).
 - Structured logging with ISO UTC timestamps and request context.
 - Correlation ID tracking via `X-Request-ID` middleware.
-- Health check endpoints: `/health` (liveness probe), `/ready` (readiness probe), and `/api/v1/info`.
+- Health check endpoints: `/health`, `/ready`, and `/api/v1/info`.
 - Docker Compose setup with `pgvector/pgvector:pg16` database.
