@@ -1,154 +1,92 @@
 # RAGForge Development Guide
 
-This guide details the local setup, tooling, testing, and migration workflows for RAGForge.
+This guide details developer workflows, environment setup, testing, and migration instructions for RAGForge.
 
 ---
 
-## 1. Prerequisites
+## 1. Local Environment Setup
 
-- **Python**: Version 3.12 or 3.13
-- **Docker & Docker Compose**: For local PostgreSQL + pgvector container
-- **Git**: For version control
-
----
-
-## 2. Local Environment Setup
-
-### Option A: Running with Docker Compose (Recommended for Full Stack)
-
-1. Clone repository and copy environment configuration:
-   ```bash
-   cp .env.example .env
-   ```
-
-2. Build and launch containers:
-   ```bash
-   docker compose up --build
-   ```
-
-3. The backend API will be available at `http://localhost:8000`.
-   - OpenAPI Docs: `http://localhost:8000/docs`
-   - Liveness Check: `http://localhost:8000/health`
-   - Readiness Check: `http://localhost:8000/ready`
-
----
-
-### Option B: Local Python Virtual Environment
-
-1. Navigate to the backend directory:
-   ```bash
-   cd backend
-   ```
-
-2. Create and activate a virtual environment:
-   ```bash
-   # On macOS/Linux:
-   python3 -m venv .venv
-   source .venv/bin/activate
-
-   # On Windows (PowerShell):
-   python -m venv .venv
-   .venv\Scripts\Activate.ps1
-   ```
-
-3. Install project dependencies and development tools:
-   ```bash
-   pip install --upgrade pip
-   pip install -e ".[dev]"
-   ```
-
-4. Start the local PostgreSQL + pgvector database:
-   ```bash
-   # From root directory:
-   docker compose up -d postgres
-   ```
-
-5. Run database migrations:
-   ```bash
-   alembic upgrade head
-   ```
-
-6. Start the development server with auto-reload:
-   ```bash
-   uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-   ```
-
----
-
-## 3. Database Migrations (Alembic)
-
-Alembic is configured for asynchronous PostgreSQL migrations.
-
-- **Apply all migrations:**
-  ```bash
-  alembic upgrade head
-  ```
-
-- **Roll back the last migration:**
-  ```bash
-  alembic downgrade -1
-  ```
-
-- **Generate a new migration:**
-  ```bash
-  alembic revision --autogenerate -m "describe_changes"
-  ```
-
----
-
-## 4. Testing
-
-Run the test suite with pytest:
-
+### Using Python Virtual Environment
 ```bash
-# Run all tests
-pytest -v
+cd backend
+python -m venv .venv
+# On Windows PowerShell:
+.\.venv\Scripts\Activate.ps1
+# On Linux/macOS:
+source .venv/bin/activate
 
-# Run with coverage report
-pytest --cov=app tests/
+pip install -e ".[dev]"
+```
 
-# Run a specific test file
-pytest -v tests/test_health.py
+### Starting Dependencies with Docker
+```bash
+docker compose up -d postgres
 ```
 
 ---
 
-## 5. Code Quality & Formatting
+## 2. Database Migrations
 
-Ruff is used for both linting and formatting.
+RAGForge uses **Alembic** to manage database schema migrations.
 
-- **Check lint rules:**
-  ```bash
-  ruff check .
-  ```
+### Apply Migrations
+```bash
+cd backend
+alembic upgrade head
+```
 
-- **Apply automatic lint fixes:**
-  ```bash
-  ruff check --fix .
-  ```
+### Dry-Run SQL Generation
+```bash
+cd backend
+alembic upgrade head --sql
+```
 
-- **Check code formatting:**
-  ```bash
-  ruff format --check .
-  ```
-
-- **Format codebase:**
-  ```bash
-  ruff format .
-  ```
+### Migration History
+- `0001_enable_pgvector`: Enables pgvector PostgreSQL extension.
+- `0002_auth_and_multitenancy`: Creates users, organizations, memberships, refresh tokens, and provider credentials tables.
+- `0003_knowledge_bases_and_documents`: Creates knowledge bases, documents, and document versions tables.
+- `0004_ingestion_jobs_and_chunks`: Creates ingestion jobs and document chunks tables.
 
 ---
 
-## 6. Makefile Shortcuts
+## 3. Code Quality & Linters
 
-A `Makefile` is available at the project root with standard targets:
+Run Ruff linter and formatter:
+```bash
+cd backend
+ruff check .
+ruff format --check .
+```
 
-| Command | Description |
-|---|---|
-| `make up` | Start all Docker Compose services in background |
-| `make down` | Stop all Docker Compose services |
-| `make test` | Run pytest suite |
-| `make lint` | Run ruff lint check |
-| `make format` | Run ruff code formatter |
-| `make migrate`| Run Alembic database migrations |
-| `make dev` | Run local Uvicorn development server |
+To auto-fix lint and formatting issues:
+```bash
+ruff check --fix .
+ruff format .
+```
+
+---
+
+## 4. Running Automated Tests
+
+Run the complete test suite with `pytest`:
+```bash
+cd backend
+pytest -v
+```
+
+---
+
+## 5. Document Ingestion Configuration
+
+Configurable environment variables in `.env`:
+```env
+# Chunk size in characters
+CHUNK_SIZE=1000
+
+# Overlap size in characters
+CHUNK_OVERLAP=150
+
+# Safeguards
+MAX_EXTRACTED_TEXT_CHARS=5000000
+MAX_CHUNKS_PER_DOCUMENT=10000
+```

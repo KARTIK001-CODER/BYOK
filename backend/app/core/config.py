@@ -1,7 +1,7 @@
 from functools import lru_cache
 from typing import Any, Literal
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     APP_NAME: str = "RAGForge"
     APP_ENV: Literal["development", "staging", "production", "test"] = "development"
     DEBUG: bool = False
-    VERSION: str = "0.3.0"
+    VERSION: str = "0.4.0"
 
     # Server Settings
     HOST: str = "0.0.0.0"
@@ -57,6 +57,12 @@ class Settings(BaseSettings):
     STORAGE_LOCAL_DIR: str = "data/storage"
     MAX_UPLOAD_SIZE_MB: int = 25
 
+    # Document Ingestion & Chunking Settings
+    CHUNK_SIZE: int = 1000
+    CHUNK_OVERLAP: int = 150
+    MAX_EXTRACTED_TEXT_CHARS: int = 5000000
+    MAX_CHUNKS_PER_DOCUMENT: int = 10000
+
     # BYOK Master Encryption Key Placeholder (Deferred to Future Phases)
     API_KEY_ENCRYPTION_KEY: str = Field(
         default="change-this-to-a-32-byte-hex-key-for-byok-encryption-vault"
@@ -72,6 +78,20 @@ class Settings(BaseSettings):
         if isinstance(value, str):
             return [origin.strip() for origin in value.split(",") if origin.strip()]
         return value
+
+    @model_validator(mode="after")
+    def validate_chunking_config(self) -> "Settings":
+        if self.CHUNK_SIZE <= 0:
+            raise ValueError("CHUNK_SIZE must be greater than 0")
+        if self.CHUNK_OVERLAP < 0:
+            raise ValueError("CHUNK_OVERLAP must be non-negative")
+        if self.CHUNK_OVERLAP >= self.CHUNK_SIZE:
+            raise ValueError("CHUNK_OVERLAP must be strictly less than CHUNK_SIZE")
+        if self.MAX_EXTRACTED_TEXT_CHARS <= 0:
+            raise ValueError("MAX_EXTRACTED_TEXT_CHARS must be greater than 0")
+        if self.MAX_CHUNKS_PER_DOCUMENT <= 0:
+            raise ValueError("MAX_CHUNKS_PER_DOCUMENT must be greater than 0")
+        return self
 
     @property
     def max_upload_size_bytes(self) -> int:

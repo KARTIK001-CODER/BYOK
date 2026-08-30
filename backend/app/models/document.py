@@ -15,7 +15,9 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 
 if TYPE_CHECKING:
+    from app.models.document_chunk import DocumentChunk
     from app.models.document_version import DocumentVersion
+    from app.models.ingestion_job import IngestionJob
     from app.models.knowledge_base import KnowledgeBase
     from app.models.organization import Organization
     from app.models.user import User
@@ -119,4 +121,16 @@ class Document(Base, UUIDPrimaryKeyMixin, TimestampMixin):
         back_populates="document",
         cascade="all, delete-orphan",
         order_by="DocumentVersion.version_number.desc()",
+    )
+    ingestion_jobs: Mapped[list["IngestionJob"]] = relationship(
+        "IngestionJob",
+        back_populates="document",
+        cascade="all, delete-orphan",
+        order_by="IngestionJob.created_at.desc()",
+    )
+    chunks: Mapped[list["DocumentChunk"]] = relationship(
+        "DocumentChunk",
+        back_populates="document",
+        cascade="all, delete-orphan",
+        order_by="DocumentChunk.chunk_index.asc()",
     )
