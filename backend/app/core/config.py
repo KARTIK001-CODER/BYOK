@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     APP_NAME: str = "RAGForge"
     APP_ENV: Literal["development", "staging", "production", "test"] = "development"
     DEBUG: bool = False
-    VERSION: str = "0.4.0"
+    VERSION: str = "0.5.0"
 
     # Server Settings
     HOST: str = "0.0.0.0"
@@ -63,6 +63,14 @@ class Settings(BaseSettings):
     MAX_EXTRACTED_TEXT_CHARS: int = 5000000
     MAX_CHUNKS_PER_DOCUMENT: int = 10000
 
+    # Embedding Generation & Vector Storage Settings
+    EMBEDDING_PROVIDER: Literal["local", "openai", "google", "custom"] = "local"
+    EMBEDDING_MODEL: str = "BAAI/bge-small-en-v1.5"
+    EMBEDDING_DIMENSION: int = 384
+    EMBEDDING_BATCH_SIZE: int = 32
+    EMBEDDING_DEVICE: Literal["auto", "cpu", "cuda"] = "cpu"
+    MAX_EMBEDDING_CHUNKS_PER_JOB: int = 10000
+
     # BYOK Master Encryption Key Placeholder (Deferred to Future Phases)
     API_KEY_ENCRYPTION_KEY: str = Field(
         default="change-this-to-a-32-byte-hex-key-for-byok-encryption-vault"
@@ -91,6 +99,16 @@ class Settings(BaseSettings):
             raise ValueError("MAX_EXTRACTED_TEXT_CHARS must be greater than 0")
         if self.MAX_CHUNKS_PER_DOCUMENT <= 0:
             raise ValueError("MAX_CHUNKS_PER_DOCUMENT must be greater than 0")
+        return self
+
+    @model_validator(mode="after")
+    def validate_embedding_config(self) -> "Settings":
+        if self.EMBEDDING_DIMENSION <= 0:
+            raise ValueError("EMBEDDING_DIMENSION must be greater than 0")
+        if self.EMBEDDING_BATCH_SIZE <= 0:
+            raise ValueError("EMBEDDING_BATCH_SIZE must be greater than 0")
+        if self.MAX_EMBEDDING_CHUNKS_PER_JOB <= 0:
+            raise ValueError("MAX_EMBEDDING_CHUNKS_PER_JOB must be greater than 0")
         return self
 
     @property
