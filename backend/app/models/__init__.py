@@ -1,7 +1,8 @@
 from app.db.base import Base
-from app.models.document import Document, DocumentStatus
+from app.models.document import Document, DocumentStatus, EmbeddingStatus
 from app.models.document_chunk import DocumentChunk
 from app.models.document_version import DocumentVersion
+from app.models.embedding_job import EmbeddingJob, EmbeddingJobStatus
 from app.models.ingestion_job import IngestionJob, IngestionJobStatus
 from app.models.knowledge_base import KnowledgeBase
 from app.models.membership import OrganizationMembership, OrganizationRole
@@ -16,6 +17,9 @@ __all__ = [
     "DocumentChunk",
     "DocumentStatus",
     "DocumentVersion",
+    "EmbeddingJob",
+    "EmbeddingJobStatus",
+    "EmbeddingStatus",
     "IngestionJob",
     "IngestionJobStatus",
     "KnowledgeBase",
