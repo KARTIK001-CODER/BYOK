@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ragforge"
-version = "0.1.0"
+version = "0.2.0"
 description = "RAGForge - Production-oriented modular RAG platform backend"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -15,12 +15,15 @@ authors = [
 dependencies = [
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.34.0",
-    "pydantic>=2.10.0",
+    "pydantic[email]>=2.10.0",
     "pydantic-settings>=2.7.0",
     "sqlalchemy>=2.0.36",
     "asyncpg>=0.30.0",
     "pgvector>=0.3.6",
     "alembic>=1.14.0",
+    "pyjwt>=2.9.0",
+    "argon2-cffi>=23.1.0",
+    "email-validator>=2.2.0",
 ]
 
 [project.optional-dependencies]
