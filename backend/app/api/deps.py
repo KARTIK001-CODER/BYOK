@@ -8,10 +8,12 @@ from app.core.exceptions import ForbiddenException, NotFoundException, Unauthori
 from app.core.security import decode_access_token
 from app.db.session import get_db
 from app.models.document import Document
+from app.models.ingestion_job import IngestionJob
 from app.models.knowledge_base import KnowledgeBase
 from app.models.membership import OrganizationMembership, OrganizationRole
 from app.models.user import User
 from app.services.documents.service import DocumentService
+from app.services.ingestion.service import IngestionService
 from app.services.knowledge_bases.service import KnowledgeBaseService
 from app.services.organizations.service import OrganizationService
 from app.services.users.service import UserService
@@ -126,3 +128,20 @@ async def get_document_or_404(
     if membership is None:
         raise NotFoundException(message="Document not found.")
     return doc, membership
+
+
+async def get_ingestion_job_or_404(
+    job_id: str,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> tuple[IngestionJob, OrganizationMembership]:
+    """Retrieve IngestionJob and verify caller has organization access."""
+    job = await IngestionService.get_job_by_id(session, job_id)
+    membership = await OrganizationService.get_membership(
+        session=session,
+        organization_id=job.organization_id,
+        user_id=current_user.id,
+    )
+    if membership is None:
+        raise NotFoundException(message="Ingestion job not found.")
+    return job, membership

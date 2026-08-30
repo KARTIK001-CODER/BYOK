@@ -20,6 +20,7 @@ from app.models.document import Document, DocumentStatus
 from app.models.knowledge_base import KnowledgeBase
 from app.models.membership import OrganizationMembership, OrganizationRole
 from app.models.user import User
+from app.schemas.chunks import DocumentChunkResponse
 from app.schemas.common import PaginatedResponse
 from app.schemas.documents import (
     DocumentResponse,
@@ -27,7 +28,9 @@ from app.schemas.documents import (
     DocumentUploadResponse,
     DocumentVersionResponse,
 )
+from app.schemas.ingestion import IngestionTriggerResponse
 from app.services.documents.service import DocumentService
+from app.services.ingestion.service import IngestionService
 
 router = APIRouter(tags=["Documents"])
 
@@ -176,3 +179,64 @@ async def delete_document(
 
     await DocumentService.delete_document(session=session, document=doc)
     return {"message": "Document deleted successfully."}
+
+
+@router.post(
+    "/documents/{document_id}/ingest",
+    response_model=IngestionTriggerResponse,
+    summary="Trigger Document Ingestion",
+    description="Extracts, normalizes, and chunks the document (requires ADMIN or OWNER).",
+)
+async def ingest_document(
+    doc_and_membership: tuple[Document, OrganizationMembership] = Depends(get_document_or_404),
+    session: AsyncSession = Depends(get_db),
+) -> IngestionTriggerResponse:
+    doc, membership = doc_and_membership
+
+    user_level = ROLE_HIERARCHY.get(membership.role, 0)
+    if user_level < ROLE_HIERARCHY[OrganizationRole.ADMIN]:
+        raise ForbiddenException(
+            message="Insufficient permissions: Ingestion requires ADMIN or OWNER role."
+        )
+
+    job = await IngestionService.process_document(
+        session=session,
+        document=doc,
+    )
+
+    return IngestionTriggerResponse(
+        job_id=job.id,
+        document_id=doc.id,
+        status=job.status,
+        message="Document ingestion completed.",
+    )
+
+
+@router.get(
+    "/documents/{document_id}/chunks",
+    response_model=PaginatedResponse[DocumentChunkResponse],
+    summary="List Document Chunks",
+    description="Retrieves the generated provenance-aware text chunks for a document.",
+)
+async def list_document_chunks(
+    doc_and_membership: tuple[Document, OrganizationMembership] = Depends(get_document_or_404),
+    limit: int = Query(20, ge=1, le=100, description="Items per page"),
+    offset: int = Query(0, ge=0, description="Pagination offset"),
+    session: AsyncSession = Depends(get_db),
+) -> PaginatedResponse[DocumentChunkResponse]:
+    doc, membership = doc_and_membership
+
+    items, total = await IngestionService.list_chunks(
+        session=session,
+        document_id=doc.id,
+        organization_id=membership.organization_id,
+        limit=limit,
+        offset=offset,
+    )
+
+    return PaginatedResponse(
+        items=[DocumentChunkResponse.model_validate(c) for c in items],
+        total=total,
+        limit=limit,
+        offset=offset,
+    )

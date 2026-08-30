@@ -6,6 +6,7 @@ from app.schemas.auth import (
     RegisterRequest,
     TokenResponse,
 )
+from app.schemas.chunks import DocumentChunkResponse
 from app.schemas.common import PaginatedResponse
 from app.schemas.documents import (
     DocumentResponse,
@@ -14,6 +15,10 @@ from app.schemas.documents import (
     DocumentVersionResponse,
 )
 from app.schemas.health import HealthResponse, ReadinessResponse, SystemInfoResponse
+from app.schemas.ingestion import (
+    IngestionJobResponse,
+    IngestionTriggerResponse,
+)
 from app.schemas.knowledge_bases import (
     KnowledgeBaseCreate,
     KnowledgeBaseResponse,
@@ -28,11 +33,14 @@ from app.schemas.users import UserResponse, UserSummary
 
 __all__ = [
     "AuthResponse",
+    "DocumentChunkResponse",
     "DocumentResponse",
     "DocumentUpdate",
     "DocumentUploadResponse",
     "DocumentVersionResponse",
     "HealthResponse",
+    "IngestionJobResponse",
+    "IngestionTriggerResponse",
     "KnowledgeBaseCreate",
     "KnowledgeBaseResponse",
     "KnowledgeBaseUpdate",
