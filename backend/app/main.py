@@ -50,7 +50,7 @@ def create_application() -> FastAPI:
 
     app = FastAPI(
         title=f"{settings.APP_NAME} API",
-        description="Production-oriented modular RAG platform foundation.",
+        description="Production-oriented modular RAG platform - Phase 2: Auth & Multi-Tenancy.",
         version=settings.VERSION,
         docs_url="/docs",
         redoc_url="/redoc",
