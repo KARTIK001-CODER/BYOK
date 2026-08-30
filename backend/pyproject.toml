@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ragforge"
-version = "0.2.0"
+version = "0.3.0"
 description = "RAGForge - Production-oriented modular RAG platform backend"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -24,6 +24,7 @@ dependencies = [
     "pyjwt>=2.9.0",
     "argon2-cffi>=23.1.0",
     "email-validator>=2.2.0",
+    "python-multipart>=0.0.18",
 ]
 
 [project.optional-dependencies]

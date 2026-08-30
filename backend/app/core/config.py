@@ -1,18 +1,12 @@
 from functools import lru_cache
 from typing import Any, Literal
 
-from pydantic import field_validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    """
-    Application configuration loaded from environment variables and .env file.
-
-    IMPORTANT: This class contains ONLY server-level configuration.
-    User-provided LLM/Embedding provider API keys will NEVER be placed here.
-    In later phases, provider keys will be securely encrypted in the database (BYOK).
-    """
+    """Application configuration loaded from environment variables."""
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -21,55 +15,70 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # Core Application Settings
-    APP_ENV: Literal["development", "testing", "staging", "production"] = "development"
+    # App Info
     APP_NAME: str = "RAGForge"
-    DEBUG: bool = True
-    VERSION: str = "0.2.0"
+    APP_ENV: Literal["development", "staging", "production", "test"] = "development"
+    DEBUG: bool = False
+    VERSION: str = "0.3.0"
 
     # Server Settings
     HOST: str = "0.0.0.0"
     PORT: int = 8000
     API_V1_STR: str = "/api/v1"
+    CORS_ORIGINS: list[str] = Field(
+        default_factory=lambda: [
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+        ]
+    )
+
+    # Database Settings (Neon PostgreSQL / Local Postgres)
+    DATABASE_URL: str = Field(
+        default="postgresql+asyncpg://postgres:postgres@localhost:5432/ragforge"
+    )
+    DB_POOL_SIZE: int = 10
+    DB_MAX_OVERFLOW: int = 20
+    DB_POOL_TIMEOUT: int = 30
+    DB_POOL_RECYCLE: int = 1800
+    DB_ECHO: bool = False
+
+    # Security & Auth Settings
+    JWT_SECRET_KEY: str = Field(
+        default="change-this-to-a-super-secret-hex-key-minimum-32-chars-for-dev"
+    )
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+
+    # Object Storage & Upload Settings
+    STORAGE_BACKEND: Literal["local", "s3", "r2", "gcs"] = "local"
+    STORAGE_LOCAL_DIR: str = "data/storage"
+    MAX_UPLOAD_SIZE_MB: int = 25
+
+    # BYOK Master Encryption Key Placeholder (Deferred to Future Phases)
+    API_KEY_ENCRYPTION_KEY: str = Field(
+        default="change-this-to-a-32-byte-hex-key-for-byok-encryption-vault"
+    )
 
     # Logging Settings
     LOG_LEVEL: str = "INFO"
     LOG_FORMAT: Literal["text", "json"] = "text"
 
-    # PostgreSQL + pgvector Database Settings
-    DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/ragforge"
-    DB_POOL_SIZE: int = 10
-    DB_MAX_OVERFLOW: int = 20
-    DB_POOL_TIMEOUT: int = 30
-
-    # CORS Settings
-    CORS_ORIGINS: list[str] = [
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ]
-
-    # Authentication & JWT Settings (Phase 2)
-    JWT_SECRET_KEY: str = "ragforge-dev-secret-key-change-in-production-min32chars!"
-    JWT_ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
-    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
-
-    # Future BYOK Encryption Key Separation
-    API_KEY_ENCRYPTION_KEY: str | None = None
-
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
-    def assemble_cors_origins(cls, v: Any) -> list[str]:
-        if isinstance(v, str) and not v.startswith("["):
-            return [i.strip() for i in v.split(",") if i.strip()]
-        elif isinstance(v, list):
-            return v
-        return []
+    def parse_cors_origins(cls, value: Any) -> list[str]:
+        if isinstance(value, str):
+            return [origin.strip() for origin in value.split(",") if origin.strip()]
+        return value
+
+    @property
+    def max_upload_size_bytes(self) -> int:
+        return self.MAX_UPLOAD_SIZE_MB * 1024 * 1024
 
 
 @lru_cache
 def get_settings() -> Settings:
-    """Return cached application settings singleton."""
+    """Singleton getter for cached application settings."""
     return Settings()
