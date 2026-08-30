@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     APP_ENV: Literal["development", "testing", "staging", "production"] = "development"
     APP_NAME: str = "RAGForge"
     DEBUG: bool = True
-    VERSION: str = "0.1.0"
+    VERSION: str = "0.2.0"
 
     # Server Settings
     HOST: str = "0.0.0.0"
@@ -49,6 +49,15 @@ class Settings(BaseSettings):
         "http://localhost:5173",
         "http://127.0.0.1:5173",
     ]
+
+    # Authentication & JWT Settings (Phase 2)
+    JWT_SECRET_KEY: str = "ragforge-dev-secret-key-change-in-production-min32chars!"
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+
+    # Future BYOK Encryption Key Separation
+    API_KEY_ENCRYPTION_KEY: str | None = None
 
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod

@@ -1,12 +1,20 @@
 """
 SQLAlchemy ORM models package.
-
-Future phases will define:
-- Document & Chunk models
-- Embedding & Vector Index models
-- User & Key Vault models (BYOK encrypted credentials)
 """
 
 from app.db.base import Base
+from app.models.membership import OrganizationMembership, OrganizationRole
+from app.models.organization import Organization
+from app.models.provider_credential import ProviderCredential
+from app.models.refresh_token import RefreshToken
+from app.models.user import User
 
-__all__ = ["Base"]
+__all__ = [
+    "Base",
+    "User",
+    "Organization",
+    "OrganizationMembership",
+    "OrganizationRole",
+    "RefreshToken",
+    "ProviderCredential",
+]

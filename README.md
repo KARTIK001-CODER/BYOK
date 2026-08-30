@@ -6,13 +6,16 @@
 
 ## 📌 Project Status
 
-**Current Status**: **Phase 1 Complete (Foundation & Architecture)**.
-- Established clean engineering architecture, FastAPI application factory, and async database layer.
-- Configured PostgreSQL 16 with the `pgvector` extension and initial Alembic migrations.
-- Implemented structured logging with request ID tracking (`X-Request-ID`), centralized error handling, and health/readiness endpoints.
-- Configured Docker Compose, Ruff linting/formatting, and automated pytest suite.
+**Current Status**: **Phase 2 Complete (Authentication, Multi-Tenancy & BYOK-Ready Database)**.
+- Implemented user accounts with Argon2id password hashing and normalized email uniqueness.
+- Implemented JWT access tokens (15m) and rotating refresh tokens (7d) with automatic reuse detection.
+- Implemented multi-tenant organizations with automatic default workspace provisioning upon registration.
+- Implemented centralized Role-Based Access Control (RBAC): `OWNER`, `ADMIN`, `MEMBER`.
+- Implemented and verified strict tenant isolation (cross-tenant access rejected).
+- Created `ProviderCredential` database schema for future BYOK credential ciphertext storage.
+- All Phase 1 infrastructure preserved, tested, and verified.
 
-*Note: Document ingestion, chunking, vector indexing, reranking, evaluation, and user authentication are planned for upcoming phases.*
+*Note: Actual BYOK encryption algorithms, provider SDK integrations (Groq, OpenAI, Gemini), document ingestion, and vector retrieval are planned for upcoming phases.*
 
 ---
 
@@ -22,7 +25,8 @@
 - **Web Framework**: FastAPI (Async ASGI)
 - **Database & Vector Engine**: PostgreSQL 16 + `pgvector`
 - **ORM & Migrations**: SQLAlchemy 2.0 (AsyncIO) & Alembic
-- **Configuration & Validation**: Pydantic v2 & `pydantic-settings`
+- **Security & Authentication**: Argon2id (`argon2-cffi`), PyJWT, Pydantic v2
+- **Configuration & Validation**: `pydantic-settings` & `email-validator`
 - **Containerization**: Docker & Docker Compose
 - **Quality & Testing**: Ruff (Linter & Formatter), pytest, pytest-asyncio, HTTPX
 
@@ -35,19 +39,28 @@ ragforge/
 ├── backend/
 │   ├── app/
 │   │   ├── api/
+│   │   │   ├── deps.py               # Authentication & RBAC FastAPI dependencies
 │   │   │   ├── router.py             # Top-level API router aggregator
 │   │   │   └── v1/
-│   │   │       └── health.py         # Liveness, readiness, and system info endpoints
+│   │   │       ├── health.py         # Liveness, readiness, and system info endpoints
+│   │   │       ├── auth.py           # Register, login, refresh, logout, me endpoints
+│   │   │       └── organizations.py  # Tenant-isolated organization endpoints
 │   │   ├── core/
-│   │   │   ├── config.py             # Server settings via Pydantic BaseSettings
+│   │   │   ├── config.py             # Server settings & JWT token expiration configs
+│   │   │   ├── security.py           # Argon2id hashing, JWT encoding, refresh token hashing
 │   │   │   ├── logging.py            # Structured logging with request ID context
 │   │   │   └── exceptions.py         # Centralized error handlers & envelopes
 │   │   ├── db/
 │   │   │   ├── base.py               # DeclarativeBase, UUID & timestamp mixins
 │   │   │   └── session.py            # Async engine, connection pool & sessionmaker
-│   │   ├── models/                   # SQLAlchemy ORM models
-│   │   ├── schemas/                  # Pydantic schemas (Request / Response)
-│   │   ├── services/                 # Domain service layer (HealthService)
+│   │   ├── models/
+│   │   │   ├── user.py               # User account model (normalized email, is_active)
+│   │   │   ├── organization.py       # Organization tenant model (slug, name)
+│   │   │   ├── membership.py         # OrganizationMembership model (OWNER, ADMIN, MEMBER)
+│   │   │   ├── refresh_token.py      # RefreshToken model (rotation & revocation)
+│   │   │   └── provider_credential.py# ProviderCredential model (BYOK DB foundation)
+│   │   ├── schemas/                  # Pydantic schemas (Auth, Users, Organizations, Health)
+│   │   ├── services/                 # Domain service layer (Auth, Users, Organizations, Health)
 │   │   └── main.py                   # FastAPI app entry point & lifespan
 │   ├── alembic/                      # Database migrations (async)
 │   ├── tests/                        # Automated unit & integration tests
@@ -58,12 +71,13 @@ ragforge/
 │   └── postgres/
 │       └── init.sql                  # PostgreSQL extension initializations
 ├── docs/
-│   ├── ARCHITECTURE.md               # Architecture details & BYOK design
+│   ├── ARCHITECTURE.md               # Architecture details, Auth & BYOK design
 │   └── DEVELOPMENT.md                # Development, tooling & migration workflows
 ├── .github/workflows/ci.yml          # GitHub Actions CI workflow
 ├── docker-compose.yml                # Multi-container orchestration (Backend + Postgres)
 ├── .env.example                      # Server environment configuration template
 ├── Makefile                          # Development shortcut commands
+├── CHANGELOG.md                      # Release changelog
 └── README.md
 ```
 
@@ -89,7 +103,9 @@ Endpoints available:
 - **API Documentation (Swagger UI)**: `http://localhost:8000/docs`
 - **Liveness Probe**: `http://localhost:8000/health`
 - **Readiness Probe**: `http://localhost:8000/ready`
-- **API v1 Info**: `http://localhost:8000/api/v1/info`
+- **Registration**: `POST http://localhost:8000/api/v1/auth/register`
+- **Login**: `POST http://localhost:8000/api/v1/auth/login`
+- **Current User Profile**: `GET http://localhost:8000/api/v1/auth/me`
 
 ---
 
@@ -138,22 +154,22 @@ ruff format .
 
 ---
 
-## 🔒 Security & BYOK Architecture
+## 🔒 Security & Multi-Tenancy Architecture
 
-- **No Secrets in Git**: `.env` is ignored. `.env.example` contains only server infrastructure settings.
-- **BYOK (Bring Your Own Key)**: In subsequent phases, user/organization provider keys (e.g., OpenAI, Groq, Anthropic, Gemini) will be encrypted and stored in PostgreSQL, decrypted only in-memory per request.
-- **Fail-Safe Responses**: Stack traces and raw internal error details are sanitized and never exposed to clients.
-- **Request Tracing**: All requests carry a unique `X-Request-ID` attached to structured server logs.
+- **Argon2id Password Hashing**: Passwords are hashed with salt using Argon2id. Plaintext passwords and hashes are never returned or logged.
+- **JWT & Token Rotation**: 15-minute access tokens + 7-day rotating refresh tokens. Reusing a revoked refresh token triggers reuse detection and revokes all active tokens for the user.
+- **Tenant Isolation**: Every organization is an isolated tenant. The backend strictly checks membership and role server-side; cross-tenant access is denied (`403 Forbidden`).
+- **BYOK Preparation**: Database schema is established with `provider_credentials` scoped by organization, separate from server secrets.
 
 ---
 
 ## 🗺️ Roadmap
 
 - [x] **Phase 1: Project Foundation** (FastAPI, PostgreSQL + pgvector, Alembic, Logging, Healthchecks, Docker)
-- [ ] **Phase 2: Authentication & BYOK Vault** (Multi-tenant orgs, AES-256-GCM secret encryption, key management)
-- [ ] **Phase 3: Document Ingestion & Chunking Pipeline** (Parsers, semantic & recursive chunking, metadata)
-- [ ] **Phase 4: Embeddings & Vector Indexing** (Multi-provider embeddings, HNSW / IVFFlat indexing)
+- [x] **Phase 2: Authentication & Multi-Tenancy** (User accounts, Argon2id, JWT, Token Rotation, Organizations, RBAC, Tenant Isolation, BYOK DB Schema)
+- [ ] **Phase 3: Document Ingestion & Chunking Pipeline** (Parsers, semantic & recursive chunking, metadata extraction)
+- [ ] **Phase 4: Embeddings & Vector Indexing** (Multi-provider embeddings, HNSW / IVFFlat indexing in pgvector)
 - [ ] **Phase 5: Hybrid Retrieval & Reranking** (Dense vector search + BM25 sparse search + Cohere/Cross-Encoder reranking)
-- [ ] **Phase 6: RAG Generation & LLM Gateway** (Context assembly, streaming responses, citations)
+- [ ] **Phase 6: RAG Generation & LLM Gateway** (Context assembly, streaming responses, citations, BYOK secret vault)
 - [ ] **Phase 7: Grounding Verification & Evaluation** (Hallucination detection, RAGAS metrics)
 - [ ] **Phase 8: Frontend UI** (Modern Next.js / Vite SPA for document management & RAG playground)

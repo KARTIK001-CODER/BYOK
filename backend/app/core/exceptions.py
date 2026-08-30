@@ -38,12 +38,42 @@ class NotFoundException(AppException):
         )
 
 
+class UnauthorizedException(AppException):
+    def __init__(self, message: str = "Unauthorized", details: Any = None) -> None:
+        super().__init__(
+            message=message,
+            code="UNAUTHORIZED",
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            details=details,
+        )
+
+
+class ForbiddenException(AppException):
+    def __init__(self, message: str = "Forbidden", details: Any = None) -> None:
+        super().__init__(
+            message=message,
+            code="FORBIDDEN",
+            status_code=status.HTTP_403_FORBIDDEN,
+            details=details,
+        )
+
+
+class ConflictException(AppException):
+    def __init__(self, message: str = "Resource conflict", details: Any = None) -> None:
+        super().__init__(
+            message=message,
+            code="CONFLICT",
+            status_code=status.HTTP_409_CONFLICT,
+            details=details,
+        )
+
+
 class ValidationException(AppException):
     def __init__(self, message: str = "Validation error", details: Any = None) -> None:
         super().__init__(
             message=message,
             code="VALIDATION_ERROR",
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=422,
             details=details,
         )
 
@@ -105,6 +135,7 @@ def register_exception_handlers(app: FastAPI) -> None:
             status.HTTP_404_NOT_FOUND: "NOT_FOUND",
             status.HTTP_401_UNAUTHORIZED: "UNAUTHORIZED",
             status.HTTP_403_FORBIDDEN: "FORBIDDEN",
+            status.HTTP_409_CONFLICT: "CONFLICT",
             status.HTTP_400_BAD_REQUEST: "BAD_REQUEST",
             status.HTTP_405_METHOD_NOT_ALLOWED: "METHOD_NOT_ALLOWED",
             status.HTTP_503_SERVICE_UNAVAILABLE: "SERVICE_UNAVAILABLE",
@@ -131,7 +162,7 @@ def register_exception_handlers(app: FastAPI) -> None:
         return create_error_response(
             code="VALIDATION_ERROR",
             message="Request validation failed.",
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=422,
             details=exc.errors(),
         )
 

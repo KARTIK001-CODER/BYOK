@@ -2,15 +2,15 @@
 
 FastAPI asynchronous backend for RAGForge.
 
-## Structure
-- `app/api/`: Versioned API endpoints (`/api/v1`)
-- `app/core/`: Configuration, structured logging, centralized exception handlers
+## Phase 2 Modules
+- `app/api/`: Versioned API endpoints (`/api/v1/auth`, `/api/v1/organizations`, `/api/v1/health`)
+- `app/core/`: Configuration, structured logging, Argon2id security, JWT tokens, centralized exception handlers
 - `app/db/`: Async SQLAlchemy 2.0 database engine, session management, declarative models
-- `app/models/`: Database ORM models
-- `app/schemas/`: Pydantic request/response validation schemas
-- `app/services/`: Domain services (e.g. `HealthService`)
-- `alembic/`: Database migrations
-- `tests/`: Automated pytest test suite
+- `app/models/`: Database ORM models (`User`, `Organization`, `OrganizationMembership`, `RefreshToken`, `ProviderCredential`)
+- `app/schemas/`: Pydantic request/response validation schemas (`Auth`, `Users`, `Organizations`, `Health`)
+- `app/services/`: Domain services (`AuthService`, `UserService`, `OrganizationService`, `TokenService`, `PasswordService`, `HealthService`)
+- `alembic/`: Database migrations (`0001_enable_pgvector.py`, `0002_auth_and_multitenancy.py`)
+- `tests/`: Comprehensive pytest automated test suite
 
 ## Quick Commands
 ```bash

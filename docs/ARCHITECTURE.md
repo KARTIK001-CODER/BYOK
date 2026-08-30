@@ -1,17 +1,17 @@
 # RAGForge Architecture Documentation
 
-RAGForge is a production-grade, modular Retrieval-Augmented Generation (RAG) platform designed for reliability, scalability, and strict security compliance.
+RAGForge is a production-grade, modular Retrieval-Augmented Generation (RAG) platform designed for reliability, scalability, multi-tenancy, and strict security compliance.
 
 ---
 
-## Phase 1 Implemented Architecture
+## Phase 2 Implemented Architecture: Authentication & Multi-Tenancy
 
-Phase 1 establishes the clean engineering foundation, API routing, database layer, configuration management, structured logging, and health checking mechanisms.
+Phase 2 establishes the secure identity, multi-tenant isolation, and authorization foundation for RAGForge.
 
 ```
 Client (HTTP / REST)
        │
-       ▼ [X-Request-ID Header]
+       ▼ [Authorization: Bearer <JWT>] [X-Request-ID Header]
 ┌───────────────────────────────────────────────────────────┐
 │                      FastAPI Gateway                      │
 │                                                           │
@@ -22,92 +22,105 @@ Client (HTTP / REST)
                               │
                               ▼
 ┌───────────────────────────────────────────────────────────┐
+│                 Authentication & RBAC Layer               │
+│                                                           │
+│  ├── get_current_user (JWT Validation: sub, exp, type)    │
+│  ├── require_organization_membership (Tenant Isolation)   │
+│  └── require_role (RBAC: OWNER > ADMIN > MEMBER)          │
+└─────────────────────────────┬─────────────────────────────┘
+                              │
+                              ▼
+┌───────────────────────────────────────────────────────────┐
 │                      API Layer (/api/v1)                  │
 │                                                           │
-│  ├── /health (Liveness Probe)                             │
-│  ├── /ready  (Readiness Probe)                            │
-│  └── /info   (System Metadata)                            │
+│  ├── /auth/register   (User + Default Workspace creation)│
+│  ├── /auth/login      (Argon2id verification + Tokens)   │
+│  ├── /auth/refresh    (Rotating Refresh Token + Reuse Det)│
+│  ├── /auth/logout     (Idempotent Token Revocation)       │
+│  ├── /auth/me         (Safe profile info)                 │
+│  ├── /organizations   (List & Create Tenant Workspaces)   │
+│  └── /health, /ready  (Infrastructure probes)             │
 └─────────────────────────────┬─────────────────────────────┘
                               │
                               ▼
 ┌───────────────────────────────────────────────────────────┐
 │                      Service Layer                        │
 │                                                           │
-│  └── HealthService (Infrastructure verification)          │
+│  ├── AuthService        (Registration, Login, Tokens)     │
+│  ├── UserService        (User lookup, email normalization)│
+│  ├── OrganizationService(Slug generation, memberships)    │
+│  ├── TokenService       (Rotation, SHA-256 hash, reuse)   │
+│  └── PasswordService    (Argon2id hashing & verification) │
 └─────────────────────────────┬─────────────────────────────┘
                               │
                               ▼
 ┌───────────────────────────────────────────────────────────┐
 │                      Database Layer                       │
 │                                                           │
-│  ├── SQLAlchemy 2.0 Async Session Management              │
-│  ├── Connection Pooling (asyncpg)                         │
-│  └── Alembic Migrations                                   │
+│  ├── users (UUID PK, normalized email, password_hash)     │
+│  ├── organizations (UUID PK, unique slug, tenant root)    │
+│  ├── organization_memberships (User <-> Org, RBAC role)   │
+│  ├── refresh_tokens (SHA-256 hash, rotation linkage)      │
+│  └── provider_credentials (BYOK DB ciphertext preparation)│
 └─────────────────────────────┬─────────────────────────────┘
                               │
                               ▼
 ┌───────────────────────────────────────────────────────────┐
 │                   PostgreSQL 16 + pgvector                │
-│                                                           │
-│  ├── vector extension                                     │
-│  └── uuid-ossp extension                                  │
 └───────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Future Target Architecture (Planned - Phases 2+)
+## Multi-Tenancy & Tenant Isolation
 
-> [!NOTE]
-> The following diagram represents the planned evolution for upcoming phases. These components (Ingestion, Hybrid Retrieval, Reranker, LLM Gateway, BYOK Secret Store, Redis, Workers) are intentionally **not** implemented in Phase 1.
+Multi-tenancy in RAGForge is structured around the `Organization` entity:
 
+```text
+User
+ │
+ ├── Organization A (Role: OWNER)
+ │      ├── Knowledge Bases (Future)
+ │      ├── Documents (Future)
+ │      └── Provider Credentials (BYOK DB Ready)
+ │
+ └── Organization B (Role: MEMBER)
+        ├── Knowledge Bases (Future)
+        ├── Documents (Future)
+        └── Provider Credentials (BYOK DB Ready)
 ```
-                    ┌────────────────────────┐
-                    │     Frontend (SPA)     │
-                    └───────────┬────────────┘
-                                │
-                                ▼
-┌──────────────────────────────────────────────────────────────────────────┐
-│                             FastAPI Gateway                              │
-│                                                                          │
-│  ├── Auth & Organization RBAC                                            │
-│  ├── Rate Limiting & Audit Logging                                       │
-│  └── BYOK Secret Decryption (In-Memory Session)                          │
-└───────────────────────────────────┬──────────────────────────────────────┘
-                                    │
-                                    ▼
-┌──────────────────────────────────────────────────────────────────────────┐
-│                           RAG Orchestrator                               │
-│                                                                          │
-│  ├── 1. Query Processing (Decomposition, Rewriting, HyDE)                │
-│  ├── 2. Hybrid Retrieval (Dense Vector + Sparse Full-Text BM25)          │
-│  ├── 3. Reranking (Cross-Encoder / Cohere Rerank)                        │
-│  ├── 4. Context Window Assembly & Token Budgeting                        │
-│  ├── 5. Multi-Provider LLM Gateway (Groq, OpenAI, Anthropic, Gemini)    │
-│  └── 6. Grounding & Citation Verification (Faithfulness check)           │
-└──────────────┬────────────────────┬───────────────────────┬──────────────┘
-               │                    │                       │
-               ▼                    ▼                       ▼
-    ┌──────────────────┐  ┌──────────────────┐   ┌──────────────────────┐
-    │  PostgreSQL 16   │  │   Redis Cache    │   │  Background Workers  │
-    │    + pgvector    │  │ (Query Cache &   │   │ (Document ingestion, │
-    │ (Vectors & Rel)  │  │  Session Store)  │   │  chunking, embed)    │
-    └──────────────────┘  └──────────────────┘   └──────────────────────┘
-```
+
+### Invariants:
+1. **Server-Side Verification**: Route handlers never rely on client-supplied organization identifiers without executing `require_organization_membership`.
+2. **Access Rejection**: If a user attempts to read or modify resources in an organization they do not belong to, the request is immediately rejected (`403 Forbidden` / `404 Not Found`).
+3. **Cascading Deletions**: Deleting an organization cascades to all memberships, knowledge bases, documents, and credentials associated with that organization.
 
 ---
 
-## Bring Your Own Key (BYOK) Security Architecture
+## Authentication & Token Lifecycle
 
-A core architectural tenet of RAGForge is zero plaintext exposure of user LLM API keys:
+### 1. Registration Flow
+1. User provides `email`, `password`, `full_name`.
+2. Email is normalized to lowercase and checked for uniqueness.
+3. Password is validated for minimum strength and hashed using Argon2id.
+4. An `Organization` is created with a unique slug (e.g. `user-workspace`).
+5. An `OrganizationMembership` is created with `Role.OWNER`.
+6. Access token (15m) and rotating refresh token (7d) are issued.
+7. Atomic commit; on failure, transaction is rolled back completely.
 
-1. **Server Environment Separation**: Server `.env` files contain **only** server operational configuration (`APP_ENV`, `DATABASE_URL`, `LOG_LEVEL`, `CORS_ORIGINS`).
-2. **Encrypted Vault Storage**: User API keys for model providers (OpenAI, Groq, Anthropic, Google) are supplied per user/organization and encrypted before storing in the database using strong encryption (AES-256-GCM).
-3. **In-Memory Decryption**: Keys are decrypted exclusively in ephemeral worker/request memory at the point of dispatching an inference call, ensuring they are never logged or committed to disk.
+### 2. Refresh Token Rotation & Reuse Detection
+- Raw refresh tokens are 64-character cryptographically secure random strings.
+- Only the SHA-256 digest (`token_hash`) is stored in the database.
+- Upon refresh:
+  - If valid: Old token is revoked (`revoked_at = now()`), new token is issued, and `old_token.replaced_by_token_id = new_token.id`.
+  - If a revoked token is presented again (indicating token compromise or replay): The server logs `[SECURITY_EVENT] Refresh token reuse detected` and revokes all active refresh tokens for the user.
 
 ---
 
-## Architectural Invariants
-- **Non-blocking I/O**: All database access and network calls use asynchronous programming (`async`/`await`, `asyncpg`, `AsyncSession`).
-- **Traceability**: Every HTTP request receives an `X-Request-ID` attached to structured log outputs.
-- **Fail-Safe Centralized Error Handling**: Internal stack traces and credentials are never returned in public HTTP responses.
+## Bring Your Own Key (BYOK) Database Foundation
+
+The `provider_credentials` table prepares the database for future multi-provider AI credentials (Groq, OpenAI, Gemini, Cohere):
+- Scoped strictly per `organization_id`.
+- Stores `encrypted_api_key` (reserved for future AES-256-GCM ciphertext).
+- Encryption key will use `API_KEY_ENCRYPTION_KEY`, completely separated from `JWT_SECRET_KEY`.
+- *Note: Actual key submission, encryption/decryption, and model provider SDKs are intentionally deferred to future phases.*
