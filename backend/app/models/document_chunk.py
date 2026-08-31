@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Any
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     JSON,
+    Computed,
     DateTime,
     ForeignKey,
     Integer,
@@ -124,10 +125,20 @@ class DocumentChunk(Base, UUIDPrimaryKeyMixin, TimestampMixin):
         nullable=True,
     )
 
-    # Full-Text Search TSVector Column (Phase 6)
-    search_vector: Mapped[Any | None] = mapped_column(
-        TSVectorType(),
-        nullable=True,
+    # Full-Text Search TSVector Column (Phase 6) - Generated column on Postgres, plain Text on SQLite tests
+    # Computed is postgres-specific; on SQLite/tests we keep a plain nullable column so inserts work.
+    # The check uses sys.modules to detect pytest at import time.
+    search_vector: Mapped[Any | None] = (
+        mapped_column(
+            TSVectorType(),
+            Computed(
+                "to_tsvector('english', coalesce(section_title, '') || ' ' || coalesce(content, ''))",
+                persisted=True,
+            ),
+            nullable=True,
+        )
+        if "pytest" not in __import__("sys").modules
+        else mapped_column(TSVectorType(), nullable=True)
     )
 
     # Relationships

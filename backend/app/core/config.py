@@ -44,6 +44,28 @@ class Settings(BaseSettings):
     DB_POOL_RECYCLE: int = 1800
     DB_ECHO: bool = False
 
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def normalize_database_url(cls, v: str) -> str:
+        if isinstance(v, str):
+            if v.startswith("postgres://"):
+                v = v.replace("postgres://", "postgresql+asyncpg://", 1)
+            elif v.startswith("postgresql://") and not v.startswith("postgresql+"):
+                v = v.replace("postgresql://", "postgresql+asyncpg://", 1)
+
+            # asyncpg does not accept sslmode or channel_binding query params
+            if "sslmode=" in v:
+                v = v.replace("sslmode=require", "ssl=require").replace(
+                    "sslmode=prefer", "ssl=prefer"
+                )
+            if "channel_binding=" in v:
+                import re
+
+                v = re.sub(r"[&?]channel_binding=[^&]*", "", v)
+                if "?" not in v and "&" in v:
+                    v = v.replace("&", "?", 1)
+        return v
+
     # Security & Auth Settings
     JWT_SECRET_KEY: str = Field(
         default="change-this-to-a-super-secret-hex-key-minimum-32-chars-for-dev"
@@ -79,6 +101,18 @@ class Settings(BaseSettings):
     MAX_CANDIDATE_K: int = 500
     RRF_K: int = 60
     MAX_QUERY_LENGTH: int = 2000
+
+    # Generation Engine & LLM Provider Settings (Phase 7)
+    DEFAULT_LLM_PROVIDER: Literal["groq", "openai", "gemini", "mock"] = "groq"
+    DEFAULT_LLM_MODEL: str = "qwen/qwen3.8-27b"
+    GROQ_API_KEY: str | None = None
+    OPENAI_API_KEY: str | None = None
+    GEMINI_API_KEY: str | None = None
+    LLM_TIMEOUT_SECONDS: int = 60
+    MAX_CONTEXT_TOKENS: int = 12000
+    MAX_HISTORY_MESSAGES: int = 10
+    DEFAULT_TEMPERATURE: float = 0.2
+    MAX_GENERATION_TOKENS: int = 4096
 
     # BYOK Master Encryption Key Placeholder (Deferred to Future Phases)
     API_KEY_ENCRYPTION_KEY: str = Field(
