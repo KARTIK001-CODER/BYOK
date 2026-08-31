@@ -103,6 +103,9 @@ RAGForge is a production-grade, modular Retrieval-Augmented Generation (RAG) pla
                 │                                 │ embedding (VECTOR(384))         │
                 │                                 │ embedding_model, provider, dim  │
                 │                                 │ embedded_at (TIMESTAMP)         │
+                │                                 │ search_vector (TSVECTOR)        │
+                │                                 │ GIN INDEX (search_vector)       │
+                │                                 │ IX(organization_id, kb_id)     │
                 └────────────────────────────────►│ UQ(version_id, chunk_index)     │
                                                   │ HNSW INDEX (vector_cosine_ops)  │
                                                   └─────────────────────────────────┘
@@ -110,37 +113,69 @@ RAGForge is a production-grade, modular Retrieval-Augmented Generation (RAG) pla
 
 ---
 
-## Embedding & Vector Storage Architecture (Phase 5)
+## Retrieval Engine & Hybrid Search Architecture (Phase 6)
 
-### 1. Provider Abstraction (`services/embeddings/`)
-- `BaseEmbeddingProvider` interface decouples the application from specific AI vendors.
-- Exposes `embed_documents` (for passage chunks) and `embed_query` (with query prefix instructions).
-- **Default Local Provider**: `LocalEmbeddingProvider` using `fastembed` with `BAAI/bge-small-en-v1.5` (dimension: 384, cosine distance metric).
-- Model is loaded once as a cached singleton at startup for low memory overhead and zero API cost.
+### 1. Multi-Modal Retrieval Strategy
 
-### 2. Database & Vector Indexing
-- Native pgvector column: `document_chunks.embedding vector(384)`.
-- Model metadata columns: `embedding_model`, `embedding_provider`, `embedding_dimension`, `embedded_at`.
-- Cosine Distance Index: `CREATE INDEX ix_document_chunks_embedding_hnsw ON document_chunks USING hnsw (embedding vector_cosine_ops) WITH (m = 16, ef_construction = 64);`.
+```text
+                         User Query
+                              │
+                              ▼
+                     Retrieval Service
+                              │
+                 ┌────────────┴────────────┐
+                 │                         │
+                 ▼                         ▼
+          Query Embedding             PostgreSQL FTS
+                 │                         │
+                 ▼                         ▼
+             pgvector                 Keyword Search
+                 │                         │
+                 └────────────┬────────────┘
+                              ▼
+                         RRF Fusion
+                              │
+                              ▼
+                        Deduplication
+                              │
+                              ▼
+                        Top-K Results
+                              │
+                              ▼
+                       Future Reranker
+                              │
+                              ▼
+                         Future LLM
+```
 
-### 3. Batching, Idempotency & Resumability
-- Batched inference: Processed in chunks of `EMBEDDING_BATCH_SIZE` (default: 32).
-- Model-aware idempotency: Chunks already embedded with the requested model are skipped.
-- Progress updates are committed per batch to `EmbeddingJob.processed_chunks`. If interrupted, retry resumes missing chunks.
+- **Semantic Vector Search**: pgvector cosine distance (`<=>`) using `BAAI/bge-small-en-v1.5` embeddings.
+- **PostgreSQL Full-Text Search (FTS)**: Native `tsvector` generated column on `(coalesce(section_title, '') || ' ' || content)`, GIN indexed, ranked via `ts_rank_cd` (Cover Density).
+- **Hybrid Search**: Concurrent or resilient dual-branch candidate retrieval with fallback protection.
+- **Reciprocal Rank Fusion (RRF)**:
+  $$RRF(d) = \sum_{m \in M} \frac{1}{RRF\_K + rank_m(d)}$$
+  (Default $RRF\_K = 60$). Combines disparate scoring scales into a single normalized monotonic ranking.
+
+### 2. Tenant Isolation & Version Integrity
+- **Database-Level Filtering**: All retrieval queries strictly filter `WHERE document_chunks.organization_id = :organization_id` at the database level.
+- **Knowledge Base Authorization**: Explicit validation that all requested knowledge base IDs belong to the caller's organization before query execution.
+- **Document Version Integrity**: Filters ensure only active chunks from the latest version (`document_versions.version_number == documents.current_version`) of `READY` documents are retrieved.
+
+### 3. Evaluation & Golden Benchmark
+- Offline development benchmark evaluating **Recall@K**, **Precision@K**, and **MRR** across Vector, Keyword, and Hybrid search strategies using `python -m app.evaluation.retrieval`.
 
 ---
 
-## Future Retrieval & Generation Pipeline
+## Future Generation Pipeline
 
 ```text
-Phase 5 (Completed)
-Dense Vectors in PostgreSQL pgvector (HNSW Index)
+Phase 6 (Completed)
+Hybrid Retrieval (pgvector + PostgreSQL FTS + RRF)
         │
         ▼
-Phase 6 (Next)
-Hybrid Retrieval (Vector Similarity Search + BM25 Full-Text Search + RRF + Cross-Encoder Reranker)
+Phase 7 (Next)
+RAG Generation (Prompt Construction, Context Synthesis, Citations & Grounding, Provider Integration)
         │
         ▼
-Phase 7
-RAG Generation (Grounding Context + Citations + LLM Provider Integration)
+Phase 8
+BYOK Vault & Master Encryption (AES-256-GCM Vault for Groq, OpenAI, Anthropic, Gemini)
 ```

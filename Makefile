@@ -1,15 +1,16 @@
-.PHONY: help up down dev test lint format migrate revision clean
+.PHONY: help up down dev test lint format migrate evaluate-retrieval clean
 
 help:
 	@echo "RAGForge Management Commands:"
-	@echo "  make up        - Start Docker Compose containers"
-	@echo "  make down      - Stop Docker Compose containers"
-	@echo "  make dev       - Start local Uvicorn dev server"
-	@echo "  make test      - Run pytest suite"
-	@echo "  make lint      - Run Ruff linter"
-	@echo "  make format    - Run Ruff formatter"
-	@echo "  make migrate   - Apply Alembic migrations"
-	@echo "  make clean     - Remove Python cache files"
+	@echo "  make up                 - Start Docker Compose containers"
+	@echo "  make down               - Stop Docker Compose containers"
+	@echo "  make dev                - Start local Uvicorn dev server"
+	@echo "  make test               - Run pytest suite"
+	@echo "  make lint               - Run Ruff linter"
+	@echo "  make format             - Run Ruff formatter"
+	@echo "  make migrate            - Apply Alembic migrations"
+	@echo "  make evaluate-retrieval - Run IR benchmark evaluation across search modes"
+	@echo "  make clean              - Remove Python cache files"
 
 up:
 	docker compose up --build -d
@@ -31,6 +32,9 @@ format:
 
 migrate:
 	cd backend && alembic upgrade head
+
+evaluate-retrieval:
+	cd backend && python -m app.evaluation.retrieval
 
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +

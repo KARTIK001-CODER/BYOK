@@ -9,8 +9,10 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    TypeDecorator,
     UniqueConstraint,
 )
+from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -20,6 +22,18 @@ if TYPE_CHECKING:
     from app.models.document_version import DocumentVersion
     from app.models.knowledge_base import KnowledgeBase
     from app.models.organization import Organization
+
+
+class TSVectorType(TypeDecorator):
+    """Dialect-aware TSVECTOR type falling back to Text on non-PostgreSQL (e.g. SQLite)."""
+
+    impl = Text
+    cache_ok = True
+
+    def load_dialect_impl(self, dialect: Any) -> Any:
+        if dialect.name == "postgresql":
+            return dialect.type_descriptor(TSVECTOR())
+        return dialect.type_descriptor(Text())
 
 
 class DocumentChunk(Base, UUIDPrimaryKeyMixin, TimestampMixin):
@@ -107,6 +121,12 @@ class DocumentChunk(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     )
     embedded_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
+        nullable=True,
+    )
+
+    # Full-Text Search TSVector Column (Phase 6)
+    search_vector: Mapped[Any | None] = mapped_column(
+        TSVectorType(),
         nullable=True,
     )
 

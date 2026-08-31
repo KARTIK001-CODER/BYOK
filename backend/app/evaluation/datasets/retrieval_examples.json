@@ -1,0 +1,64 @@
+{
+  "description": "RAGForge Development Evaluation Dataset (IR Ground Truth)",
+  "documents": [
+    {
+      "id": "doc-auth",
+      "title": "Authentication and JWT Architecture",
+      "content": "RAGForge implements a dual-token authentication architecture using short-lived JWT access tokens and cryptographically secure refresh tokens. Access tokens have a 15-minute expiration and contain user ID and email in the JWT subject payload. Refresh tokens are stored in the database as SHA-256 hashes with automatic single-use rotation to prevent token replay attacks. Password hashing uses Argon2id with recommended memory and parallelism parameters."
+    },
+    {
+      "id": "doc-multitenancy",
+      "title": "Multi-Tenancy and RBAC Isolation",
+      "content": "Tenant isolation in RAGForge is enforced at the database level using organization_id foreign keys across all core models including knowledge bases, documents, and document chunks. Role-Based Access Control (RBAC) enforces OWNER, ADMIN, and MEMBER hierarchies. Users can belong to multiple organizations with distinct membership roles."
+    },
+    {
+      "id": "doc-ingestion",
+      "title": "Document Ingestion and Recursive Chunking",
+      "content": "The ingestion pipeline extracts raw text from PDF, DOCX, TXT, and Markdown documents. Text normalization standardizes unicode, whitespace, and strip null bytes. The recursive character chunker splits content into configurable chunks of default 1000 characters with 150 character overlap, preserving section titles and paragraph boundaries."
+    },
+    {
+      "id": "doc-vector-storage",
+      "title": "pgvector and Dense Embedding Generation",
+      "content": "Dense semantic vectors are generated using BAAI/bge-small-en-v1.5 producing 384-dimensional embeddings normalized for cosine distance. Chunks and embeddings are stored in PostgreSQL using pgvector with an HNSW cosine index configured with m=16 and ef_construction=64 for fast approximate nearest neighbor search."
+    },
+    {
+      "id": "doc-hybrid-search",
+      "title": "PostgreSQL Full-Text Search and Reciprocal Rank Fusion",
+      "content": "Hybrid search combines dense vector search with PostgreSQL native full-text search using tsvector, GIN indexes, and ts_rank_cd cover density ranking. Results from both search pipelines are fused using Reciprocal Rank Fusion (RRF) with constant k=60, eliminating score scale disparities and deduplicating by chunk_id."
+    }
+  ],
+  "queries": [
+    {
+      "query": "How are refresh tokens rotated and protected against replay attacks?",
+      "relevant_doc_ids": ["doc-auth"]
+    },
+    {
+      "query": "What embedding model and vector dimension does pgvector use?",
+      "relevant_doc_ids": ["doc-vector-storage"]
+    },
+    {
+      "query": "How is multi-tenant isolation enforced in database queries and RBAC?",
+      "relevant_doc_ids": ["doc-multitenancy"]
+    },
+    {
+      "query": "How does the recursive character chunker split text with overlap?",
+      "relevant_doc_ids": ["doc-ingestion"]
+    },
+    {
+      "query": "How does Reciprocal Rank Fusion combine vector and PostgreSQL full-text search?",
+      "relevant_doc_ids": ["doc-hybrid-search"]
+    },
+    {
+      "query": "Argon2id password hashing and JWT access token expiry",
+      "relevant_doc_ids": ["doc-auth"]
+    },
+    {
+      "query": "GIN index and ts_rank_cd cover density keyword search",
+      "relevant_doc_ids": ["doc-hybrid-search"]
+    },
+    {
+      "query": "HNSW cosine index parameters m=16 ef_construction=64",
+      "relevant_doc_ids": ["doc-vector-storage"]
+    }
+  ]
+}

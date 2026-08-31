@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     APP_NAME: str = "RAGForge"
     APP_ENV: Literal["development", "staging", "production", "test"] = "development"
     DEBUG: bool = False
-    VERSION: str = "0.5.0"
+    VERSION: str = "0.6.0"
 
     # Server Settings
     HOST: str = "0.0.0.0"
@@ -71,6 +71,15 @@ class Settings(BaseSettings):
     EMBEDDING_DEVICE: Literal["auto", "cpu", "cuda"] = "cpu"
     MAX_EMBEDDING_CHUNKS_PER_JOB: int = 10000
 
+    # Retrieval Engine & Hybrid Search Settings (Phase 6)
+    DEFAULT_SEARCH_MODE: Literal["vector", "keyword", "hybrid"] = "hybrid"
+    DEFAULT_TOP_K: int = 10
+    MAX_TOP_K: int = 100
+    DEFAULT_CANDIDATE_K: int = 50
+    MAX_CANDIDATE_K: int = 500
+    RRF_K: int = 60
+    MAX_QUERY_LENGTH: int = 2000
+
     # BYOK Master Encryption Key Placeholder (Deferred to Future Phases)
     API_KEY_ENCRYPTION_KEY: str = Field(
         default="change-this-to-a-32-byte-hex-key-for-byok-encryption-vault"
@@ -109,6 +118,22 @@ class Settings(BaseSettings):
             raise ValueError("EMBEDDING_BATCH_SIZE must be greater than 0")
         if self.MAX_EMBEDDING_CHUNKS_PER_JOB <= 0:
             raise ValueError("MAX_EMBEDDING_CHUNKS_PER_JOB must be greater than 0")
+        return self
+
+    @model_validator(mode="after")
+    def validate_retrieval_config(self) -> "Settings":
+        if self.DEFAULT_TOP_K <= 0:
+            raise ValueError("DEFAULT_TOP_K must be greater than 0")
+        if self.MAX_TOP_K < self.DEFAULT_TOP_K:
+            raise ValueError("MAX_TOP_K must be greater than or equal to DEFAULT_TOP_K")
+        if self.DEFAULT_CANDIDATE_K < self.DEFAULT_TOP_K:
+            raise ValueError("DEFAULT_CANDIDATE_K must be greater than or equal to DEFAULT_TOP_K")
+        if self.MAX_CANDIDATE_K < self.MAX_TOP_K:
+            raise ValueError("MAX_CANDIDATE_K must be greater than or equal to MAX_TOP_K")
+        if self.RRF_K <= 0:
+            raise ValueError("RRF_K must be greater than 0")
+        if self.MAX_QUERY_LENGTH <= 0:
+            raise ValueError("MAX_QUERY_LENGTH must be greater than 0")
         return self
 
     @property

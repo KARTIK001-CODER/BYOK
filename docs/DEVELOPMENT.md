@@ -47,6 +47,7 @@ alembic upgrade head --sql
 - `0003_knowledge_bases_and_documents`: Creates knowledge bases, documents, and document versions tables.
 - `0004_ingestion_jobs_and_chunks`: Creates ingestion jobs and document chunks tables.
 - `0005_embeddings_and_vector_storage`: Adds vector embedding column, embedding metadata, embedding jobs table, and HNSW cosine index.
+- `0006_retrieval_and_full_text_search`: Adds `search_vector` TSVECTOR column, GIN index, and retrieval composite indexes.
 
 ---
 
@@ -67,7 +68,7 @@ ruff format .
 
 ---
 
-## 4. Running Automated Tests
+## 4. Running Automated Tests & Evaluation
 
 Run the complete test suite with `pytest`:
 ```bash
@@ -75,9 +76,17 @@ cd backend
 pytest -v
 ```
 
+Run the offline IR retrieval benchmark:
+```bash
+cd backend
+python -m app.evaluation.retrieval
+# or from root:
+make evaluate-retrieval
+```
+
 ---
 
-## 5. Embedding & Ingestion Configuration
+## 5. Retrieval & Embedding Configuration
 
 Configurable environment variables in `.env`:
 ```env
@@ -94,4 +103,13 @@ EMBEDDING_DIMENSION=384
 EMBEDDING_BATCH_SIZE=32
 EMBEDDING_DEVICE=cpu
 MAX_EMBEDDING_CHUNKS_PER_JOB=10000
+
+# Retrieval Engine & Hybrid Search (Phase 6)
+DEFAULT_SEARCH_MODE=hybrid
+DEFAULT_TOP_K=10
+MAX_TOP_K=100
+DEFAULT_CANDIDATE_K=50
+MAX_CANDIDATE_K=500
+RRF_K=60
+MAX_QUERY_LENGTH=2000
 ```
