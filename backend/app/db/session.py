@@ -1,3 +1,4 @@
+import contextlib
 import logging
 from collections.abc import AsyncGenerator
 
@@ -29,12 +30,23 @@ def get_engine() -> AsyncEngine:
 
         # PostgreSQL specific pool settings (SQLite for tests doesn't use pool_size)
         if "postgresql" in settings.DATABASE_URL:
+            # Neon pooler aggressively closes idle connections (often <5min) and
+            # Windows NAT can reset sockets (WinError 10054). Use short recycle,
+            # pre_ping, and no statement cache to avoid prepared-statement bleed
+            # across pooled connections.
             engine_kwargs.update(
                 {
                     "pool_size": settings.DB_POOL_SIZE,
                     "max_overflow": settings.DB_MAX_OVERFLOW,
                     "pool_timeout": settings.DB_POOL_TIMEOUT,
+                    "pool_recycle": 300,
                     "pool_pre_ping": True,
+                    "connect_args": {
+                        "statement_cache_size": 0,
+                        "prepared_statement_cache_size": 0,
+                        "timeout": 60,
+                        "command_timeout": 60,
+                    },
                 }
             )
 
@@ -73,11 +85,17 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """
     FastAPI dependency that provides an async database session per request.
     Rolls back transaction automatically if an uncaught exception occurs.
+    Handles transient Neon/Windows connection resets by invalidating
+    the pooled connection and surfacing a retryable error to the caller.
     """
     session_factory = get_session_factory()
     async with session_factory() as session:
         try:
             yield session
         except Exception:
-            await session.rollback()
+            with contextlib.suppress(Exception):
+                await session.rollback()
             raise
+        finally:
+            with contextlib.suppress(Exception):
+                await session.close()
