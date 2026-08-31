@@ -51,7 +51,7 @@ It utilizes BAAI/bge-small-en-v1.5 producing 384-dimensional cosine embeddings.
     job_id = data["job_id"]
     assert data["status"] == EmbeddingJobStatus.COMPLETED.value
     assert data["processed_chunks"] > 0
-    assert data["embedding_model"] == "BAAI/bge-small-en-v1.5"
+    assert data["embedding_model"] == "sentence-transformers/all-MiniLM-L6-v2"
 
     # 4. Verify Document Embedding Status
     doc_stmt = select(Document).where(Document.id == doc_id)

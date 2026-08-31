@@ -7,6 +7,7 @@ from sqlalchemy import (
     Computed,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
@@ -46,6 +47,18 @@ class DocumentChunk(Base, UUIDPrimaryKeyMixin, TimestampMixin):
             "document_version_id",
             "chunk_index",
             name="uq_document_chunks_version_index",
+        ),
+        Index(
+            "ix_document_chunks_embedding",
+            "embedding",
+            postgresql_using="hnsw",
+            postgresql_with={"m": 16, "ef_construction": 64},
+            postgresql_ops={"embedding": "vector_cosine_ops"},
+        ),
+        Index(
+            "ix_document_chunks_search_vector",
+            "search_vector",
+            postgresql_using="gin",
         ),
     )
 
