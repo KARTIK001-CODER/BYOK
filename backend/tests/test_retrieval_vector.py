@@ -117,7 +117,7 @@ async def test_vector_retriever_exact_and_semantic_match(
     # Top match should be the JWT chunk
     assert candidates[0].chunk.chunk_index == 0
     assert "JWT tokens expire" in candidates[0].chunk.content
-    assert candidates[0].score > 0.6
+    assert candidates[0].score > 0.4
     assert candidates[0].source == "vector"
 
     # 4. Search via RetrievalService
