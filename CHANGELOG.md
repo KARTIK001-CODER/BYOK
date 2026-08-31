@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.6.0] - 2026-08-31
+
+### Added
+- **Retrieval Service Architecture**: `RetrievalService` coordinating semantic vector search, PostgreSQL full-text search, and Reciprocal Rank Fusion (RRF) with metadata and version scoping.
+- **pgvector Semantic Search**: `VectorRetriever` implementing dense vector retrieval using pgvector cosine distance (`<=>`) and `BAAI/bge-small-en-v1.5` embeddings.
+- **PostgreSQL Full-Text Search**: `KeywordRetriever` leveraging native `tsvector` generated columns on chunks, `GIN` indexing, and `ts_rank_cd` cover density ranking.
+- **Hybrid Retrieval & RRF**: `HybridRetriever` and `ReciprocalRankFusion` combining vector and keyword candidate rankings ($RRF(d) = \sum \frac{1}{k + rank(d)}$, $k=60$) with chunk-level deduplication.
+- **Tenant Isolation & Security**: Strict SQL-level filtering guaranteeing queries never match unauthorized organizations, cross-tenant knowledge bases, or archived/stale document versions.
+- **Retrieval API**: `POST /api/v1/retrieval/search` supporting `vector`, `keyword`, and `hybrid` search modes, granular metadata filters, top-k candidate truncation, and optional diagnostic traces.
+- **IR Evaluation Benchmark**: Offline IR framework (`app.evaluation`) calculating `Recall@K`, `Precision@K`, and `MRR` on a development benchmark dataset (`make evaluate-retrieval`).
+- **Database Migration 0006**: Alembic migration `0006_retrieval_and_full_text_search.py` adding `search_vector` generated TSVECTOR column, GIN index, and retrieval composite indexes.
+- **Automated Test Suite**: 91 automated tests verifying all Phase 1–6 capabilities, including exact RRF mathematical scoring, vector/keyword ranking, tenant isolation, RBAC, and API schemas.
+
+---
+
 ## [0.5.0] - 2026-08-30
 
 ### Added

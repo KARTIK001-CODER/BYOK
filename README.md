@@ -11,40 +11,39 @@ RAGForge is a production-oriented, multi-tenant Retrieval-Augmented Generation (
 - [x] **Phase 3: Knowledge Bases & Document Management** (Knowledge Bases, Document Lifecycle `UPLOADED ➔ PROCESSING ➔ READY ➔ FAILED ➔ ARCHIVED`, Storage Abstraction, Magic Byte Inspection, Duplicate Detection)
 - [x] **Phase 4: Document Ingestion & Processing Pipeline** (Multi-Format Extraction [PDF, TXT, MD, DOCX], Text Normalization, Recursive Chunking, Ingestion Jobs, Provenance Chunks)
 - [x] **Phase 5: Embeddings & Vector Storage** (Embedding Provider Abstraction, FastEmbed `BAAI/bge-small-en-v1.5`, Native `pgvector` Vector Storage, HNSW Cosine Index, Resumable Batching)
-- [ ] **Phase 6: Retrieval & Reranking Engine** (Vector Search, BM25 Hybrid Retrieval, RRF, Cross-Encoder Reranking)
+- [x] **Phase 6: Retrieval Engine & Hybrid Search** (Dense Vector pgvector `<=>` Search, PostgreSQL Full-Text Search `tsvector` + GIN + `ts_rank_cd`, Reciprocal Rank Fusion `RRF(d)`, Tenant Isolation, IR Evaluation Framework)
 - [ ] **Phase 7: RAG Generation & LLM Orchestration** (Prompt Engineering, Context Synthesis, Grounding & Citations)
 - [ ] **Phase 8: BYOK Vault & Provider Integrations** (AES-256-GCM Key Vault, Groq, OpenAI, Anthropic, Gemini)
 
 ---
 
-## End-to-End Pipeline (Phases 1–5)
+## End-to-End Pipeline (Phases 1–6)
 
 ```text
-Uploaded File (PDF / TXT / MD / DOCX)
-     │
-     ▼
-Validation & Magic Bytes Inspection
-     │
-     ▼
-Format-Specific Extractor (PDF, DOCX, Markdown, Text)
-     │
-     ▼
-Text Normalization (Control chars, line endings, excess whitespace)
-     │
-     ▼
-Recursive Text Chunking (Hierarchy: \n\n ➔ \n ➔ Sentence ➔ Word ➔ Char)
-     │
-     ▼
-Provenance Attachment (chunk_index, page_number, section_title, character/word count)
-     │
-     ▼
-Document Chunks in PostgreSQL / Neon
-     │
-     ▼
-Embedding Generation (BAAI/bge-small-en-v1.5, 384 dimensions)
-     │
-     ▼
-Dense Vector Storage in pgvector (HNSW Cosine Vector Index)
+User Query
+    │
+    ▼
+Retrieval Service (Tenant Authorization & Scoping)
+    │
+    ├─────────────────────────────┐
+    ▼                             ▼
+Query Embedding (384-dim)    PostgreSQL Full-Text Search
+    │                             │
+    ▼                             ▼
+pgvector Cosine Search       GIN Index + ts_rank_cd
+    │                             │
+    └──────────────┬──────────────┘
+                   ▼
+       Reciprocal Rank Fusion (RRF k=60)
+                   │
+                   ▼
+         Chunk Deduplication
+                   │
+                   ▼
+     Metadata & Version Filtering
+                   │
+                   ▼
+   Top-K Ranked Evidence + Provenance
 ```
 
 ---

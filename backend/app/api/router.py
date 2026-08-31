@@ -7,6 +7,7 @@ from app.api.v1.health import router as health_v1_router
 from app.api.v1.ingestion import router as ingestion_v1_router
 from app.api.v1.knowledge_bases import router as knowledge_bases_v1_router
 from app.api.v1.organizations import router as organizations_v1_router
+from app.api.v1.retrieval import router as retrieval_v1_router
 
 api_router = APIRouter()
 
@@ -18,9 +19,9 @@ api_router.include_router(knowledge_bases_v1_router, prefix="", tags=["Knowledge
 api_router.include_router(documents_v1_router, prefix="", tags=["Documents"])
 api_router.include_router(ingestion_v1_router, prefix="", tags=["Document Ingestion"])
 api_router.include_router(embeddings_v1_router, prefix="", tags=["Vector Embeddings"])
+api_router.include_router(retrieval_v1_router, prefix="", tags=["Retrieval Engine & Hybrid Search"])
 
 # Future Phase Routers will be registered here:
-# - retrieval_v1_router (/retrieval - Search & Rerank)
 # - rag_v1_router (/rag - Generation)
 # - keys_v1_router (/keys - BYOK Vault)
 # - evaluation_v1_router (/evaluation - Grounding)
