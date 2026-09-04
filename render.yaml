@@ -1,0 +1,40 @@
+services:
+  # RAGForge Backend - FastAPI Web Service
+  - type: web
+    name: ragforge-backend
+    env: docker
+    dockerfilePath: ./backend/Dockerfile
+    region: ohio
+    plan: starter
+    healthCheckPath: /health
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      - key: PORT
+        value: 8000
+      - key: CORS_ORIGINS
+        # Vercel domain will be added here or via Render Dashboard later
+        value: "[\"*\"]"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ragforge-db
+          property: connectionString
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: EMBEDDING_PROVIDER
+        value: local
+      - key: DEFAULT_LLM_PROVIDER
+        value: groq
+      - key: GROQ_API_KEY
+        sync: false # Fill in the Render Dashboard
+
+databases:
+  # PostgreSQL 16 database with pgvector extension enabled by default on Render
+  - name: ragforge-db
+    databaseName: ragforge
+    user: postgres
+    plan: starter
+    region: ohio
+    postgresMajorVersion: 16

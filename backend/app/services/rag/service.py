@@ -24,6 +24,7 @@ from app.services.rag.schemas import (
 )
 from app.services.retrieval.schemas import RetrievalRequest, SearchMode
 from app.services.retrieval.service import RetrievalService
+from app.services.retrieval.arxiv_client import ArxivClient
 
 logger = logging.getLogger("app.services.rag.service")
 
@@ -106,10 +107,20 @@ class RAGService:
             organization_id=organization_id,
             request=retrieval_req,
         )
+        
+        # Fallback to Arxiv search if no local results found
+        if not retrieval_resp.results:
+            arxiv_results = await ArxivClient.search(
+                query=request.message,
+                top_k=request.top_k,
+                organization_id=organization_id
+            )
+            retrieval_resp.results = arxiv_results
+            
         retrieval_latency_ms = (time.perf_counter() - retrieval_start) * 1000.0
 
         # 4. Fetch document names for citations
-        doc_ids = list({r.document_id for r in retrieval_resp.results})
+        doc_ids = list({r.document_id for r in retrieval_resp.results if not r.document_id.startswith("arxiv_")})
         doc_names = await self._get_document_names(session, organization_id, doc_ids)
 
         # 5. Assemble context with provenance and token budgeting
@@ -276,6 +287,16 @@ class RAGService:
                 organization_id=organization_id,
                 request=retrieval_req,
             )
+            
+            # Fallback to Arxiv search if no local results found
+            if not retrieval_resp.results:
+                arxiv_results = await ArxivClient.search(
+                    query=request.message,
+                    top_k=request.top_k,
+                    organization_id=organization_id
+                )
+                retrieval_resp.results = arxiv_results
+                
             retrieval_latency_ms = (time.perf_counter() - retrieval_start) * 1000.0
 
             retrieval_payload = {
@@ -286,7 +307,7 @@ class RAGService:
             yield f"event: retrieval\ndata: {json.dumps(retrieval_payload)}\n\n"
 
             # 4. Fetch doc names
-            doc_ids = list({r.document_id for r in retrieval_resp.results})
+            doc_ids = list({r.document_id for r in retrieval_resp.results if not r.document_id.startswith("arxiv_")})
             doc_names = await self._get_document_names(session, organization_id, doc_ids)
 
             # 5. Assemble context
