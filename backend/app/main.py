@@ -100,15 +100,24 @@ def create_application() -> FastAPI:
             set_request_id(None)
 
     # 2. Configure CORS Middleware
+    allowed_origins = [
+        "https://byok-livid.vercel.app",
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:5173",
+    ]
     if settings.CORS_ORIGINS:
-        app.add_middleware(
-            CORSMiddleware,
-            allow_origins=settings.CORS_ORIGINS,
-            allow_credentials=True,
-            allow_methods=["*"],
-            allow_headers=["*"],
-            expose_headers=["X-Request-ID"],
-        )
+        allowed_origins.extend(settings.CORS_ORIGINS)
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=list(set(allowed_origins)),
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+        expose_headers=["X-Request-ID"],
+    )
 
     # 3. Register Centralized Exception Handlers
     register_exception_handlers(app)
