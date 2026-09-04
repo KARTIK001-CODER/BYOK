@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     HOST: str = "0.0.0.0"
     PORT: int = 8000
     API_V1_STR: str = "/api/v1"
-    CORS_ORIGINS: list[str] = Field(
+    CORS_ORIGINS: Any = Field(
         default_factory=lambda: [
             "http://localhost:3000",
             "http://127.0.0.1:3000",
@@ -127,6 +127,13 @@ class Settings(BaseSettings):
     @classmethod
     def parse_cors_origins(cls, value: Any) -> list[str]:
         if isinstance(value, str):
+            import json
+            try:
+                parsed = json.loads(value)
+                if isinstance(parsed, list):
+                    return parsed
+            except Exception:
+                pass
             return [origin.strip() for origin in value.split(",") if origin.strip()]
         return value
 
