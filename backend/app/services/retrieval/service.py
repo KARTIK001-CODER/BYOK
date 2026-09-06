@@ -130,13 +130,63 @@ class RetrievalService:
             request.candidate_k,
         )
 
+        # Phase 2.1 — Query Intelligence (adaptive, no DB/LLM, <5ms, safe fallback to HYBRID)
+        effective_search_mode = request.search_mode
+        effective_candidate_k = request.candidate_k
+        query_analysis_dict: dict | None = None
+        if settings.ENABLE_QUERY_INTELLIGENCE:
+            try:
+                from app.services.query_intelligence.analyzer import QueryAnalyzer
+                from app.services.query_intelligence.schemas import RetrievalStrategy
+
+                analysis, qi_timings = QueryAnalyzer.analyze_with_timings(normalized_query)
+                query_analysis_dict = analysis.model_dump()
+                if trace:
+                    for tk, tv in qi_timings.items():
+                        trace.record(tk, tv)
+                    trace.set_counter("qi_strategy", analysis.strategy.strategy.value)
+                    trace.set_counter("qi_class", analysis.classification.primary_class.value)
+                    trace.set_counter("qi_confidence", analysis.classification.confidence)
+                    trace.set_counter("qi_ambiguity", analysis.ambiguity.ambiguity_score)
+                    trace.set_counter("qi_reason", analysis.strategy.reason)
+                # Map strategy to effective search mode / candidate_k
+                strat = analysis.strategy.strategy
+                if strat == RetrievalStrategy.KEYWORD:
+                    effective_search_mode = SearchMode.KEYWORD
+                elif strat == RetrievalStrategy.VECTOR:
+                    effective_search_mode = SearchMode.VECTOR
+                elif strat == RetrievalStrategy.HYBRID_WIDE:
+                    effective_search_mode = SearchMode.HYBRID
+                    effective_candidate_k = settings.HYBRID_WIDE_CANDIDATE_K
+                else:
+                    effective_search_mode = SearchMode.HYBRID
+                    effective_candidate_k = request.candidate_k
+                logger.info(
+                    "Query intelligence: q_hash=%s class=%s conf=%.2f amb=%.2f strategy=%s reason=%s",
+                    query_hash,
+                    analysis.classification.primary_class.value,
+                    analysis.classification.confidence,
+                    analysis.ambiguity.ambiguity_score,
+                    analysis.strategy.strategy.value,
+                    analysis.strategy.reason,
+                )
+            except Exception as e:
+                logger.warning("Query intelligence failed, fallback to HYBRID: %s", e)
+                if trace:
+                    trace.add_error(f"qi_failed: {e}")
+                effective_search_mode = SearchMode.HYBRID
+                effective_candidate_k = request.candidate_k
+        else:
+            if trace:
+                trace.set_counter("qi_enabled", False)
+
         # 3. Query Embedding (if Vector or Hybrid mode)
         query_embedding: list[float] | None = None
         embed_duration_ms = 0.0
         embed_init_ms = 0.0
         embed_infer_ms = 0.0
 
-        if request.search_mode in (SearchMode.VECTOR, SearchMode.HYBRID):
+        if effective_search_mode in (SearchMode.VECTOR, SearchMode.HYBRID):
             # Measure provider instantiation (model init) separately from inference
             init_t0 = time.perf_counter()
             embedding_provider = provider or get_embedding_provider()
@@ -178,14 +228,14 @@ class RetrievalService:
         results: list[RetrievalResult] = []
         serialization_ms = 0.0
 
-        if request.search_mode == SearchMode.VECTOR:
+        if effective_search_mode == SearchMode.VECTOR:
             assert query_embedding is not None
             v_start = time.perf_counter()
             vector_candidates = await VectorRetriever.retrieve(
                 session=session,
                 organization_id=organization_id,
                 query_embedding=query_embedding,
-                candidate_k=request.candidate_k,
+                candidate_k=effective_candidate_k,
                 knowledge_base_ids=request.knowledge_base_ids,
                 document_ids=request.document_ids,
                 filters=request.filters,
@@ -236,13 +286,13 @@ class RetrievalService:
             if trace:
                 trace.record("result_serialization_ms", serialization_ms)
 
-        elif request.search_mode == SearchMode.KEYWORD:
+        elif effective_search_mode == SearchMode.KEYWORD:
             k_start = time.perf_counter()
             keyword_candidates = await KeywordRetriever.retrieve(
                 session=session,
                 organization_id=organization_id,
                 query=normalized_query,
-                candidate_k=request.candidate_k,
+                candidate_k=effective_candidate_k,
                 knowledge_base_ids=request.knowledge_base_ids,
                 document_ids=request.document_ids,
                 filters=request.filters,
@@ -291,7 +341,7 @@ class RetrievalService:
             if trace:
                 trace.record("result_serialization_ms", serialization_ms)
 
-        elif request.search_mode == SearchMode.HYBRID:
+        elif effective_search_mode == SearchMode.HYBRID:
             assert query_embedding is not None
             hybrid_retriever = HybridRetriever()
             (
@@ -305,7 +355,7 @@ class RetrievalService:
                 query=normalized_query,
                 query_embedding=query_embedding,
                 top_k=request.top_k,
-                candidate_k=request.candidate_k,
+                candidate_k=effective_candidate_k,
                 knowledge_base_ids=request.knowledge_base_ids,
                 document_ids=request.document_ids,
                 filters=request.filters,
@@ -338,9 +388,16 @@ class RetrievalService:
         if trace:
             trace.record("retrieval_overall_ms", total_duration_ms)
 
+        # Include effective mode in trace if adaptive
+        effective_mode_str = effective_search_mode.value
+        if query_analysis_dict and query_analysis_dict.get("strategy", {}).get("strategy") == "HYBRID_WIDE":
+            effective_mode_str = "hybrid_wide"
+            if trace:
+                trace.set_counter("effective_candidate_k", effective_candidate_k)
+
         retr_trace = RetrievalTrace(
             query_hash=query_hash,
-            search_mode=request.search_mode.value,
+            search_mode=effective_mode_str,
             vector_candidate_count=vector_candidates_count,
             keyword_candidate_count=keyword_candidates_count,
             fused_candidate_count=vector_candidates_count + keyword_candidates_count,
@@ -352,11 +409,12 @@ class RetrievalService:
             total_duration_ms=round(total_duration_ms, 2),
             partial_failure=partial_failure,
             partial_failure_reason=partial_reason,
+            query_analysis=query_analysis_dict,
         )
 
         logger.info(
             "Retrieval completed: org_id=%s, q_hash=%s, results=%d, total_ms=%.2f "
-            "(embed=%.2f [init=%.2f infer=%.2f], vec=%.2f, kw=%.2f, fuse=%.2f, ser=%.2f)",
+            "(embed=%.2f [init=%.2f infer=%.2f], vec=%.2f, kw=%.2f, fuse=%.2f, ser=%.2f) qi=%s",
             organization_id,
             query_hash,
             len(results),
@@ -368,12 +426,14 @@ class RetrievalService:
             keyword_duration_ms,
             fusion_duration_ms,
             serialization_ms,
+            query_analysis_dict.get("strategy", {}).get("strategy") if query_analysis_dict else "none",
         )
 
         return RetrievalResponse(
             query=request.query,
-            search_mode=request.search_mode,
+            search_mode=effective_search_mode,
             total_results=len(results),
             results=results,
             trace=retr_trace if request.debug else None,
+            query_analysis=query_analysis_dict,
         )

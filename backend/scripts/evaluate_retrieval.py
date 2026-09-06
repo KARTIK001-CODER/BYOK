@@ -75,12 +75,36 @@ async def evaluate_single(retriever: str, dataset_path: Path, top_k: int, output
 
     factory = get_session_factory()
     async with factory() as session:
-        # Monkey-patch to inject KB scope? Runner already scopes by org only; dataset expected document_name matching works across KBs in org
-        # We need to ensure retrieval respects org_id only (KB optional). That's fine — our fixtures are all in eval-kb under eval-org.
         report = await runner.run(session=session, organization_id=org_id)
 
     # Console
     print(console_report(report))
+
+    # Phase 2.1 extra: routing distribution + strategy quality for adaptive
+    if retriever == "adaptive":
+        from app.services.query_intelligence.analyzer import QueryAnalyzer
+        from collections import Counter
+        dist = Counter()
+        strat_quality: dict[str, list[float]] = {"VECTOR": [], "KEYWORD": [], "HYBRID": [], "HYBRID_WIDE": []}
+        for case in ds.cases:
+            analysis = QueryAnalyzer.analyze(case.query)
+            strat = analysis.strategy.strategy.value
+            dist[strat] += 1
+            # find case result to get hit
+            cr = next((c for c in report.cases if c.case_id == case.id), None)
+            if cr:
+                # store per-strategy hit
+                strat_quality.setdefault(strat, []).append(1.0 if cr.status == "hit" else 0.0)
+        print("\nAdaptive Routing Distribution:")
+        total = len(ds.cases)
+        for strat in ["VECTOR", "KEYWORD", "HYBRID", "HYBRID_WIDE"]:
+            cnt = dist.get(strat, 0)
+            print(f"  {strat:12s} {cnt:2d}/{total} {cnt/total:5.1%}")
+        print("\nStrategy Quality (Hit@5 per routed group):")
+        for strat, hits in strat_quality.items():
+            if hits:
+                avg = sum(hits)/len(hits)
+                print(f"  {strat:12s} queries {len(hits):2d} Hit@5 {avg:.3f}")
 
     # Reports
     json_path = write_json_report(report, output_dir)
@@ -101,7 +125,6 @@ async def evaluate_single(retriever: str, dataset_path: Path, top_k: int, output
             for r in results:
                 print(f"  {r.metric}: baseline {r.baseline_value:.3f} -> current {r.current_value:.3f} delta {r.delta_pct:+.1%} status {r.status} (threshold {r.threshold:.0%})")
             print(RegressionChecker.summarize(results))
-            # Exit code handling could be added: fail CI if FAIL
         else:
             print(f"No baseline found for retriever {retriever} — run with --save-baseline first")
 
@@ -109,8 +132,8 @@ async def evaluate_single(retriever: str, dataset_path: Path, top_k: int, output
 
 
 async def main():
-    parser = argparse.ArgumentParser(description="BYOK Retrieval Evaluation (Phase 2.0)")
-    parser.add_argument("--retriever", default="all", choices=["vector", "keyword", "hybrid", "all"], help="Retriever to evaluate")
+    parser = argparse.ArgumentParser(description="BYOK Retrieval Evaluation (Phase 2.0 + 2.1 adaptive)")
+    parser.add_argument("--retriever", default="all", choices=["vector", "keyword", "hybrid", "adaptive", "all"], help="Retriever to evaluate (adaptive = Phase 2.1 query intelligence)")
     parser.add_argument("--dataset", default=str(DEFAULT_DATASET), help="Dataset path")
     parser.add_argument("--top-k", type=int, default=5, help="Top K for evaluation")
     parser.add_argument("--candidate-k", type=int, default=None, help="Candidate K (default top_k*4)")
@@ -136,7 +159,11 @@ async def main():
     if not output_dir.is_absolute():
         output_dir = Path(__file__).resolve().parents[1] / output_dir
 
-    retrievers = ["vector", "keyword", "hybrid"] if args.retriever == "all" else [args.retriever]
+    # Expand "all" to include adaptive if present
+    if args.retriever == "all":
+        retrievers = ["vector", "keyword", "hybrid", "adaptive"]
+    else:
+        retrievers = [args.retriever]
 
     reports = []
     for ret in retrievers:
@@ -164,6 +191,33 @@ async def main():
         for r in reports:
             print(f"{r.retriever:<15} | {r.overall.hit_at_1:<6.3f} | {r.overall.hit_at_3:<6.3f} | {r.overall.hit_at_5:<6.3f} | {r.overall.mrr:<6.3f} | {r.overall.precision_at_k:<7.3f} | {r.overall.recall_at_k:.3f}")
         print("="*70)
+        # Oracle upper bound (best per query across vector/keyword/hybrid)
+        if len(reports) >= 3 and any(r.retriever == "hybrid" for r in reports):
+            # Find best per case across non-adaptive retrievers
+            try:
+                # Collect per-case hits
+                cases_by_id: dict[str, dict[str, float]] = {}
+                for r in reports:
+                    if r.retriever in ("vector", "keyword", "hybrid"):
+                        for c in r.cases:
+                            cases_by_id.setdefault(c.case_id, {})[r.retriever] = c.mrr
+                oracle_mrrs = []
+                oracle_hits = []
+                for cid, mrrs in cases_by_id.items():
+                    best = max(mrrs.values()) if mrrs else 0.0
+                    oracle_mrrs.append(best)
+                    oracle_hits.append(1.0 if best > 0 else 0.0)
+                oracle_mrr = sum(oracle_mrrs)/len(oracle_mrrs) if oracle_mrrs else 0
+                oracle_hit5 = sum(oracle_hits)/len(oracle_hits) if oracle_hits else 0
+                hybrid = next((r for r in reports if r.retriever=="hybrid"), None)
+                adaptive = next((r for r in reports if r.retriever=="adaptive"), None)
+                print("\nORACLE UPPER BOUND (best of vector/keyword/hybrid per query):")
+                print(f"  Hybrid:   Hit@5 {hybrid.overall.hit_at_5:.3f} MRR {hybrid.overall.mrr:.3f}" if hybrid else "")
+                if adaptive:
+                    print(f"  Adaptive: Hit@5 {adaptive.overall.hit_at_5:.3f} MRR {adaptive.overall.mrr:.3f}")
+                print(f"  Oracle:   Hit@5 {oracle_hit5:.3f} MRR {oracle_mrr:.3f} (max possible)")
+            except Exception as e:
+                print(f"Oracle calculation failed: {e}")
 
 
 if __name__ == "__main__":

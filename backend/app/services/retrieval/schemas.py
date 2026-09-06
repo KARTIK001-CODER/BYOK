@@ -159,6 +159,8 @@ class RetrievalTrace(BaseModel):
     total_duration_ms: float = 0.0
     partial_failure: bool = False
     partial_failure_reason: str | None = None
+    # Phase 2.1 query intelligence (optional diagnostics)
+    query_analysis: dict[str, Any] | None = None
 
 
 class RetrievalResponse(BaseModel):
@@ -169,3 +171,5 @@ class RetrievalResponse(BaseModel):
     total_results: int
     results: list[RetrievalResult]
     trace: RetrievalTrace | None = None
+    # Phase 2.1 query intelligence metadata (internal diagnostics, not public by default)
+    query_analysis: dict[str, Any] | None = None

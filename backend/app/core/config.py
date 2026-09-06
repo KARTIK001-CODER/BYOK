@@ -118,6 +118,12 @@ class Settings(BaseSettings):
     ENABLE_ARXIV_FALLBACK: bool = False
     ARXIV_TIMEOUT_SECONDS: int = 2
 
+    # Query Intelligence & Adaptive Retrieval — Phase 2.1 (deterministic, no LLM/DB)
+    ENABLE_QUERY_INTELLIGENCE: bool = False
+    QUERY_CLASSIFICATION_CONFIDENCE_THRESHOLD: float = 0.6
+    AMBIGUITY_THRESHOLD: float = 0.5
+    HYBRID_WIDE_CANDIDATE_K: int = 50
+
     # BYOK Master Encryption Key Placeholder (Deferred to Future Phases)
     API_KEY_ENCRYPTION_KEY: str = Field(
         default="change-this-to-a-32-byte-hex-key-for-byok-encryption-vault"
