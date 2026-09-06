@@ -1,0 +1,265 @@
+{
+  "version": "1.0",
+  "description": "BYOK Phase 2.0 Retrieval Baseline — 30 queries across 5 fixture documents, categories semantic/keyword/factual/multi_hop/ambiguous",
+  "created_at": "2026-09-06T00:00:00Z",
+  "cases": [
+    {
+      "id": "eval_001",
+      "query": "How do I get my money back after buying a plan?",
+      "category": "semantic",
+      "difficulty": "easy",
+      "expected": [{ "document_name": "Refund Policy", "relevance_grade": 1 }],
+      "notes": "Tests semantic understanding: refund = money back"
+    },
+    {
+      "id": "eval_002",
+      "query": "Tell me how to receive a reimbursement for my subscription",
+      "category": "semantic",
+      "difficulty": "medium",
+      "expected": [{ "document_name": "Refund Policy", "relevance_grade": 1 }],
+      "notes": "Paraphrase of refund"
+    },
+    {
+      "id": "eval_003",
+      "query": "What is the hybrid search mechanism that combines vectors and text search?",
+      "category": "semantic",
+      "difficulty": "medium",
+      "expected": [{ "document_name": "Technical Docs", "relevance_grade": 1 }],
+      "notes": "Semantic: hybrid search = vector + keyword"
+    },
+    {
+      "id": "eval_004",
+      "query": "Explain how my data stays private and where it is stored",
+      "category": "semantic",
+      "difficulty": "medium",
+      "expected": [{ "document_name": "Company Handbook", "relevance_grade": 1 }],
+      "notes": "Privacy / encryption"
+    },
+    {
+      "id": "eval_005",
+      "query": "I want to understand the company's work-from-home rules",
+      "category": "semantic",
+      "difficulty": "easy",
+      "expected": [{ "document_name": "Company Handbook", "relevance_grade": 1 }],
+      "notes": "Hybrid / remote work"
+    },
+    {
+      "id": "eval_006",
+      "query": "How much does the Pro tier cost and what does it include?",
+      "category": "semantic",
+      "difficulty": "easy",
+      "expected": [{ "document_name": "Pricing", "relevance_grade": 1 }],
+      "notes": "Pricing Pro"
+    },
+    {
+      "id": "eval_007",
+      "query": "Describe the chunking process that splits documents",
+      "category": "semantic",
+      "difficulty": "medium",
+      "expected": [{ "document_name": "Technical Docs", "relevance_grade": 1 }],
+      "notes": "Chunking semantic"
+    },
+    {
+      "id": "eval_008",
+      "query": "How can I delete my knowledge and what about backups?",
+      "category": "semantic",
+      "difficulty": "hard",
+      "expected": [{ "document_name": "Support FAQ", "relevance_grade": 1 }],
+      "notes": "Data retention semantic"
+    },
+    {
+      "id": "eval_009",
+      "query": "What does the onboarding look like for new engineers?",
+      "category": "semantic",
+      "difficulty": "easy",
+      "expected": [{ "document_name": "Company Handbook", "relevance_grade": 1 }],
+      "notes": "Onboarding"
+    },
+    {
+      "id": "eval_010",
+      "query": "What is the cancellation_fee?",
+      "category": "keyword",
+      "difficulty": "easy",
+      "expected": [{ "document_name": "Refund Policy", "relevance_grade": 1 }],
+      "notes": "Exact underscore term — keyword should win"
+    },
+    {
+      "id": "eval_011",
+      "query": "STORAGE: 25 MB",
+      "category": "keyword",
+      "difficulty": "easy",
+      "expected": [{ "document_name": "Pricing", "relevance_grade": 1 }],
+      "notes": "Exact keyword: maximum file size"
+    },
+    {
+      "id": "eval_012",
+      "query": "vector_cosine_ops",
+      "category": "keyword",
+      "difficulty": "medium",
+      "expected": [{ "document_name": "Technical Docs", "relevance_grade": 1 }],
+      "notes": "Exact operator class"
+    },
+    {
+      "id": "eval_013",
+      "query": "RRF_K=60",
+      "category": "keyword",
+      "difficulty": "medium",
+      "expected": [{ "document_name": "Technical Docs", "relevance_grade": 1 }],
+      "notes": "Exact RRF constant"
+    },
+    {
+      "id": "eval_014",
+      "query": "pool_size=10",
+      "category": "keyword",
+      "difficulty": "medium",
+      "expected": [{ "document_name": "Technical Docs", "relevance_grade": 1 }],
+      "notes": "Exact pool config"
+    },
+    {
+      "id": "eval_015",
+      "query": "ENABLE_ARXIV_FALLBACK",
+      "category": "keyword",
+      "difficulty": "hard",
+      "expected": [{ "document_name": "Support FAQ", "relevance_grade": 1 }],
+      "notes": "Exact flag"
+    },
+    {
+      "id": "eval_016",
+      "query": "What is the maximum file size allowed for uploads?",
+      "category": "factual",
+      "difficulty": "easy",
+      "expected": [{ "document_name": "Pricing", "relevance_grade": 1 }],
+      "notes": "Direct factual: 25 MB"
+    },
+    {
+      "id": "eval_017",
+      "query": "How many days of refund eligibility for low usage?",
+      "category": "factual",
+      "difficulty": "easy",
+      "expected": [{ "document_name": "Refund Policy", "relevance_grade": 1 }],
+      "notes": "14 days, <25% usage"
+    },
+    {
+      "id": "eval_018",
+      "query": "What embedding model and dimension does the system use?",
+      "category": "factual",
+      "difficulty": "easy",
+      "expected": [{ "document_name": "Technical Docs", "relevance_grade": 1 }],
+      "notes": "BAAI/bge-small-en-v1.5 384"
+    },
+    {
+      "id": "eval_019",
+      "query": "What are the HNSW index parameters m and ef_construction?",
+      "category": "factual",
+      "difficulty": "medium",
+      "expected": [{ "document_name": "Technical Docs", "relevance_grade": 1 }],
+      "notes": "m=16 ef_construction=64"
+    },
+    {
+      "id": "eval_020",
+      "query": "How many days of annual leave and what is the learning budget?",
+      "category": "factual",
+      "difficulty": "medium",
+      "expected": [{ "document_name": "Company Handbook", "relevance_grade": 1 }],
+      "notes": "28 days, 2000 EUR"
+    },
+    {
+      "id": "eval_021",
+      "query": "What is the Enterprise SLA and how many knowledge bases in Pro?",
+      "category": "factual",
+      "difficulty": "hard",
+      "expected": [
+        { "document_name": "Pricing", "relevance_grade": 1 },
+        { "document_name": "Technical Docs", "relevance_grade": 0 }
+      ],
+      "notes": "Pricing factual with two facts"
+    },
+    {
+      "id": "eval_022",
+      "query": "If I buy an annual plan and cancel after 20 days with 30% usage, what refund and fee apply?",
+      "category": "multi_hop",
+      "difficulty": "hard",
+      "expected": [
+        { "document_name": "Refund Policy", "relevance_grade": 1 },
+        { "document_name": "Pricing", "relevance_grade": 1 }
+      ],
+      "notes": "Requires Refund Policy (30 days pro-rata 25-50%) + Pricing (annual) + cancellation_fee 15%"
+    },
+    {
+      "id": "eval_023",
+      "query": "What happens when a user cancels during trial and then requests a refund after conversion?",
+      "category": "multi_hop",
+      "difficulty": "hard",
+      "expected": [
+        { "document_name": "Refund Policy", "relevance_grade": 1 },
+        { "document_name": "Support FAQ", "relevance_grade": 1 }
+      ],
+      "notes": "Trial 14 days convert day 15 + refund 14 days + Support FAQ trial cancel"
+    },
+    {
+      "id": "eval_024",
+      "query": "Explain how a document goes from upload (25 MB limit) through chunking (1000/150) to HNSW indexing",
+      "category": "multi_hop",
+      "difficulty": "hard",
+      "expected": [
+        { "document_name": "Technical Docs", "relevance_grade": 1 },
+        { "document_name": "Pricing", "relevance_grade": 1 }
+      ],
+      "notes": "Chunking + pricing max file size + HNSW"
+    },
+    {
+      "id": "eval_025",
+      "query": "How does hybrid retrieval work from query to RRF fusion to context for LLM?",
+      "category": "multi_hop",
+      "difficulty": "hard",
+      "expected": [
+        { "document_name": "Technical Docs", "relevance_grade": 1 },
+        { "document_name": "Pricing", "relevance_grade": 0 }
+      ],
+      "notes": "Hybrid + RRF + context assembly"
+    },
+    {
+      "id": "eval_026",
+      "query": "How does it work?",
+      "category": "ambiguous",
+      "difficulty": "hard",
+      "expected": [{ "document_name": "Technical Docs", "relevance_grade": 1 }],
+      "notes": "Ambiguous vague — should return technical overview, not handbook"
+    },
+    {
+      "id": "eval_027",
+      "query": "What are the limits?",
+      "category": "ambiguous",
+      "difficulty": "hard",
+      "expected": [{ "document_name": "Pricing", "relevance_grade": 1 }],
+      "notes": "Ambiguous limits — pricing quotas most relevant"
+    },
+    {
+      "id": "eval_028",
+      "query": "Tell me about the policy",
+      "category": "ambiguous",
+      "difficulty": "medium",
+      "expected": [{ "document_name": "Refund Policy", "relevance_grade": 1 }],
+      "notes": "Ambiguous policy — refund most likely, but handbook also has policy"
+    },
+    {
+      "id": "eval_029",
+      "query": "How can I get help?",
+      "category": "ambiguous",
+      "difficulty": "easy",
+      "expected": [{ "document_name": "Support FAQ", "relevance_grade": 1 }],
+      "notes": "Ambiguous help — support FAQ"
+    },
+    {
+      "id": "eval_030",
+      "query": "What is the 25 MB limit and what happens if I exceed it?",
+      "category": "factual",
+      "difficulty": "medium",
+      "expected": [
+        { "document_name": "Pricing", "relevance_grade": 1 },
+        { "document_name": "Support FAQ", "relevance_grade": 1 }
+      ],
+      "notes": "Factual with two docs: pricing + FAQ both mention 25 MB"
+    }
+  ]
+}
