@@ -44,6 +44,49 @@ class EvaluationMetrics:
         return 0.0
 
     @staticmethod
+    def ndcg_at_k(
+        retrieved_ids: Sequence[str],
+        relevant_grades: dict[str, int],
+        k: int,
+    ) -> float:
+        """
+        NDCG@K with graded relevance (0-3).
+        DCG = sum (2^rel -1)/log2(rank+1) for retrieved in top K
+        IDCG = ideal DCG sorting relevant grades descending
+        Deduplicates retrieved_ids by first occurrence to handle multiple chunks per document.
+        """
+        if k <= 0 or not relevant_grades:
+            return 0.0
+        import math
+
+        # Deduplicate retrieved_ids preserving order (document-level)
+        seen: set[str] = set()
+        deduped: list[str] = []
+        for rid in retrieved_ids:
+            if rid not in seen:
+                seen.add(rid)
+                deduped.append(rid)
+
+        # DCG on deduped
+        dcg = 0.0
+        for rank, rid in enumerate(deduped[:k], start=1):
+            rel = relevant_grades.get(rid, 0)
+            if rel > 0:
+                dcg += (2**rel - 1) / math.log2(rank + 1)
+
+        # IDCG: sort grades descending, take top K unique
+        sorted_grades = sorted(relevant_grades.values(), reverse=True)[:k]
+        idcg = 0.0
+        for rank, rel in enumerate(sorted_grades, start=1):
+            if rel > 0:
+                idcg += (2**rel - 1) / math.log2(rank + 1)
+
+        if idcg == 0:
+            return 0.0
+        # Clamp to 1.0 due to floating errors
+        return min(1.0, dcg / idcg)
+
+    @staticmethod
     def mrr(case_mrrs: Sequence[float]) -> float:
         if not case_mrrs:
             return 0.0
@@ -85,12 +128,19 @@ class EvaluationMetrics:
         avg_mrr = sum(c.mrr for c in case_results) / n
         avg_prec = sum(c.precision_at_k for c in case_results) / n
         avg_rec = sum(c.recall_at_k for c in case_results) / n
+        # NDCG (if present)
+        avg_ndcg3 = sum(c.ndcg_at_k.get("3", c.ndcg) for c in case_results) / n if any(c.ndcg_at_k for c in case_results) else sum(c.ndcg for c in case_results) / n if any(c.ndcg for c in case_results) else 0.0
+        avg_ndcg5 = sum(c.ndcg_at_k.get("5", c.ndcg) for c in case_results) / n if any(c.ndcg_at_k for c in case_results) else sum(c.ndcg for c in case_results) / n if any(c.ndcg for c in case_results) else 0.0
+        avg_ndcg10 = sum(c.ndcg_at_k.get("10", 0.0) for c in case_results) / n if 10 in top_k_values and any(c.ndcg_at_k for c in case_results) else None
         return MetricResult(
             hit_at_1=round(hits_1, 4),
             hit_at_3=round(hits_3, 4),
             hit_at_5=round(hits_5, 4),
             hit_at_10=round(hits_10, 4) if hits_10 is not None else None,
             mrr=round(avg_mrr, 4),
+            ndcg_at_3=round(avg_ndcg3, 4),
+            ndcg_at_5=round(avg_ndcg5, 4),
+            ndcg_at_10=round(avg_ndcg10, 4) if avg_ndcg10 is not None else None,
             precision_at_k=round(avg_prec, 4),
             recall_at_k=round(avg_rec, 4),
             total_cases=n,

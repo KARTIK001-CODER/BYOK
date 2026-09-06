@@ -122,6 +122,8 @@ class CaseResult(BaseModel):
     mrr: float = 0.0
     precision_at_k: float = 0.0
     recall_at_k: float = 0.0
+    ndcg: float = 0.0
+    ndcg_at_k: dict[str, float] = Field(default_factory=dict)
     first_relevant_rank: int | None = None
     status: str = Field(default="miss", description="hit | miss | partial")
     duration_ms: float = 0.0
@@ -133,6 +135,9 @@ class MetricResult(BaseModel):
     hit_at_5: float = 0.0
     hit_at_10: float | None = None
     mrr: float = 0.0
+    ndcg_at_3: float = 0.0
+    ndcg_at_5: float = 0.0
+    ndcg_at_10: float | None = None
     precision_at_k: float = 0.0
     recall_at_k: float = 0.0
     total_cases: int = 0

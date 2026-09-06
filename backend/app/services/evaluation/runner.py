@@ -167,11 +167,88 @@ class AdaptiveAdapter:
         ]
 
 
+@dataclass
+class HybridRerankedAdapter:
+    name: str = "hybrid_reranked"
+
+    async def retrieve(self, session: AsyncSession, organization_id: str, query: str, top_k: int, candidate_k: int = 50) -> list[RetrievedResult]:
+        from app.core.config import get_settings
+
+        settings = get_settings()
+        orig = getattr(settings, "ENABLE_RERANKING", False)
+        try:
+            settings.ENABLE_RERANKING = True
+            # Ensure candidate_k for reranking is respected
+            req = RetrievalRequest(query=query, top_k=top_k, candidate_k=candidate_k, search_mode=SearchMode.HYBRID)
+            resp = await RetrievalService.search(session=session, organization_id=organization_id, request=req)
+            return [
+                RetrievedResult(
+                    rank=r.rank,
+                    chunk_id=r.chunk_id,
+                    document_id=r.document_id,
+                    document_name=r.document_name,
+                    score=r.score,
+                    rrf_score=r.rrf_score,
+                    is_relevant=False,
+                )
+                for r in resp.results
+            ]
+        finally:
+            settings.ENABLE_RERANKING = orig
+
+
+@dataclass
+class AdaptiveRerankedAdapter:
+    name: str = "adaptive_reranked"
+
+    async def retrieve(self, session: AsyncSession, organization_id: str, query: str, top_k: int, candidate_k: int = 50) -> list[RetrievedResult]:
+        from app.core.config import get_settings
+        from app.services.query_intelligence.analyzer import QueryAnalyzer
+
+        settings = get_settings()
+        analysis = QueryAnalyzer.analyze(query)
+        strat = analysis.strategy.strategy.value
+        # Map to base mode
+        if strat == "KEYWORD":
+            base_mode = SearchMode.KEYWORD
+        elif strat == "VECTOR":
+            base_mode = SearchMode.VECTOR
+        else:
+            base_mode = SearchMode.HYBRID
+            if strat == "HYBRID_WIDE":
+                candidate_k = getattr(settings, "HYBRID_WIDE_CANDIDATE_K", 50)
+
+        orig_qi = getattr(settings, "ENABLE_QUERY_INTELLIGENCE", False)
+        orig_rerank = getattr(settings, "ENABLE_RERANKING", False)
+        try:
+            settings.ENABLE_QUERY_INTELLIGENCE = False  # prevent double analysis
+            settings.ENABLE_RERANKING = True
+            req = RetrievalRequest(query=query, top_k=top_k, candidate_k=candidate_k, search_mode=base_mode)
+            resp = await RetrievalService.search(session=session, organization_id=organization_id, request=req)
+            return [
+                RetrievedResult(
+                    rank=r.rank,
+                    chunk_id=r.chunk_id,
+                    document_id=r.document_id,
+                    document_name=r.document_name,
+                    score=r.score,
+                    rrf_score=r.rrf_score,
+                    is_relevant=False,
+                )
+                for r in resp.results
+            ]
+        finally:
+            settings.ENABLE_QUERY_INTELLIGENCE = orig_qi
+            settings.ENABLE_RERANKING = orig_rerank
+
+
 ADAPTER_REGISTRY: dict[str, RetrieverAdapter] = {
     "vector": VectorAdapter(),
     "keyword": KeywordAdapter(),
     "hybrid": HybridAdapter(),
     "adaptive": AdaptiveAdapter(),
+    "hybrid_reranked": HybridRerankedAdapter(),
+    "adaptive_reranked": AdaptiveRerankedAdapter(),
 }
 
 
@@ -269,6 +346,17 @@ class EvaluationRunner:
             mrr = EvaluationMetrics.reciprocal_rank(retrieved_doc_names, relevant_doc_names) if relevant_doc_names else 0.0
             prec = EvaluationMetrics.precision_at_k(retrieved_doc_names, relevant_doc_names, top_k) if relevant_doc_names else 0.0
             rec = EvaluationMetrics.recall_at_k(retrieved_doc_names, relevant_doc_names, top_k) if relevant_doc_names else 0.0
+            # NDCG with graded relevance (binary grade 1 for current dataset, future 0-3)
+            relevant_grades: dict[str, int] = {}
+            for exp in case.expected:
+                key = exp.document_name or exp.document_slug or exp.chunk_content_snippet
+                if key:
+                    relevant_grades[key] = max(relevant_grades.get(key, 0), exp.relevance_grade)
+            # Map retrieved_doc_names to grades dict for NDCG (use doc_name as key)
+            ndcg = EvaluationMetrics.ndcg_at_k(retrieved_doc_names, relevant_grades, top_k) if relevant_grades else 0.0
+            ndcg_at_k: dict[str, float] = {}
+            for tk in top_k_values:
+                ndcg_at_k[str(tk)] = round(EvaluationMetrics.ndcg_at_k(retrieved_doc_names, relevant_grades, tk), 4) if relevant_grades else 0.0
 
             # First relevant rank
             first_rank: int | None = None
@@ -295,6 +383,8 @@ class EvaluationRunner:
                 mrr=round(mrr, 4),
                 precision_at_k=round(prec, 4),
                 recall_at_k=round(rec, 4),
+                ndcg=round(ndcg, 4),
+                ndcg_at_k=ndcg_at_k,
                 first_relevant_rank=first_rank,
                 status=status,
                 duration_ms=round(duration_ms, 2),

@@ -1,0 +1,4136 @@
+{
+  "evaluation_id": "036e2810-8598-47ad-9bc8-6c1dc501adbc",
+  "timestamp": "2026-09-06T15:04:44.500667+00:00",
+  "dataset_version": "1.0",
+  "dataset_path": "C:\\Users\\karti\\OneDrive\\Desktop\\Projects\\BYOK\\backend\\evaluation\\datasets\\retrieval_baseline.json",
+  "retriever": "hybrid_reranked",
+  "top_k": 5,
+  "config": {
+    "evaluation_version": "1.0",
+    "dataset_version": "1.0",
+    "retriever_type": "hybrid_reranked",
+    "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
+    "embedding_dimension": 384,
+    "top_k": 5,
+    "candidate_k": 30,
+    "fusion_method": "rrf",
+    "rrf_k": 60,
+    "extra": {
+      "top_k_values": [
+        1,
+        3,
+        5,
+        10
+      ]
+    }
+  },
+  "overall": {
+    "hit_at_1": 0.5,
+    "hit_at_3": 0.8,
+    "hit_at_5": 0.9667,
+    "hit_at_10": 0.9667,
+    "mrr": 0.6739,
+    "ndcg_at_3": 0.8813,
+    "ndcg_at_5": 1.1656,
+    "ndcg_at_10": 1.1656,
+    "precision_at_k": 0.2133,
+    "recall_at_k": 0.9167,
+    "total_cases": 30,
+    "top_k": 5
+  },
+  "by_category": {
+    "semantic": {
+      "hit_at_1": 0.2222,
+      "hit_at_3": 0.5556,
+      "hit_at_5": 1.0,
+      "hit_at_10": 1.0,
+      "mrr": 0.4648,
+      "ndcg_at_3": 0.5436,
+      "ndcg_at_5": 0.8973,
+      "ndcg_at_10": 0.8973,
+      "precision_at_k": 0.2,
+      "recall_at_k": 1.0,
+      "total_cases": 9,
+      "top_k": 5
+    },
+    "keyword": {
+      "hit_at_1": 0.6667,
+      "hit_at_3": 1.0,
+      "hit_at_5": 1.0,
+      "hit_at_10": 1.0,
+      "mrr": 0.8333,
+      "ndcg_at_3": 1.1924,
+      "ndcg_at_5": 1.3859,
+      "ndcg_at_10": 1.3859,
+      "precision_at_k": 0.2,
+      "recall_at_k": 1.0,
+      "total_cases": 6,
+      "top_k": 5
+    },
+    "factual": {
+      "hit_at_1": 0.7143,
+      "hit_at_3": 1.0,
+      "hit_at_5": 1.0,
+      "hit_at_10": 1.0,
+      "mrr": 0.8333,
+      "ndcg_at_3": 0.9911,
+      "ndcg_at_5": 1.3729,
+      "ndcg_at_10": 1.3729,
+      "precision_at_k": 0.2286,
+      "recall_at_k": 0.9286,
+      "total_cases": 7,
+      "top_k": 5
+    },
+    "multi_hop": {
+      "hit_at_1": 0.5,
+      "hit_at_3": 1.0,
+      "hit_at_5": 1.0,
+      "hit_at_10": 1.0,
+      "mrr": 0.75,
+      "ndcg_at_3": 0.9234,
+      "ndcg_at_5": 1.2047,
+      "ndcg_at_10": 1.2047,
+      "precision_at_k": 0.3,
+      "recall_at_k": 0.75,
+      "total_cases": 4,
+      "top_k": 5
+    },
+    "ambiguous": {
+      "hit_at_1": 0.5,
+      "hit_at_3": 0.5,
+      "hit_at_5": 0.75,
+      "hit_at_10": 0.75,
+      "mrr": 0.55,
+      "ndcg_at_3": 0.9405,
+      "ndcg_at_5": 1.0372,
+      "ndcg_at_10": 1.0372,
+      "precision_at_k": 0.15,
+      "recall_at_k": 0.75,
+      "total_cases": 4,
+      "top_k": 5
+    }
+  },
+  "by_difficulty": {
+    "easy": {
+      "hit_at_1": 0.4,
+      "hit_at_3": 0.8,
+      "hit_at_5": 1.0,
+      "hit_at_10": 1.0,
+      "mrr": 0.6117,
+      "ndcg_at_3": 0.8024,
+      "ndcg_at_5": 1.1593,
+      "ndcg_at_10": 1.1593,
+      "precision_at_k": 0.2,
+      "recall_at_k": 1.0,
+      "total_cases": 10,
+      "top_k": 5
+    },
+    "medium": {
+      "hit_at_1": 0.5455,
+      "hit_at_3": 0.8182,
+      "hit_at_5": 1.0,
+      "hit_at_10": 1.0,
+      "mrr": 0.7182,
+      "ndcg_at_3": 0.8601,
+      "ndcg_at_5": 1.1734,
+      "ndcg_at_10": 1.1734,
+      "precision_at_k": 0.2182,
+      "recall_at_k": 1.0,
+      "total_cases": 11,
+      "top_k": 5
+    },
+    "hard": {
+      "hit_at_1": 0.5556,
+      "hit_at_3": 0.7778,
+      "hit_at_5": 0.8889,
+      "hit_at_10": 0.8889,
+      "mrr": 0.6889,
+      "ndcg_at_3": 0.995,
+      "ndcg_at_5": 1.163,
+      "ndcg_at_10": 1.163,
+      "precision_at_k": 0.2222,
+      "recall_at_k": 0.7222,
+      "total_cases": 9,
+      "top_k": 5
+    }
+  },
+  "cases": [
+    {
+      "case_id": "eval_001",
+      "query": "How do I get my money back after buying a plan?",
+      "category": "semantic",
+      "difficulty": "easy",
+      "expected": [
+        {
+          "document_name": "Refund Policy",
+          "document_slug": null,
+          "chunk_content_snippet": null,
+          "relevance_grade": 1
+        }
+      ],
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": "65eefaa4-a0aa-4cba-aec8-27a6310783f0",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.8282,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.016393,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 2,
+          "chunk_id": "58588d7f-9839-49f8-b44b-a64e54689726",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.4619,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015385,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 3,
+          "chunk_id": "2e810af4-7238-48b1-9ebb-c9c83b9e4e97",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.3703,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015152,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 4,
+          "chunk_id": "684da56a-3718-407c-a831-ac59c70ae6c7",
+          "document_id": "4bedbcd5-224c-470d-9fde-5ec33ba0cde0",
+          "document_name": "Refund Policy",
+          "score": 0.2807,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015625,
+          "is_relevant": true,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 5,
+          "chunk_id": "d8513d6e-c9bf-4a2e-8a4a-f234110ca825",
+          "document_id": "4bedbcd5-224c-470d-9fde-5ec33ba0cde0",
+          "document_name": "Refund Policy",
+          "score": 0.1912,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.016129,
+          "is_relevant": true,
+          "relevance_grade": 0
+        }
+      ],
+      "top_k": 5,
+      "hit_at_k": {
+        "1": false,
+        "3": false,
+        "5": true,
+        "10": true
+      },
+      "mrr": 0.25,
+      "precision_at_k": 0.2,
+      "recall_at_k": 1.0,
+      "ndcg": 0.8175,
+      "ndcg_at_k": {
+        "1": 0.0,
+        "3": 0.0,
+        "5": 0.8175,
+        "10": 0.8175
+      },
+      "first_relevant_rank": 4,
+      "status": "hit",
+      "duration_ms": 10866.79
+    },
+    {
+      "case_id": "eval_002",
+      "query": "Tell me how to receive a reimbursement for my subscription",
+      "category": "semantic",
+      "difficulty": "medium",
+      "expected": [
+        {
+          "document_name": "Refund Policy",
+          "document_slug": null,
+          "chunk_content_snippet": null,
+          "relevance_grade": 1
+        }
+      ],
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": "684da56a-3718-407c-a831-ac59c70ae6c7",
+          "document_id": "4bedbcd5-224c-470d-9fde-5ec33ba0cde0",
+          "document_name": "Refund Policy",
+          "score": 0.51,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.016393,
+          "is_relevant": true,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 2,
+          "chunk_id": "65eefaa4-a0aa-4cba-aec8-27a6310783f0",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.5093,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.016129,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 3,
+          "chunk_id": "58588d7f-9839-49f8-b44b-a64e54689726",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.4073,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015385,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 4,
+          "chunk_id": "3140b7ef-ba05-42bf-b6e2-17eca310cd4b",
+          "document_id": "4bedbcd5-224c-470d-9fde-5ec33ba0cde0",
+          "document_name": "Refund Policy",
+          "score": 0.3087,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015873,
+          "is_relevant": true,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 5,
+          "chunk_id": "d8513d6e-c9bf-4a2e-8a4a-f234110ca825",
+          "document_id": "4bedbcd5-224c-470d-9fde-5ec33ba0cde0",
+          "document_name": "Refund Policy",
+          "score": 0.308,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015625,
+          "is_relevant": true,
+          "relevance_grade": 0
+        }
+      ],
+      "top_k": 5,
+      "hit_at_k": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true
+      },
+      "mrr": 1.0,
+      "precision_at_k": 0.2,
+      "recall_at_k": 1.0,
+      "ndcg": 1.8175,
+      "ndcg_at_k": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.8175,
+        "10": 1.8175
+      },
+      "first_relevant_rank": 1,
+      "status": "hit",
+      "duration_ms": 3491.64
+    },
+    {
+      "case_id": "eval_003",
+      "query": "What is the hybrid search mechanism that combines vectors and text search?",
+      "category": "semantic",
+      "difficulty": "medium",
+      "expected": [
+        {
+          "document_name": "Technical Docs",
+          "document_slug": null,
+          "chunk_content_snippet": null,
+          "relevance_grade": 1
+        }
+      ],
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": "58588d7f-9839-49f8-b44b-a64e54689726",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.8275,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.016129,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 2,
+          "chunk_id": "684da56a-3718-407c-a831-ac59c70ae6c7",
+          "document_id": "4bedbcd5-224c-470d-9fde-5ec33ba0cde0",
+          "document_name": "Refund Policy",
+          "score": 0.5495,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.014286,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 3,
+          "chunk_id": "1d4828a3-afa9-4578-b42d-2a6dab5b17b3",
+          "document_id": "562f0357-bc44-4ebb-b284-7c4a74a975d0",
+          "document_name": "Company Handbook",
+          "score": 0.4612,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015152,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 4,
+          "chunk_id": "65eefaa4-a0aa-4cba-aec8-27a6310783f0",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.4565,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.013699,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 5,
+          "chunk_id": "5f307135-4598-4fc8-9d07-2462bb975a8e",
+          "document_id": "009c5a12-a7c3-44d6-821c-940c40173d3e",
+          "document_name": "Technical Docs",
+          "score": 0.3736,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.016393,
+          "is_relevant": true,
+          "relevance_grade": 0
+        }
+      ],
+      "top_k": 5,
+      "hit_at_k": {
+        "1": false,
+        "3": false,
+        "5": true,
+        "10": true
+      },
+      "mrr": 0.2,
+      "precision_at_k": 0.2,
+      "recall_at_k": 1.0,
+      "ndcg": 0.3869,
+      "ndcg_at_k": {
+        "1": 0.0,
+        "3": 0.0,
+        "5": 0.3869,
+        "10": 0.3869
+      },
+      "first_relevant_rank": 5,
+      "status": "hit",
+      "duration_ms": 4731.41
+    },
+    {
+      "case_id": "eval_004",
+      "query": "Explain how my data stays private and where it is stored",
+      "category": "semantic",
+      "difficulty": "medium",
+      "expected": [
+        {
+          "document_name": "Company Handbook",
+          "document_slug": null,
+          "chunk_content_snippet": null,
+          "relevance_grade": 1
+        }
+      ],
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": "65eefaa4-a0aa-4cba-aec8-27a6310783f0",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.4599,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.014706,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 2,
+          "chunk_id": "684da56a-3718-407c-a831-ac59c70ae6c7",
+          "document_id": "4bedbcd5-224c-470d-9fde-5ec33ba0cde0",
+          "document_name": "Refund Policy",
+          "score": 0.3723,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015873,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 3,
+          "chunk_id": "58588d7f-9839-49f8-b44b-a64e54689726",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.3683,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.014493,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 4,
+          "chunk_id": "2e810af4-7238-48b1-9ebb-c9c83b9e4e97",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.3676,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.014286,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 5,
+          "chunk_id": "3fa1b5f6-4c9f-4d50-a35e-1c7a7e5f55f3",
+          "document_id": "562f0357-bc44-4ebb-b284-7c4a74a975d0",
+          "document_name": "Company Handbook",
+          "score": 0.2827,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.016393,
+          "is_relevant": true,
+          "relevance_grade": 0
+        }
+      ],
+      "top_k": 5,
+      "hit_at_k": {
+        "1": false,
+        "3": false,
+        "5": true,
+        "10": true
+      },
+      "mrr": 0.2,
+      "precision_at_k": 0.2,
+      "recall_at_k": 1.0,
+      "ndcg": 0.3869,
+      "ndcg_at_k": {
+        "1": 0.0,
+        "3": 0.0,
+        "5": 0.3869,
+        "10": 0.3869
+      },
+      "first_relevant_rank": 5,
+      "status": "hit",
+      "duration_ms": 3500.82
+    },
+    {
+      "case_id": "eval_005",
+      "query": "I want to understand the company's work-from-home rules",
+      "category": "semantic",
+      "difficulty": "easy",
+      "expected": [
+        {
+          "document_name": "Company Handbook",
+          "document_slug": null,
+          "chunk_content_snippet": null,
+          "relevance_grade": 1
+        }
+      ],
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": "2e810af4-7238-48b1-9ebb-c9c83b9e4e97",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.4579,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.014085,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 2,
+          "chunk_id": "1d4828a3-afa9-4578-b42d-2a6dab5b17b3",
+          "document_id": "562f0357-bc44-4ebb-b284-7c4a74a975d0",
+          "document_name": "Company Handbook",
+          "score": 0.3736,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.016393,
+          "is_relevant": true,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 3,
+          "chunk_id": "58588d7f-9839-49f8-b44b-a64e54689726",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.371,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015385,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 4,
+          "chunk_id": "684da56a-3718-407c-a831-ac59c70ae6c7",
+          "document_id": "4bedbcd5-224c-470d-9fde-5ec33ba0cde0",
+          "document_name": "Refund Policy",
+          "score": 0.2774,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.014493,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 5,
+          "chunk_id": "65eefaa4-a0aa-4cba-aec8-27a6310783f0",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.2767,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.014286,
+          "is_relevant": false,
+          "relevance_grade": 0
+        }
+      ],
+      "top_k": 5,
+      "hit_at_k": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true
+      },
+      "mrr": 0.5,
+      "precision_at_k": 0.2,
+      "recall_at_k": 1.0,
+      "ndcg": 0.6309,
+      "ndcg_at_k": {
+        "1": 0.0,
+        "3": 0.6309,
+        "5": 0.6309,
+        "10": 0.6309
+      },
+      "first_relevant_rank": 2,
+      "status": "hit",
+      "duration_ms": 4013.99
+    },
+    {
+      "case_id": "eval_006",
+      "query": "How much does the Pro tier cost and what does it include?",
+      "category": "semantic",
+      "difficulty": "easy",
+      "expected": [
+        {
+          "document_name": "Pricing",
+          "document_slug": null,
+          "chunk_content_snippet": null,
+          "relevance_grade": 1
+        }
+      ],
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": "58588d7f-9839-49f8-b44b-a64e54689726",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.7339,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015152,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 2,
+          "chunk_id": "d8513d6e-c9bf-4a2e-8a4a-f234110ca825",
+          "document_id": "4bedbcd5-224c-470d-9fde-5ec33ba0cde0",
+          "document_name": "Refund Policy",
+          "score": 0.3723,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015873,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 3,
+          "chunk_id": "684da56a-3718-407c-a831-ac59c70ae6c7",
+          "document_id": "4bedbcd5-224c-470d-9fde-5ec33ba0cde0",
+          "document_name": "Refund Policy",
+          "score": 0.371,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015385,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 4,
+          "chunk_id": "65eefaa4-a0aa-4cba-aec8-27a6310783f0",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.367,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.014085,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 5,
+          "chunk_id": "b1514be6-d0e8-4d5f-9247-0bc715b5612c",
+          "document_id": "f7c91986-d415-4757-8da5-f2b9c71be211",
+          "document_name": "Pricing",
+          "score": 0.2827,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.016393,
+          "is_relevant": true,
+          "relevance_grade": 0
+        }
+      ],
+      "top_k": 5,
+      "hit_at_k": {
+        "1": false,
+        "3": false,
+        "5": true,
+        "10": true
+      },
+      "mrr": 0.2,
+      "precision_at_k": 0.2,
+      "recall_at_k": 1.0,
+      "ndcg": 0.3869,
+      "ndcg_at_k": {
+        "1": 0.0,
+        "3": 0.0,
+        "5": 0.3869,
+        "10": 0.3869
+      },
+      "first_relevant_rank": 5,
+      "status": "hit",
+      "duration_ms": 3512.77
+    },
+    {
+      "case_id": "eval_007",
+      "query": "Describe the chunking process that splits documents",
+      "category": "semantic",
+      "difficulty": "medium",
+      "expected": [
+        {
+          "document_name": "Technical Docs",
+          "document_slug": null,
+          "chunk_content_snippet": null,
+          "relevance_grade": 1
+        }
+      ],
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": "d8513d6e-c9bf-4a2e-8a4a-f234110ca825",
+          "document_id": "4bedbcd5-224c-470d-9fde-5ec33ba0cde0",
+          "document_name": "Refund Policy",
+          "score": 0.5741,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.013889,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 2,
+          "chunk_id": "4a8bd483-7ace-4631-b347-74ae1ace845f",
+          "document_id": "009c5a12-a7c3-44d6-821c-940c40173d3e",
+          "document_name": "Technical Docs",
+          "score": 0.4386,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.016393,
+          "is_relevant": true,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 3,
+          "chunk_id": "b1514be6-d0e8-4d5f-9247-0bc715b5612c",
+          "document_id": "f7c91986-d415-4757-8da5-f2b9c71be211",
+          "document_name": "Pricing",
+          "score": 0.2944,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015873,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 4,
+          "chunk_id": "80893beb-7856-408a-9318-3dd5dd94a38e",
+          "document_id": "f7c91986-d415-4757-8da5-f2b9c71be211",
+          "document_name": "Pricing",
+          "score": 0.2937,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015625,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 5,
+          "chunk_id": "2e810af4-7238-48b1-9ebb-c9c83b9e4e97",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.293,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015385,
+          "is_relevant": false,
+          "relevance_grade": 0
+        }
+      ],
+      "top_k": 5,
+      "hit_at_k": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true
+      },
+      "mrr": 0.5,
+      "precision_at_k": 0.2,
+      "recall_at_k": 1.0,
+      "ndcg": 0.6309,
+      "ndcg_at_k": {
+        "1": 0.0,
+        "3": 0.6309,
+        "5": 0.6309,
+        "10": 0.6309
+      },
+      "first_relevant_rank": 2,
+      "status": "hit",
+      "duration_ms": 3406.94
+    },
+    {
+      "case_id": "eval_008",
+      "query": "How can I delete my knowledge and what about backups?",
+      "category": "semantic",
+      "difficulty": "hard",
+      "expected": [
+        {
+          "document_name": "Support FAQ",
+          "document_slug": null,
+          "chunk_content_snippet": null,
+          "relevance_grade": 1
+        }
+      ],
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": "58588d7f-9839-49f8-b44b-a64e54689726",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.606,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.014925,
+          "is_relevant": true,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 2,
+          "chunk_id": "65eefaa4-a0aa-4cba-aec8-27a6310783f0",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.5093,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.016129,
+          "is_relevant": true,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 3,
+          "chunk_id": "2e810af4-7238-48b1-9ebb-c9c83b9e4e97",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.5047,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.014493,
+          "is_relevant": true,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 4,
+          "chunk_id": "684da56a-3718-407c-a831-ac59c70ae6c7",
+          "document_id": "4bedbcd5-224c-470d-9fde-5ec33ba0cde0",
+          "document_name": "Refund Policy",
+          "score": 0.31,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.016393,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 5,
+          "chunk_id": "1d4828a3-afa9-4578-b42d-2a6dab5b17b3",
+          "document_id": "562f0357-bc44-4ebb-b284-7c4a74a975d0",
+          "document_name": "Company Handbook",
+          "score": 0.2087,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015873,
+          "is_relevant": false,
+          "relevance_grade": 0
+        }
+      ],
+      "top_k": 5,
+      "hit_at_k": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true
+      },
+      "mrr": 1.0,
+      "precision_at_k": 0.2,
+      "recall_at_k": 1.0,
+      "ndcg": 2.1309,
+      "ndcg_at_k": {
+        "1": 1.0,
+        "3": 2.1309,
+        "5": 2.1309,
+        "10": 2.1309
+      },
+      "first_relevant_rank": 1,
+      "status": "hit",
+      "duration_ms": 3468.54
+    },
+    {
+      "case_id": "eval_009",
+      "query": "What does the onboarding look like for new engineers?",
+      "category": "semantic",
+      "difficulty": "easy",
+      "expected": [
+        {
+          "document_name": "Company Handbook",
+          "document_slug": null,
+          "chunk_content_snippet": null,
+          "relevance_grade": 1
+        }
+      ],
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": "684da56a-3718-407c-a831-ac59c70ae6c7",
+          "document_id": "4bedbcd5-224c-470d-9fde-5ec33ba0cde0",
+          "document_name": "Refund Policy",
+          "score": 0.5576,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.013699,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 2,
+          "chunk_id": "58588d7f-9839-49f8-b44b-a64e54689726",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.4471,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.013889,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 3,
+          "chunk_id": "0238a66b-336d-440d-b946-4f3dfa39f168",
+          "document_id": "562f0357-bc44-4ebb-b284-7c4a74a975d0",
+          "document_name": "Company Handbook",
+          "score": 0.3433,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.016393,
+          "is_relevant": true,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 4,
+          "chunk_id": "2e810af4-7238-48b1-9ebb-c9c83b9e4e97",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.34,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015152,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 5,
+          "chunk_id": "1d4828a3-afa9-4578-b42d-2a6dab5b17b3",
+          "document_id": "562f0357-bc44-4ebb-b284-7c4a74a975d0",
+          "document_name": "Company Handbook",
+          "score": 0.2309,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015873,
+          "is_relevant": true,
+          "relevance_grade": 0
+        }
+      ],
+      "top_k": 5,
+      "hit_at_k": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true
+      },
+      "mrr": 0.3333,
+      "precision_at_k": 0.2,
+      "recall_at_k": 1.0,
+      "ndcg": 0.8869,
+      "ndcg_at_k": {
+        "1": 0.0,
+        "3": 0.5,
+        "5": 0.8869,
+        "10": 0.8869
+      },
+      "first_relevant_rank": 3,
+      "status": "hit",
+      "duration_ms": 3425.51
+    },
+    {
+      "case_id": "eval_010",
+      "query": "What is the cancellation_fee?",
+      "category": "keyword",
+      "difficulty": "easy",
+      "expected": [
+        {
+          "document_name": "Refund Policy",
+          "document_slug": null,
+          "chunk_content_snippet": null,
+          "relevance_grade": 1
+        }
+      ],
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": "65eefaa4-a0aa-4cba-aec8-27a6310783f0",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 1.0093,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.032002,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 2,
+          "chunk_id": "3140b7ef-ba05-42bf-b6e2-17eca310cd4b",
+          "document_id": "4bedbcd5-224c-470d-9fde-5ec33ba0cde0",
+          "document_name": "Refund Policy",
+          "score": 0.76,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.032787,
+          "is_relevant": true,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 3,
+          "chunk_id": "58588d7f-9839-49f8-b44b-a64e54689726",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.758,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015625,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 4,
+          "chunk_id": "2e810af4-7238-48b1-9ebb-c9c83b9e4e97",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.756,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.014925,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 5,
+          "chunk_id": "684da56a-3718-407c-a831-ac59c70ae6c7",
+          "document_id": "4bedbcd5-224c-470d-9fde-5ec33ba0cde0",
+          "document_name": "Refund Policy",
+          "score": 0.5087,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.032002,
+          "is_relevant": true,
+          "relevance_grade": 0
+        }
+      ],
+      "top_k": 5,
+      "hit_at_k": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true
+      },
+      "mrr": 0.5,
+      "precision_at_k": 0.2,
+      "recall_at_k": 1.0,
+      "ndcg": 1.0178,
+      "ndcg_at_k": {
+        "1": 0.0,
+        "3": 0.6309,
+        "5": 1.0178,
+        "10": 1.0178
+      },
+      "first_relevant_rank": 2,
+      "status": "hit",
+      "duration_ms": 3480.36
+    },
+    {
+      "case_id": "eval_011",
+      "query": "STORAGE: 25 MB",
+      "category": "keyword",
+      "difficulty": "easy",
+      "expected": [
+        {
+          "document_name": "Pricing",
+          "document_slug": null,
+          "chunk_content_snippet": null,
+          "relevance_grade": 1
+        }
+      ],
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": "b1514be6-d0e8-4d5f-9247-0bc715b5612c",
+          "document_id": "f7c91986-d415-4757-8da5-f2b9c71be211",
+          "document_name": "Pricing",
+          "score": 1.31,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.032522,
+          "is_relevant": true,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 2,
+          "chunk_id": "80893beb-7856-408a-9318-3dd5dd94a38e",
+          "document_id": "f7c91986-d415-4757-8da5-f2b9c71be211",
+          "document_name": "Pricing",
+          "score": 0.676,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.016393,
+          "is_relevant": true,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 3,
+          "chunk_id": "d8513d6e-c9bf-4a2e-8a4a-f234110ca825",
+          "document_id": "4bedbcd5-224c-470d-9fde-5ec33ba0cde0",
+          "document_name": "Refund Policy",
+          "score": 0.6707,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.014286,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 4,
+          "chunk_id": "65eefaa4-a0aa-4cba-aec8-27a6310783f0",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.67,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.014085,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 5,
+          "chunk_id": "4a8bd483-7ace-4631-b347-74ae1ace845f",
+          "document_id": "009c5a12-a7c3-44d6-821c-940c40173d3e",
+          "document_name": "Technical Docs",
+          "score": 0.3413,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015625,
+          "is_relevant": false,
+          "relevance_grade": 0
+        }
+      ],
+      "top_k": 5,
+      "hit_at_k": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true
+      },
+      "mrr": 1.0,
+      "precision_at_k": 0.2,
+      "recall_at_k": 1.0,
+      "ndcg": 1.6309,
+      "ndcg_at_k": {
+        "1": 1.0,
+        "3": 1.6309,
+        "5": 1.6309,
+        "10": 1.6309
+      },
+      "first_relevant_rank": 1,
+      "status": "hit",
+      "duration_ms": 3456.03
+    },
+    {
+      "case_id": "eval_012",
+      "query": "vector_cosine_ops",
+      "category": "keyword",
+      "difficulty": "medium",
+      "expected": [
+        {
+          "document_name": "Technical Docs",
+          "document_slug": null,
+          "chunk_content_snippet": null,
+          "relevance_grade": 1
+        }
+      ],
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": "5f307135-4598-4fc8-9d07-2462bb975a8e",
+          "document_id": "009c5a12-a7c3-44d6-821c-940c40173d3e",
+          "document_name": "Technical Docs",
+          "score": 1.31,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.032787,
+          "is_relevant": true,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 2,
+          "chunk_id": "4a8bd483-7ace-4631-b347-74ae1ace845f",
+          "document_id": "009c5a12-a7c3-44d6-821c-940c40173d3e",
+          "document_name": "Technical Docs",
+          "score": 1.3093,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.031054,
+          "is_relevant": true,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 3,
+          "chunk_id": "80893beb-7856-408a-9318-3dd5dd94a38e",
+          "document_id": "f7c91986-d415-4757-8da5-f2b9c71be211",
+          "document_name": "Pricing",
+          "score": 0.0087,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.016129,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 4,
+          "chunk_id": "0238a66b-336d-440d-b946-4f3dfa39f168",
+          "document_id": "562f0357-bc44-4ebb-b284-7c4a74a975d0",
+          "document_name": "Company Handbook",
+          "score": 0.008,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015873,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 5,
+          "chunk_id": "ea5a7298-105e-4e00-8e89-976a810cd634",
+          "document_id": "009c5a12-a7c3-44d6-821c-940c40173d3e",
+          "document_name": "Technical Docs",
+          "score": 0.0073,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015625,
+          "is_relevant": true,
+          "relevance_grade": 0
+        }
+      ],
+      "top_k": 5,
+      "hit_at_k": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true
+      },
+      "mrr": 1.0,
+      "precision_at_k": 0.2,
+      "recall_at_k": 1.0,
+      "ndcg": 2.0178,
+      "ndcg_at_k": {
+        "1": 1.0,
+        "3": 1.6309,
+        "5": 2.0178,
+        "10": 2.0178
+      },
+      "first_relevant_rank": 1,
+      "status": "hit",
+      "duration_ms": 3438.12
+    },
+    {
+      "case_id": "eval_013",
+      "query": "RRF_K=60",
+      "category": "keyword",
+      "difficulty": "medium",
+      "expected": [
+        {
+          "document_name": "Technical Docs",
+          "document_slug": null,
+          "chunk_content_snippet": null,
+          "relevance_grade": 1
+        }
+      ],
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": "b1514be6-d0e8-4d5f-9247-0bc715b5612c",
+          "document_id": "f7c91986-d415-4757-8da5-f2b9c71be211",
+          "document_name": "Pricing",
+          "score": 1.3093,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.031099,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 2,
+          "chunk_id": "5f307135-4598-4fc8-9d07-2462bb975a8e",
+          "document_id": "009c5a12-a7c3-44d6-821c-940c40173d3e",
+          "document_name": "Technical Docs",
+          "score": 1.3087,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.031054,
+          "is_relevant": true,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 3,
+          "chunk_id": "58588d7f-9839-49f8-b44b-a64e54689726",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.51,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.032266,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 4,
+          "chunk_id": "d8513d6e-c9bf-4a2e-8a4a-f234110ca825",
+          "document_id": "4bedbcd5-224c-470d-9fde-5ec33ba0cde0",
+          "document_name": "Refund Policy",
+          "score": 0.008,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.016129,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 5,
+          "chunk_id": "2e810af4-7238-48b1-9ebb-c9c83b9e4e97",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.0073,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015873,
+          "is_relevant": false,
+          "relevance_grade": 0
+        }
+      ],
+      "top_k": 5,
+      "hit_at_k": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true
+      },
+      "mrr": 0.5,
+      "precision_at_k": 0.2,
+      "recall_at_k": 1.0,
+      "ndcg": 0.6309,
+      "ndcg_at_k": {
+        "1": 0.0,
+        "3": 0.6309,
+        "5": 0.6309,
+        "10": 0.6309
+      },
+      "first_relevant_rank": 2,
+      "status": "hit",
+      "duration_ms": 3379.41
+    },
+    {
+      "case_id": "eval_014",
+      "query": "pool_size=10",
+      "category": "keyword",
+      "difficulty": "medium",
+      "expected": [
+        {
+          "document_name": "Technical Docs",
+          "document_slug": null,
+          "chunk_content_snippet": null,
+          "relevance_grade": 1
+        }
+      ],
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": "ea5a7298-105e-4e00-8e89-976a810cd634",
+          "document_id": "009c5a12-a7c3-44d6-821c-940c40173d3e",
+          "document_name": "Technical Docs",
+          "score": 1.31,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.032787,
+          "is_relevant": true,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 2,
+          "chunk_id": "b1514be6-d0e8-4d5f-9247-0bc715b5612c",
+          "document_id": "f7c91986-d415-4757-8da5-f2b9c71be211",
+          "document_name": "Pricing",
+          "score": 0.5073,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015385,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 3,
+          "chunk_id": "65eefaa4-a0aa-4cba-aec8-27a6310783f0",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.5053,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.014706,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 4,
+          "chunk_id": "1d4828a3-afa9-4578-b42d-2a6dab5b17b3",
+          "document_id": "562f0357-bc44-4ebb-b284-7c4a74a975d0",
+          "document_name": "Company Handbook",
+          "score": 0.5027,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.013889,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 5,
+          "chunk_id": "1c66ace6-ea27-415f-bd24-624000429569",
+          "document_id": "009c5a12-a7c3-44d6-821c-940c40173d3e",
+          "document_name": "Technical Docs",
+          "score": 0.0093,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.016129,
+          "is_relevant": true,
+          "relevance_grade": 0
+        }
+      ],
+      "top_k": 5,
+      "hit_at_k": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true
+      },
+      "mrr": 1.0,
+      "precision_at_k": 0.2,
+      "recall_at_k": 1.0,
+      "ndcg": 1.3869,
+      "ndcg_at_k": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.3869,
+        "10": 1.3869
+      },
+      "first_relevant_rank": 1,
+      "status": "hit",
+      "duration_ms": 3653.92
+    },
+    {
+      "case_id": "eval_015",
+      "query": "ENABLE_ARXIV_FALLBACK",
+      "category": "keyword",
+      "difficulty": "hard",
+      "expected": [
+        {
+          "document_name": "Support FAQ",
+          "document_slug": null,
+          "chunk_content_snippet": null,
+          "relevance_grade": 1
+        }
+      ],
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": "2e810af4-7238-48b1-9ebb-c9c83b9e4e97",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 1.31,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.032522,
+          "is_relevant": true,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 2,
+          "chunk_id": "65eefaa4-a0aa-4cba-aec8-27a6310783f0",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.0093,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.016393,
+          "is_relevant": true,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 3,
+          "chunk_id": "d8513d6e-c9bf-4a2e-8a4a-f234110ca825",
+          "document_id": "4bedbcd5-224c-470d-9fde-5ec33ba0cde0",
+          "document_name": "Refund Policy",
+          "score": 0.0087,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015873,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 4,
+          "chunk_id": "ea5a7298-105e-4e00-8e89-976a810cd634",
+          "document_id": "009c5a12-a7c3-44d6-821c-940c40173d3e",
+          "document_name": "Technical Docs",
+          "score": 0.008,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015625,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 5,
+          "chunk_id": "1c66ace6-ea27-415f-bd24-624000429569",
+          "document_id": "009c5a12-a7c3-44d6-821c-940c40173d3e",
+          "document_name": "Technical Docs",
+          "score": 0.0073,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015385,
+          "is_relevant": false,
+          "relevance_grade": 0
+        }
+      ],
+      "top_k": 5,
+      "hit_at_k": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true
+      },
+      "mrr": 1.0,
+      "precision_at_k": 0.2,
+      "recall_at_k": 1.0,
+      "ndcg": 1.6309,
+      "ndcg_at_k": {
+        "1": 1.0,
+        "3": 1.6309,
+        "5": 1.6309,
+        "10": 1.6309
+      },
+      "first_relevant_rank": 1,
+      "status": "hit",
+      "duration_ms": 3392.34
+    },
+    {
+      "case_id": "eval_016",
+      "query": "What is the maximum file size allowed for uploads?",
+      "category": "factual",
+      "difficulty": "easy",
+      "expected": [
+        {
+          "document_name": "Pricing",
+          "document_slug": null,
+          "chunk_content_snippet": null,
+          "relevance_grade": 1
+        }
+      ],
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": "80893beb-7856-408a-9318-3dd5dd94a38e",
+          "document_id": "f7c91986-d415-4757-8da5-f2b9c71be211",
+          "document_name": "Pricing",
+          "score": 0.6767,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.016393,
+          "is_relevant": true,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 2,
+          "chunk_id": "65eefaa4-a0aa-4cba-aec8-27a6310783f0",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.6707,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.014286,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 3,
+          "chunk_id": "2e810af4-7238-48b1-9ebb-c9c83b9e4e97",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.5642,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015873,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 4,
+          "chunk_id": "58588d7f-9839-49f8-b44b-a64e54689726",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.4464,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.013699,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 5,
+          "chunk_id": "b1514be6-d0e8-4d5f-9247-0bc715b5612c",
+          "document_id": "f7c91986-d415-4757-8da5-f2b9c71be211",
+          "document_name": "Pricing",
+          "score": 0.3427,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.016129,
+          "is_relevant": true,
+          "relevance_grade": 0
+        }
+      ],
+      "top_k": 5,
+      "hit_at_k": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true
+      },
+      "mrr": 1.0,
+      "precision_at_k": 0.2,
+      "recall_at_k": 1.0,
+      "ndcg": 1.3869,
+      "ndcg_at_k": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.3869,
+        "10": 1.3869
+      },
+      "first_relevant_rank": 1,
+      "status": "hit",
+      "duration_ms": 3483.53
+    },
+    {
+      "case_id": "eval_017",
+      "query": "How many days of refund eligibility for low usage?",
+      "category": "factual",
+      "difficulty": "easy",
+      "expected": [
+        {
+          "document_name": "Refund Policy",
+          "document_slug": null,
+          "chunk_content_snippet": null,
+          "relevance_grade": 1
+        }
+      ],
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": "d8513d6e-c9bf-4a2e-8a4a-f234110ca825",
+          "document_id": "4bedbcd5-224c-470d-9fde-5ec33ba0cde0",
+          "document_name": "Refund Policy",
+          "score": 0.6767,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.016393,
+          "is_relevant": true,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 2,
+          "chunk_id": "58588d7f-9839-49f8-b44b-a64e54689726",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.676,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.016129,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 3,
+          "chunk_id": "65eefaa4-a0aa-4cba-aec8-27a6310783f0",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.4531,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015873,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 4,
+          "chunk_id": "684da56a-3718-407c-a831-ac59c70ae6c7",
+          "document_id": "4bedbcd5-224c-470d-9fde-5ec33ba0cde0",
+          "document_name": "Refund Policy",
+          "score": 0.4524,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015625,
+          "is_relevant": true,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 5,
+          "chunk_id": "3140b7ef-ba05-42bf-b6e2-17eca310cd4b",
+          "document_id": "4bedbcd5-224c-470d-9fde-5ec33ba0cde0",
+          "document_name": "Refund Policy",
+          "score": 0.4518,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015385,
+          "is_relevant": true,
+          "relevance_grade": 0
+        }
+      ],
+      "top_k": 5,
+      "hit_at_k": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true
+      },
+      "mrr": 1.0,
+      "precision_at_k": 0.2,
+      "recall_at_k": 1.0,
+      "ndcg": 1.8175,
+      "ndcg_at_k": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.8175,
+        "10": 1.8175
+      },
+      "first_relevant_rank": 1,
+      "status": "hit",
+      "duration_ms": 3427.57
+    },
+    {
+      "case_id": "eval_018",
+      "query": "What embedding model and dimension does the system use?",
+      "category": "factual",
+      "difficulty": "easy",
+      "expected": [
+        {
+          "document_name": "Technical Docs",
+          "document_slug": null,
+          "chunk_content_snippet": null,
+          "relevance_grade": 1
+        }
+      ],
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": "58588d7f-9839-49f8-b44b-a64e54689726",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.5589,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.014085,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 2,
+          "chunk_id": "2e810af4-7238-48b1-9ebb-c9c83b9e4e97",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.4538,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.016129,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 3,
+          "chunk_id": "4a8bd483-7ace-4631-b347-74ae1ace845f",
+          "document_id": "009c5a12-a7c3-44d6-821c-940c40173d3e",
+          "document_name": "Technical Docs",
+          "score": 0.3433,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.016393,
+          "is_relevant": true,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 4,
+          "chunk_id": "80893beb-7856-408a-9318-3dd5dd94a38e",
+          "document_id": "f7c91986-d415-4757-8da5-f2b9c71be211",
+          "document_name": "Pricing",
+          "score": 0.342,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015873,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 5,
+          "chunk_id": "ea5a7298-105e-4e00-8e89-976a810cd634",
+          "document_id": "009c5a12-a7c3-44d6-821c-940c40173d3e",
+          "document_name": "Technical Docs",
+          "score": 0.3407,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015385,
+          "is_relevant": true,
+          "relevance_grade": 0
+        }
+      ],
+      "top_k": 5,
+      "hit_at_k": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true
+      },
+      "mrr": 0.3333,
+      "precision_at_k": 0.2,
+      "recall_at_k": 1.0,
+      "ndcg": 0.8869,
+      "ndcg_at_k": {
+        "1": 0.0,
+        "3": 0.5,
+        "5": 0.8869,
+        "10": 0.8869
+      },
+      "first_relevant_rank": 3,
+      "status": "hit",
+      "duration_ms": 3630.19
+    },
+    {
+      "case_id": "eval_019",
+      "query": "What are the HNSW index parameters m and ef_construction?",
+      "category": "factual",
+      "difficulty": "medium",
+      "expected": [
+        {
+          "document_name": "Technical Docs",
+          "document_slug": null,
+          "chunk_content_snippet": null,
+          "relevance_grade": 1
+        }
+      ],
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": "4a8bd483-7ace-4631-b347-74ae1ace845f",
+          "document_id": "009c5a12-a7c3-44d6-821c-940c40173d3e",
+          "document_name": "Technical Docs",
+          "score": 0.7824,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.014493,
+          "is_relevant": true,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 2,
+          "chunk_id": "2e810af4-7238-48b1-9ebb-c9c83b9e4e97",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.6753,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015873,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 3,
+          "chunk_id": "b1514be6-d0e8-4d5f-9247-0bc715b5612c",
+          "document_id": "f7c91986-d415-4757-8da5-f2b9c71be211",
+          "document_name": "Pricing",
+          "score": 0.5649,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.016129,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 4,
+          "chunk_id": "58588d7f-9839-49f8-b44b-a64e54689726",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.5582,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.013889,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 5,
+          "chunk_id": "5f307135-4598-4fc8-9d07-2462bb975a8e",
+          "document_id": "009c5a12-a7c3-44d6-821c-940c40173d3e",
+          "document_name": "Technical Docs",
+          "score": 0.4484,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.014286,
+          "is_relevant": true,
+          "relevance_grade": 0
+        }
+      ],
+      "top_k": 5,
+      "hit_at_k": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true
+      },
+      "mrr": 1.0,
+      "precision_at_k": 0.2,
+      "recall_at_k": 1.0,
+      "ndcg": 1.3869,
+      "ndcg_at_k": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.3869,
+        "10": 1.3869
+      },
+      "first_relevant_rank": 1,
+      "status": "hit",
+      "duration_ms": 3498.29
+    },
+    {
+      "case_id": "eval_020",
+      "query": "How many days of annual leave and what is the learning budget?",
+      "category": "factual",
+      "difficulty": "medium",
+      "expected": [
+        {
+          "document_name": "Company Handbook",
+          "document_slug": null,
+          "chunk_content_snippet": null,
+          "relevance_grade": 1
+        }
+      ],
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": "65eefaa4-a0aa-4cba-aec8-27a6310783f0",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.6713,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.014493,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 2,
+          "chunk_id": "1d4828a3-afa9-4578-b42d-2a6dab5b17b3",
+          "document_id": "562f0357-bc44-4ebb-b284-7c4a74a975d0",
+          "document_name": "Company Handbook",
+          "score": 0.5933,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.016393,
+          "is_relevant": true,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 3,
+          "chunk_id": "58588d7f-9839-49f8-b44b-a64e54689726",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.5907,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015385,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 4,
+          "chunk_id": "3fa1b5f6-4c9f-4d50-a35e-1c7a7e5f55f3",
+          "document_id": "562f0357-bc44-4ebb-b284-7c4a74a975d0",
+          "document_name": "Company Handbook",
+          "score": 0.5087,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015873,
+          "is_relevant": true,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 5,
+          "chunk_id": "684da56a-3718-407c-a831-ac59c70ae6c7",
+          "document_id": "4bedbcd5-224c-470d-9fde-5ec33ba0cde0",
+          "document_name": "Refund Policy",
+          "score": 0.508,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015625,
+          "is_relevant": false,
+          "relevance_grade": 0
+        }
+      ],
+      "top_k": 5,
+      "hit_at_k": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true
+      },
+      "mrr": 0.5,
+      "precision_at_k": 0.2,
+      "recall_at_k": 1.0,
+      "ndcg": 1.0616,
+      "ndcg_at_k": {
+        "1": 0.0,
+        "3": 0.6309,
+        "5": 1.0616,
+        "10": 1.0616
+      },
+      "first_relevant_rank": 2,
+      "status": "hit",
+      "duration_ms": 3501.26
+    },
+    {
+      "case_id": "eval_021",
+      "query": "What is the Enterprise SLA and how many knowledge bases in Pro?",
+      "category": "factual",
+      "difficulty": "hard",
+      "expected": [
+        {
+          "document_name": "Pricing",
+          "document_slug": null,
+          "chunk_content_snippet": null,
+          "relevance_grade": 1
+        },
+        {
+          "document_name": "Technical Docs",
+          "document_slug": null,
+          "chunk_content_snippet": null,
+          "relevance_grade": 0
+        }
+      ],
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": "80893beb-7856-408a-9318-3dd5dd94a38e",
+          "document_id": "f7c91986-d415-4757-8da5-f2b9c71be211",
+          "document_name": "Pricing",
+          "score": 0.676,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.016129,
+          "is_relevant": true,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 2,
+          "chunk_id": "58588d7f-9839-49f8-b44b-a64e54689726",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.6727,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.014925,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 3,
+          "chunk_id": "b1514be6-d0e8-4d5f-9247-0bc715b5612c",
+          "document_id": "f7c91986-d415-4757-8da5-f2b9c71be211",
+          "document_name": "Pricing",
+          "score": 0.51,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.016393,
+          "is_relevant": true,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 4,
+          "chunk_id": "2e810af4-7238-48b1-9ebb-c9c83b9e4e97",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.5067,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015152,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 5,
+          "chunk_id": "1d4828a3-afa9-4578-b42d-2a6dab5b17b3",
+          "document_id": "562f0357-bc44-4ebb-b284-7c4a74a975d0",
+          "document_name": "Company Handbook",
+          "score": 0.4253,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015873,
+          "is_relevant": false,
+          "relevance_grade": 0
+        }
+      ],
+      "top_k": 5,
+      "hit_at_k": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true
+      },
+      "mrr": 1.0,
+      "precision_at_k": 0.2,
+      "recall_at_k": 0.5,
+      "ndcg": 1.5,
+      "ndcg_at_k": {
+        "1": 1.0,
+        "3": 1.5,
+        "5": 1.5,
+        "10": 1.5
+      },
+      "first_relevant_rank": 1,
+      "status": "hit",
+      "duration_ms": 3613.6
+    },
+    {
+      "case_id": "eval_022",
+      "query": "If I buy an annual plan and cancel after 20 days with 30% usage, what refund and fee apply?",
+      "category": "multi_hop",
+      "difficulty": "hard",
+      "expected": [
+        {
+          "document_name": "Refund Policy",
+          "document_slug": null,
+          "chunk_content_snippet": null,
+          "relevance_grade": 1
+        },
+        {
+          "document_name": "Pricing",
+          "document_slug": null,
+          "chunk_content_snippet": null,
+          "relevance_grade": 1
+        }
+      ],
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": "58588d7f-9839-49f8-b44b-a64e54689726",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.6191,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015625,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 2,
+          "chunk_id": "684da56a-3718-407c-a831-ac59c70ae6c7",
+          "document_id": "4bedbcd5-224c-470d-9fde-5ec33ba0cde0",
+          "document_name": "Refund Policy",
+          "score": 0.5656,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.016393,
+          "is_relevant": true,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 3,
+          "chunk_id": "3140b7ef-ba05-42bf-b6e2-17eca310cd4b",
+          "document_id": "4bedbcd5-224c-470d-9fde-5ec33ba0cde0",
+          "document_name": "Refund Policy",
+          "score": 0.5649,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.016129,
+          "is_relevant": true,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 4,
+          "chunk_id": "65eefaa4-a0aa-4cba-aec8-27a6310783f0",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.5642,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015873,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 5,
+          "chunk_id": "d8513d6e-c9bf-4a2e-8a4a-f234110ca825",
+          "document_id": "4bedbcd5-224c-470d-9fde-5ec33ba0cde0",
+          "document_name": "Refund Policy",
+          "score": 0.3962,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015385,
+          "is_relevant": true,
+          "relevance_grade": 0
+        }
+      ],
+      "top_k": 5,
+      "hit_at_k": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true
+      },
+      "mrr": 0.5,
+      "precision_at_k": 0.2,
+      "recall_at_k": 0.5,
+      "ndcg": 0.9306,
+      "ndcg_at_k": {
+        "1": 0.0,
+        "3": 0.6934,
+        "5": 0.9306,
+        "10": 0.9306
+      },
+      "first_relevant_rank": 2,
+      "status": "hit",
+      "duration_ms": 3461.74
+    },
+    {
+      "case_id": "eval_023",
+      "query": "What happens when a user cancels during trial and then requests a refund after conversion?",
+      "category": "multi_hop",
+      "difficulty": "hard",
+      "expected": [
+        {
+          "document_name": "Refund Policy",
+          "document_slug": null,
+          "chunk_content_snippet": null,
+          "relevance_grade": 1
+        },
+        {
+          "document_name": "Support FAQ",
+          "document_slug": null,
+          "chunk_content_snippet": null,
+          "relevance_grade": 1
+        }
+      ],
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": "58588d7f-9839-49f8-b44b-a64e54689726",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.723,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015873,
+          "is_relevant": true,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 2,
+          "chunk_id": "65eefaa4-a0aa-4cba-aec8-27a6310783f0",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.51,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.016393,
+          "is_relevant": true,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 3,
+          "chunk_id": "684da56a-3718-407c-a831-ac59c70ae6c7",
+          "document_id": "4bedbcd5-224c-470d-9fde-5ec33ba0cde0",
+          "document_name": "Refund Policy",
+          "score": 0.3665,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.016129,
+          "is_relevant": true,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 4,
+          "chunk_id": "d8513d6e-c9bf-4a2e-8a4a-f234110ca825",
+          "document_id": "4bedbcd5-224c-470d-9fde-5ec33ba0cde0",
+          "document_name": "Refund Policy",
+          "score": 0.3645,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015385,
+          "is_relevant": true,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 5,
+          "chunk_id": "3140b7ef-ba05-42bf-b6e2-17eca310cd4b",
+          "document_id": "4bedbcd5-224c-470d-9fde-5ec33ba0cde0",
+          "document_name": "Refund Policy",
+          "score": 0.2937,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015625,
+          "is_relevant": true,
+          "relevance_grade": 0
+        }
+      ],
+      "top_k": 5,
+      "hit_at_k": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true
+      },
+      "mrr": 1.0,
+      "precision_at_k": 0.4,
+      "recall_at_k": 1.0,
+      "ndcg": 1.8078,
+      "ndcg_at_k": {
+        "1": 1.0,
+        "3": 1.3066,
+        "5": 1.8078,
+        "10": 1.8078
+      },
+      "first_relevant_rank": 1,
+      "status": "hit",
+      "duration_ms": 3477.2
+    },
+    {
+      "case_id": "eval_024",
+      "query": "Explain how a document goes from upload (25 MB limit) through chunking (1000/150) to HNSW indexing",
+      "category": "multi_hop",
+      "difficulty": "hard",
+      "expected": [
+        {
+          "document_name": "Technical Docs",
+          "document_slug": null,
+          "chunk_content_snippet": null,
+          "relevance_grade": 1
+        },
+        {
+          "document_name": "Pricing",
+          "document_slug": null,
+          "chunk_content_snippet": null,
+          "relevance_grade": 1
+        }
+      ],
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": "65eefaa4-a0aa-4cba-aec8-27a6310783f0",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.5334,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.014286,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 2,
+          "chunk_id": "4a8bd483-7ace-4631-b347-74ae1ace845f",
+          "document_id": "009c5a12-a7c3-44d6-821c-940c40173d3e",
+          "document_name": "Technical Docs",
+          "score": 0.4806,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.016393,
+          "is_relevant": true,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 3,
+          "chunk_id": "b1514be6-d0e8-4d5f-9247-0bc715b5612c",
+          "document_id": "f7c91986-d415-4757-8da5-f2b9c71be211",
+          "document_name": "Pricing",
+          "score": 0.4793,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015873,
+          "is_relevant": true,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 4,
+          "chunk_id": "58588d7f-9839-49f8-b44b-a64e54689726",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.3008,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015152,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 5,
+          "chunk_id": "2e810af4-7238-48b1-9ebb-c9c83b9e4e97",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.2426,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015385,
+          "is_relevant": false,
+          "relevance_grade": 0
+        }
+      ],
+      "top_k": 5,
+      "hit_at_k": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true
+      },
+      "mrr": 0.5,
+      "precision_at_k": 0.4,
+      "recall_at_k": 1.0,
+      "ndcg": 0.6934,
+      "ndcg_at_k": {
+        "1": 0.0,
+        "3": 0.6934,
+        "5": 0.6934,
+        "10": 0.6934
+      },
+      "first_relevant_rank": 2,
+      "status": "hit",
+      "duration_ms": 3459.85
+    },
+    {
+      "case_id": "eval_025",
+      "query": "How does hybrid retrieval work from query to RRF fusion to context for LLM?",
+      "category": "multi_hop",
+      "difficulty": "hard",
+      "expected": [
+        {
+          "document_name": "Technical Docs",
+          "document_slug": null,
+          "chunk_content_snippet": null,
+          "relevance_grade": 1
+        },
+        {
+          "document_name": "Pricing",
+          "document_slug": null,
+          "chunk_content_snippet": null,
+          "relevance_grade": 0
+        }
+      ],
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": "5f307135-4598-4fc8-9d07-2462bb975a8e",
+          "document_id": "009c5a12-a7c3-44d6-821c-940c40173d3e",
+          "document_name": "Technical Docs",
+          "score": 0.5485,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.016393,
+          "is_relevant": true,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 2,
+          "chunk_id": "58588d7f-9839-49f8-b44b-a64e54689726",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.5478,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.016129,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 3,
+          "chunk_id": "1d4828a3-afa9-4578-b42d-2a6dab5b17b3",
+          "document_id": "562f0357-bc44-4ebb-b284-7c4a74a975d0",
+          "document_name": "Company Handbook",
+          "score": 0.3906,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.014925,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 4,
+          "chunk_id": "684da56a-3718-407c-a831-ac59c70ae6c7",
+          "document_id": "4bedbcd5-224c-470d-9fde-5ec33ba0cde0",
+          "document_name": "Refund Policy",
+          "score": 0.3859,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.013514,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 5,
+          "chunk_id": "1c66ace6-ea27-415f-bd24-624000429569",
+          "document_id": "009c5a12-a7c3-44d6-821c-940c40173d3e",
+          "document_name": "Technical Docs",
+          "score": 0.3164,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015873,
+          "is_relevant": true,
+          "relevance_grade": 0
+        }
+      ],
+      "top_k": 5,
+      "hit_at_k": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true
+      },
+      "mrr": 1.0,
+      "precision_at_k": 0.2,
+      "recall_at_k": 0.5,
+      "ndcg": 1.3869,
+      "ndcg_at_k": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.3869,
+        "10": 1.3869
+      },
+      "first_relevant_rank": 1,
+      "status": "hit",
+      "duration_ms": 3374.57
+    },
+    {
+      "case_id": "eval_026",
+      "query": "How does it work?",
+      "category": "ambiguous",
+      "difficulty": "hard",
+      "expected": [
+        {
+          "document_name": "Technical Docs",
+          "document_slug": null,
+          "chunk_content_snippet": null,
+          "relevance_grade": 1
+        }
+      ],
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": "58588d7f-9839-49f8-b44b-a64e54689726",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 1.31,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.032258,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 2,
+          "chunk_id": "684da56a-3718-407c-a831-ac59c70ae6c7",
+          "document_id": "4bedbcd5-224c-470d-9fde-5ec33ba0cde0",
+          "document_name": "Refund Policy",
+          "score": 0.5087,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.016393,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 3,
+          "chunk_id": "1d4828a3-afa9-4578-b42d-2a6dab5b17b3",
+          "document_id": "562f0357-bc44-4ebb-b284-7c4a74a975d0",
+          "document_name": "Company Handbook",
+          "score": 0.2593,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.031545,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 4,
+          "chunk_id": "65eefaa4-a0aa-4cba-aec8-27a6310783f0",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.2573,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015625,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 5,
+          "chunk_id": "2e810af4-7238-48b1-9ebb-c9c83b9e4e97",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.2507,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.013333,
+          "is_relevant": false,
+          "relevance_grade": 0
+        }
+      ],
+      "top_k": 5,
+      "hit_at_k": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false
+      },
+      "mrr": 0.0,
+      "precision_at_k": 0.0,
+      "recall_at_k": 0.0,
+      "ndcg": 0.0,
+      "ndcg_at_k": {
+        "1": 0.0,
+        "3": 0.0,
+        "5": 0.0,
+        "10": 0.0
+      },
+      "first_relevant_rank": null,
+      "status": "miss",
+      "duration_ms": 3645.12
+    },
+    {
+      "case_id": "eval_027",
+      "query": "What are the limits?",
+      "category": "ambiguous",
+      "difficulty": "hard",
+      "expected": [
+        {
+          "document_name": "Pricing",
+          "document_slug": null,
+          "chunk_content_snippet": null,
+          "relevance_grade": 1
+        }
+      ],
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": "2e810af4-7238-48b1-9ebb-c9c83b9e4e97",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.758,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015873,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 2,
+          "chunk_id": "58588d7f-9839-49f8-b44b-a64e54689726",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.754,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.014493,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 3,
+          "chunk_id": "65eefaa4-a0aa-4cba-aec8-27a6310783f0",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.7513,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.013699,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 4,
+          "chunk_id": "5f307135-4598-4fc8-9d07-2462bb975a8e",
+          "document_id": "009c5a12-a7c3-44d6-821c-940c40173d3e",
+          "document_name": "Technical Docs",
+          "score": 0.51,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.029727,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 5,
+          "chunk_id": "80893beb-7856-408a-9318-3dd5dd94a38e",
+          "document_id": "f7c91986-d415-4757-8da5-f2b9c71be211",
+          "document_name": "Pricing",
+          "score": 0.5093,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.016393,
+          "is_relevant": true,
+          "relevance_grade": 0
+        }
+      ],
+      "top_k": 5,
+      "hit_at_k": {
+        "1": false,
+        "3": false,
+        "5": true,
+        "10": true
+      },
+      "mrr": 0.2,
+      "precision_at_k": 0.2,
+      "recall_at_k": 1.0,
+      "ndcg": 0.3869,
+      "ndcg_at_k": {
+        "1": 0.0,
+        "3": 0.0,
+        "5": 0.3869,
+        "10": 0.3869
+      },
+      "first_relevant_rank": 5,
+      "status": "hit",
+      "duration_ms": 3521.51
+    },
+    {
+      "case_id": "eval_028",
+      "query": "Tell me about the policy",
+      "category": "ambiguous",
+      "difficulty": "medium",
+      "expected": [
+        {
+          "document_name": "Refund Policy",
+          "document_slug": null,
+          "chunk_content_snippet": null,
+          "relevance_grade": 1
+        }
+      ],
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": "d8513d6e-c9bf-4a2e-8a4a-f234110ca825",
+          "document_id": "4bedbcd5-224c-470d-9fde-5ec33ba0cde0",
+          "document_name": "Refund Policy",
+          "score": 0.408,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015625,
+          "is_relevant": true,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 2,
+          "chunk_id": "3140b7ef-ba05-42bf-b6e2-17eca310cd4b",
+          "document_id": "4bedbcd5-224c-470d-9fde-5ec33ba0cde0",
+          "document_name": "Refund Policy",
+          "score": 0.4067,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015152,
+          "is_relevant": true,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 3,
+          "chunk_id": "65eefaa4-a0aa-4cba-aec8-27a6310783f0",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.4053,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.014706,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 4,
+          "chunk_id": "58588d7f-9839-49f8-b44b-a64e54689726",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.404,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.014286,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 5,
+          "chunk_id": "1d4828a3-afa9-4578-b42d-2a6dab5b17b3",
+          "document_id": "562f0357-bc44-4ebb-b284-7c4a74a975d0",
+          "document_name": "Company Handbook",
+          "score": 0.4033,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.014085,
+          "is_relevant": false,
+          "relevance_grade": 0
+        }
+      ],
+      "top_k": 5,
+      "hit_at_k": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true
+      },
+      "mrr": 1.0,
+      "precision_at_k": 0.2,
+      "recall_at_k": 1.0,
+      "ndcg": 1.6309,
+      "ndcg_at_k": {
+        "1": 1.0,
+        "3": 1.6309,
+        "5": 1.6309,
+        "10": 1.6309
+      },
+      "first_relevant_rank": 1,
+      "status": "hit",
+      "duration_ms": 3474.17
+    },
+    {
+      "case_id": "eval_029",
+      "query": "How can I get help?",
+      "category": "ambiguous",
+      "difficulty": "easy",
+      "expected": [
+        {
+          "document_name": "Support FAQ",
+          "document_slug": null,
+          "chunk_content_snippet": null,
+          "relevance_grade": 1
+        }
+      ],
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": "65eefaa4-a0aa-4cba-aec8-27a6310783f0",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.81,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.032787,
+          "is_relevant": true,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 2,
+          "chunk_id": "58588d7f-9839-49f8-b44b-a64e54689726",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.4073,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015385,
+          "is_relevant": true,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 3,
+          "chunk_id": "2e810af4-7238-48b1-9ebb-c9c83b9e4e97",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.4067,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015152,
+          "is_relevant": true,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 4,
+          "chunk_id": "3fa1b5f6-4c9f-4d50-a35e-1c7a7e5f55f3",
+          "document_id": "562f0357-bc44-4ebb-b284-7c4a74a975d0",
+          "document_name": "Company Handbook",
+          "score": 0.204,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.014286,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 5,
+          "chunk_id": "684da56a-3718-407c-a831-ac59c70ae6c7",
+          "document_id": "4bedbcd5-224c-470d-9fde-5ec33ba0cde0",
+          "document_name": "Refund Policy",
+          "score": 0.2013,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.013514,
+          "is_relevant": false,
+          "relevance_grade": 0
+        }
+      ],
+      "top_k": 5,
+      "hit_at_k": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true
+      },
+      "mrr": 1.0,
+      "precision_at_k": 0.2,
+      "recall_at_k": 1.0,
+      "ndcg": 2.1309,
+      "ndcg_at_k": {
+        "1": 1.0,
+        "3": 2.1309,
+        "5": 2.1309,
+        "10": 2.1309
+      },
+      "first_relevant_rank": 1,
+      "status": "hit",
+      "duration_ms": 3641.93
+    },
+    {
+      "case_id": "eval_030",
+      "query": "What is the 25 MB limit and what happens if I exceed it?",
+      "category": "factual",
+      "difficulty": "medium",
+      "expected": [
+        {
+          "document_name": "Pricing",
+          "document_slug": null,
+          "chunk_content_snippet": null,
+          "relevance_grade": 1
+        },
+        {
+          "document_name": "Support FAQ",
+          "document_slug": null,
+          "chunk_content_snippet": null,
+          "relevance_grade": 1
+        }
+      ],
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": "58588d7f-9839-49f8-b44b-a64e54689726",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.754,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.014286,
+          "is_relevant": true,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 2,
+          "chunk_id": "65eefaa4-a0aa-4cba-aec8-27a6310783f0",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.6727,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.014925,
+          "is_relevant": true,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 3,
+          "chunk_id": "80893beb-7856-408a-9318-3dd5dd94a38e",
+          "document_id": "f7c91986-d415-4757-8da5-f2b9c71be211",
+          "document_name": "Pricing",
+          "score": 0.4267,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.016393,
+          "is_relevant": true,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 4,
+          "chunk_id": "2e810af4-7238-48b1-9ebb-c9c83b9e4e97",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.4253,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015873,
+          "is_relevant": true,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 5,
+          "chunk_id": "684da56a-3718-407c-a831-ac59c70ae6c7",
+          "document_id": "4bedbcd5-224c-470d-9fde-5ec33ba0cde0",
+          "document_name": "Refund Policy",
+          "score": 0.4247,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015625,
+          "is_relevant": false,
+          "relevance_grade": 0
+        }
+      ],
+      "top_k": 5,
+      "hit_at_k": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true
+      },
+      "mrr": 1.0,
+      "precision_at_k": 0.4,
+      "recall_at_k": 1.0,
+      "ndcg": 1.5706,
+      "ndcg_at_k": {
+        "1": 1.0,
+        "3": 1.3066,
+        "5": 1.5706,
+        "10": 1.5706
+      },
+      "first_relevant_rank": 1,
+      "status": "hit",
+      "duration_ms": 3442.03
+    }
+  ],
+  "failures": [
+    {
+      "case_id": "eval_026",
+      "query": "How does it work?",
+      "category": "ambiguous",
+      "difficulty": "hard",
+      "expected": [
+        {
+          "document_name": "Technical Docs",
+          "document_slug": null,
+          "chunk_content_snippet": null,
+          "relevance_grade": 1
+        }
+      ],
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": "58588d7f-9839-49f8-b44b-a64e54689726",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 1.31,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.032258,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 2,
+          "chunk_id": "684da56a-3718-407c-a831-ac59c70ae6c7",
+          "document_id": "4bedbcd5-224c-470d-9fde-5ec33ba0cde0",
+          "document_name": "Refund Policy",
+          "score": 0.5087,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.016393,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 3,
+          "chunk_id": "1d4828a3-afa9-4578-b42d-2a6dab5b17b3",
+          "document_id": "562f0357-bc44-4ebb-b284-7c4a74a975d0",
+          "document_name": "Company Handbook",
+          "score": 0.2593,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.031545,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 4,
+          "chunk_id": "65eefaa4-a0aa-4cba-aec8-27a6310783f0",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.2573,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015625,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 5,
+          "chunk_id": "2e810af4-7238-48b1-9ebb-c9c83b9e4e97",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.2507,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.013333,
+          "is_relevant": false,
+          "relevance_grade": 0
+        }
+      ],
+      "top_k": 5,
+      "hit_at_k": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false
+      },
+      "mrr": 0.0,
+      "precision_at_k": 0.0,
+      "recall_at_k": 0.0,
+      "ndcg": 0.0,
+      "ndcg_at_k": {
+        "1": 0.0,
+        "3": 0.0,
+        "5": 0.0,
+        "10": 0.0
+      },
+      "first_relevant_rank": null,
+      "status": "miss",
+      "duration_ms": 3645.12
+    }
+  ],
+  "worst_queries": [
+    {
+      "case_id": "eval_026",
+      "query": "How does it work?",
+      "category": "ambiguous",
+      "difficulty": "hard",
+      "expected": [
+        {
+          "document_name": "Technical Docs",
+          "document_slug": null,
+          "chunk_content_snippet": null,
+          "relevance_grade": 1
+        }
+      ],
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": "58588d7f-9839-49f8-b44b-a64e54689726",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 1.31,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.032258,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 2,
+          "chunk_id": "684da56a-3718-407c-a831-ac59c70ae6c7",
+          "document_id": "4bedbcd5-224c-470d-9fde-5ec33ba0cde0",
+          "document_name": "Refund Policy",
+          "score": 0.5087,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.016393,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 3,
+          "chunk_id": "1d4828a3-afa9-4578-b42d-2a6dab5b17b3",
+          "document_id": "562f0357-bc44-4ebb-b284-7c4a74a975d0",
+          "document_name": "Company Handbook",
+          "score": 0.2593,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.031545,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 4,
+          "chunk_id": "65eefaa4-a0aa-4cba-aec8-27a6310783f0",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.2573,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015625,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 5,
+          "chunk_id": "2e810af4-7238-48b1-9ebb-c9c83b9e4e97",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.2507,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.013333,
+          "is_relevant": false,
+          "relevance_grade": 0
+        }
+      ],
+      "top_k": 5,
+      "hit_at_k": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false
+      },
+      "mrr": 0.0,
+      "precision_at_k": 0.0,
+      "recall_at_k": 0.0,
+      "ndcg": 0.0,
+      "ndcg_at_k": {
+        "1": 0.0,
+        "3": 0.0,
+        "5": 0.0,
+        "10": 0.0
+      },
+      "first_relevant_rank": null,
+      "status": "miss",
+      "duration_ms": 3645.12
+    },
+    {
+      "case_id": "eval_003",
+      "query": "What is the hybrid search mechanism that combines vectors and text search?",
+      "category": "semantic",
+      "difficulty": "medium",
+      "expected": [
+        {
+          "document_name": "Technical Docs",
+          "document_slug": null,
+          "chunk_content_snippet": null,
+          "relevance_grade": 1
+        }
+      ],
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": "58588d7f-9839-49f8-b44b-a64e54689726",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.8275,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.016129,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 2,
+          "chunk_id": "684da56a-3718-407c-a831-ac59c70ae6c7",
+          "document_id": "4bedbcd5-224c-470d-9fde-5ec33ba0cde0",
+          "document_name": "Refund Policy",
+          "score": 0.5495,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.014286,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 3,
+          "chunk_id": "1d4828a3-afa9-4578-b42d-2a6dab5b17b3",
+          "document_id": "562f0357-bc44-4ebb-b284-7c4a74a975d0",
+          "document_name": "Company Handbook",
+          "score": 0.4612,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015152,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 4,
+          "chunk_id": "65eefaa4-a0aa-4cba-aec8-27a6310783f0",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.4565,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.013699,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 5,
+          "chunk_id": "5f307135-4598-4fc8-9d07-2462bb975a8e",
+          "document_id": "009c5a12-a7c3-44d6-821c-940c40173d3e",
+          "document_name": "Technical Docs",
+          "score": 0.3736,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.016393,
+          "is_relevant": true,
+          "relevance_grade": 0
+        }
+      ],
+      "top_k": 5,
+      "hit_at_k": {
+        "1": false,
+        "3": false,
+        "5": true,
+        "10": true
+      },
+      "mrr": 0.2,
+      "precision_at_k": 0.2,
+      "recall_at_k": 1.0,
+      "ndcg": 0.3869,
+      "ndcg_at_k": {
+        "1": 0.0,
+        "3": 0.0,
+        "5": 0.3869,
+        "10": 0.3869
+      },
+      "first_relevant_rank": 5,
+      "status": "hit",
+      "duration_ms": 4731.41
+    },
+    {
+      "case_id": "eval_027",
+      "query": "What are the limits?",
+      "category": "ambiguous",
+      "difficulty": "hard",
+      "expected": [
+        {
+          "document_name": "Pricing",
+          "document_slug": null,
+          "chunk_content_snippet": null,
+          "relevance_grade": 1
+        }
+      ],
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": "2e810af4-7238-48b1-9ebb-c9c83b9e4e97",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.758,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015873,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 2,
+          "chunk_id": "58588d7f-9839-49f8-b44b-a64e54689726",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.754,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.014493,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 3,
+          "chunk_id": "65eefaa4-a0aa-4cba-aec8-27a6310783f0",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.7513,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.013699,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 4,
+          "chunk_id": "5f307135-4598-4fc8-9d07-2462bb975a8e",
+          "document_id": "009c5a12-a7c3-44d6-821c-940c40173d3e",
+          "document_name": "Technical Docs",
+          "score": 0.51,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.029727,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 5,
+          "chunk_id": "80893beb-7856-408a-9318-3dd5dd94a38e",
+          "document_id": "f7c91986-d415-4757-8da5-f2b9c71be211",
+          "document_name": "Pricing",
+          "score": 0.5093,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.016393,
+          "is_relevant": true,
+          "relevance_grade": 0
+        }
+      ],
+      "top_k": 5,
+      "hit_at_k": {
+        "1": false,
+        "3": false,
+        "5": true,
+        "10": true
+      },
+      "mrr": 0.2,
+      "precision_at_k": 0.2,
+      "recall_at_k": 1.0,
+      "ndcg": 0.3869,
+      "ndcg_at_k": {
+        "1": 0.0,
+        "3": 0.0,
+        "5": 0.3869,
+        "10": 0.3869
+      },
+      "first_relevant_rank": 5,
+      "status": "hit",
+      "duration_ms": 3521.51
+    },
+    {
+      "case_id": "eval_006",
+      "query": "How much does the Pro tier cost and what does it include?",
+      "category": "semantic",
+      "difficulty": "easy",
+      "expected": [
+        {
+          "document_name": "Pricing",
+          "document_slug": null,
+          "chunk_content_snippet": null,
+          "relevance_grade": 1
+        }
+      ],
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": "58588d7f-9839-49f8-b44b-a64e54689726",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.7339,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015152,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 2,
+          "chunk_id": "d8513d6e-c9bf-4a2e-8a4a-f234110ca825",
+          "document_id": "4bedbcd5-224c-470d-9fde-5ec33ba0cde0",
+          "document_name": "Refund Policy",
+          "score": 0.3723,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015873,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 3,
+          "chunk_id": "684da56a-3718-407c-a831-ac59c70ae6c7",
+          "document_id": "4bedbcd5-224c-470d-9fde-5ec33ba0cde0",
+          "document_name": "Refund Policy",
+          "score": 0.371,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015385,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 4,
+          "chunk_id": "65eefaa4-a0aa-4cba-aec8-27a6310783f0",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.367,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.014085,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 5,
+          "chunk_id": "b1514be6-d0e8-4d5f-9247-0bc715b5612c",
+          "document_id": "f7c91986-d415-4757-8da5-f2b9c71be211",
+          "document_name": "Pricing",
+          "score": 0.2827,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.016393,
+          "is_relevant": true,
+          "relevance_grade": 0
+        }
+      ],
+      "top_k": 5,
+      "hit_at_k": {
+        "1": false,
+        "3": false,
+        "5": true,
+        "10": true
+      },
+      "mrr": 0.2,
+      "precision_at_k": 0.2,
+      "recall_at_k": 1.0,
+      "ndcg": 0.3869,
+      "ndcg_at_k": {
+        "1": 0.0,
+        "3": 0.0,
+        "5": 0.3869,
+        "10": 0.3869
+      },
+      "first_relevant_rank": 5,
+      "status": "hit",
+      "duration_ms": 3512.77
+    },
+    {
+      "case_id": "eval_004",
+      "query": "Explain how my data stays private and where it is stored",
+      "category": "semantic",
+      "difficulty": "medium",
+      "expected": [
+        {
+          "document_name": "Company Handbook",
+          "document_slug": null,
+          "chunk_content_snippet": null,
+          "relevance_grade": 1
+        }
+      ],
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": "65eefaa4-a0aa-4cba-aec8-27a6310783f0",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.4599,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.014706,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 2,
+          "chunk_id": "684da56a-3718-407c-a831-ac59c70ae6c7",
+          "document_id": "4bedbcd5-224c-470d-9fde-5ec33ba0cde0",
+          "document_name": "Refund Policy",
+          "score": 0.3723,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015873,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 3,
+          "chunk_id": "58588d7f-9839-49f8-b44b-a64e54689726",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.3683,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.014493,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 4,
+          "chunk_id": "2e810af4-7238-48b1-9ebb-c9c83b9e4e97",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.3676,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.014286,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 5,
+          "chunk_id": "3fa1b5f6-4c9f-4d50-a35e-1c7a7e5f55f3",
+          "document_id": "562f0357-bc44-4ebb-b284-7c4a74a975d0",
+          "document_name": "Company Handbook",
+          "score": 0.2827,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.016393,
+          "is_relevant": true,
+          "relevance_grade": 0
+        }
+      ],
+      "top_k": 5,
+      "hit_at_k": {
+        "1": false,
+        "3": false,
+        "5": true,
+        "10": true
+      },
+      "mrr": 0.2,
+      "precision_at_k": 0.2,
+      "recall_at_k": 1.0,
+      "ndcg": 0.3869,
+      "ndcg_at_k": {
+        "1": 0.0,
+        "3": 0.0,
+        "5": 0.3869,
+        "10": 0.3869
+      },
+      "first_relevant_rank": 5,
+      "status": "hit",
+      "duration_ms": 3500.82
+    },
+    {
+      "case_id": "eval_001",
+      "query": "How do I get my money back after buying a plan?",
+      "category": "semantic",
+      "difficulty": "easy",
+      "expected": [
+        {
+          "document_name": "Refund Policy",
+          "document_slug": null,
+          "chunk_content_snippet": null,
+          "relevance_grade": 1
+        }
+      ],
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": "65eefaa4-a0aa-4cba-aec8-27a6310783f0",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.8282,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.016393,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 2,
+          "chunk_id": "58588d7f-9839-49f8-b44b-a64e54689726",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.4619,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015385,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 3,
+          "chunk_id": "2e810af4-7238-48b1-9ebb-c9c83b9e4e97",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.3703,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015152,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 4,
+          "chunk_id": "684da56a-3718-407c-a831-ac59c70ae6c7",
+          "document_id": "4bedbcd5-224c-470d-9fde-5ec33ba0cde0",
+          "document_name": "Refund Policy",
+          "score": 0.2807,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015625,
+          "is_relevant": true,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 5,
+          "chunk_id": "d8513d6e-c9bf-4a2e-8a4a-f234110ca825",
+          "document_id": "4bedbcd5-224c-470d-9fde-5ec33ba0cde0",
+          "document_name": "Refund Policy",
+          "score": 0.1912,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.016129,
+          "is_relevant": true,
+          "relevance_grade": 0
+        }
+      ],
+      "top_k": 5,
+      "hit_at_k": {
+        "1": false,
+        "3": false,
+        "5": true,
+        "10": true
+      },
+      "mrr": 0.25,
+      "precision_at_k": 0.2,
+      "recall_at_k": 1.0,
+      "ndcg": 0.8175,
+      "ndcg_at_k": {
+        "1": 0.0,
+        "3": 0.0,
+        "5": 0.8175,
+        "10": 0.8175
+      },
+      "first_relevant_rank": 4,
+      "status": "hit",
+      "duration_ms": 10866.79
+    },
+    {
+      "case_id": "eval_018",
+      "query": "What embedding model and dimension does the system use?",
+      "category": "factual",
+      "difficulty": "easy",
+      "expected": [
+        {
+          "document_name": "Technical Docs",
+          "document_slug": null,
+          "chunk_content_snippet": null,
+          "relevance_grade": 1
+        }
+      ],
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": "58588d7f-9839-49f8-b44b-a64e54689726",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.5589,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.014085,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 2,
+          "chunk_id": "2e810af4-7238-48b1-9ebb-c9c83b9e4e97",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.4538,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.016129,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 3,
+          "chunk_id": "4a8bd483-7ace-4631-b347-74ae1ace845f",
+          "document_id": "009c5a12-a7c3-44d6-821c-940c40173d3e",
+          "document_name": "Technical Docs",
+          "score": 0.3433,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.016393,
+          "is_relevant": true,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 4,
+          "chunk_id": "80893beb-7856-408a-9318-3dd5dd94a38e",
+          "document_id": "f7c91986-d415-4757-8da5-f2b9c71be211",
+          "document_name": "Pricing",
+          "score": 0.342,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015873,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 5,
+          "chunk_id": "ea5a7298-105e-4e00-8e89-976a810cd634",
+          "document_id": "009c5a12-a7c3-44d6-821c-940c40173d3e",
+          "document_name": "Technical Docs",
+          "score": 0.3407,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015385,
+          "is_relevant": true,
+          "relevance_grade": 0
+        }
+      ],
+      "top_k": 5,
+      "hit_at_k": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true
+      },
+      "mrr": 0.3333,
+      "precision_at_k": 0.2,
+      "recall_at_k": 1.0,
+      "ndcg": 0.8869,
+      "ndcg_at_k": {
+        "1": 0.0,
+        "3": 0.5,
+        "5": 0.8869,
+        "10": 0.8869
+      },
+      "first_relevant_rank": 3,
+      "status": "hit",
+      "duration_ms": 3630.19
+    },
+    {
+      "case_id": "eval_009",
+      "query": "What does the onboarding look like for new engineers?",
+      "category": "semantic",
+      "difficulty": "easy",
+      "expected": [
+        {
+          "document_name": "Company Handbook",
+          "document_slug": null,
+          "chunk_content_snippet": null,
+          "relevance_grade": 1
+        }
+      ],
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": "684da56a-3718-407c-a831-ac59c70ae6c7",
+          "document_id": "4bedbcd5-224c-470d-9fde-5ec33ba0cde0",
+          "document_name": "Refund Policy",
+          "score": 0.5576,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.013699,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 2,
+          "chunk_id": "58588d7f-9839-49f8-b44b-a64e54689726",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.4471,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.013889,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 3,
+          "chunk_id": "0238a66b-336d-440d-b946-4f3dfa39f168",
+          "document_id": "562f0357-bc44-4ebb-b284-7c4a74a975d0",
+          "document_name": "Company Handbook",
+          "score": 0.3433,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.016393,
+          "is_relevant": true,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 4,
+          "chunk_id": "2e810af4-7238-48b1-9ebb-c9c83b9e4e97",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.34,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015152,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 5,
+          "chunk_id": "1d4828a3-afa9-4578-b42d-2a6dab5b17b3",
+          "document_id": "562f0357-bc44-4ebb-b284-7c4a74a975d0",
+          "document_name": "Company Handbook",
+          "score": 0.2309,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015873,
+          "is_relevant": true,
+          "relevance_grade": 0
+        }
+      ],
+      "top_k": 5,
+      "hit_at_k": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true
+      },
+      "mrr": 0.3333,
+      "precision_at_k": 0.2,
+      "recall_at_k": 1.0,
+      "ndcg": 0.8869,
+      "ndcg_at_k": {
+        "1": 0.0,
+        "3": 0.5,
+        "5": 0.8869,
+        "10": 0.8869
+      },
+      "first_relevant_rank": 3,
+      "status": "hit",
+      "duration_ms": 3425.51
+    },
+    {
+      "case_id": "eval_005",
+      "query": "I want to understand the company's work-from-home rules",
+      "category": "semantic",
+      "difficulty": "easy",
+      "expected": [
+        {
+          "document_name": "Company Handbook",
+          "document_slug": null,
+          "chunk_content_snippet": null,
+          "relevance_grade": 1
+        }
+      ],
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": "2e810af4-7238-48b1-9ebb-c9c83b9e4e97",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.4579,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.014085,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 2,
+          "chunk_id": "1d4828a3-afa9-4578-b42d-2a6dab5b17b3",
+          "document_id": "562f0357-bc44-4ebb-b284-7c4a74a975d0",
+          "document_name": "Company Handbook",
+          "score": 0.3736,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.016393,
+          "is_relevant": true,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 3,
+          "chunk_id": "58588d7f-9839-49f8-b44b-a64e54689726",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.371,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015385,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 4,
+          "chunk_id": "684da56a-3718-407c-a831-ac59c70ae6c7",
+          "document_id": "4bedbcd5-224c-470d-9fde-5ec33ba0cde0",
+          "document_name": "Refund Policy",
+          "score": 0.2774,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.014493,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 5,
+          "chunk_id": "65eefaa4-a0aa-4cba-aec8-27a6310783f0",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.2767,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.014286,
+          "is_relevant": false,
+          "relevance_grade": 0
+        }
+      ],
+      "top_k": 5,
+      "hit_at_k": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true
+      },
+      "mrr": 0.5,
+      "precision_at_k": 0.2,
+      "recall_at_k": 1.0,
+      "ndcg": 0.6309,
+      "ndcg_at_k": {
+        "1": 0.0,
+        "3": 0.6309,
+        "5": 0.6309,
+        "10": 0.6309
+      },
+      "first_relevant_rank": 2,
+      "status": "hit",
+      "duration_ms": 4013.99
+    },
+    {
+      "case_id": "eval_020",
+      "query": "How many days of annual leave and what is the learning budget?",
+      "category": "factual",
+      "difficulty": "medium",
+      "expected": [
+        {
+          "document_name": "Company Handbook",
+          "document_slug": null,
+          "chunk_content_snippet": null,
+          "relevance_grade": 1
+        }
+      ],
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": "65eefaa4-a0aa-4cba-aec8-27a6310783f0",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.6713,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.014493,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 2,
+          "chunk_id": "1d4828a3-afa9-4578-b42d-2a6dab5b17b3",
+          "document_id": "562f0357-bc44-4ebb-b284-7c4a74a975d0",
+          "document_name": "Company Handbook",
+          "score": 0.5933,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.016393,
+          "is_relevant": true,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 3,
+          "chunk_id": "58588d7f-9839-49f8-b44b-a64e54689726",
+          "document_id": "1eae9b48-41fa-4e84-9623-f528bfad7d1d",
+          "document_name": "Support FAQ",
+          "score": 0.5907,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015385,
+          "is_relevant": false,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 4,
+          "chunk_id": "3fa1b5f6-4c9f-4d50-a35e-1c7a7e5f55f3",
+          "document_id": "562f0357-bc44-4ebb-b284-7c4a74a975d0",
+          "document_name": "Company Handbook",
+          "score": 0.5087,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015873,
+          "is_relevant": true,
+          "relevance_grade": 0
+        },
+        {
+          "rank": 5,
+          "chunk_id": "684da56a-3718-407c-a831-ac59c70ae6c7",
+          "document_id": "4bedbcd5-224c-470d-9fde-5ec33ba0cde0",
+          "document_name": "Refund Policy",
+          "score": 0.508,
+          "vector_rank": null,
+          "keyword_rank": null,
+          "rrf_score": 0.015625,
+          "is_relevant": false,
+          "relevance_grade": 0
+        }
+      ],
+      "top_k": 5,
+      "hit_at_k": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true
+      },
+      "mrr": 0.5,
+      "precision_at_k": 0.2,
+      "recall_at_k": 1.0,
+      "ndcg": 1.0616,
+      "ndcg_at_k": {
+        "1": 0.0,
+        "3": 0.6309,
+        "5": 1.0616,
+        "10": 1.0616
+      },
+      "first_relevant_rank": 2,
+      "status": "hit",
+      "duration_ms": 3501.26
+    }
+  ],
+  "git_commit": "99c26bd"
+}
