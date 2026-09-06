@@ -93,6 +93,7 @@ class RAGChatResponse(BaseModel):
     provider: str
     usage: dict[str, int | None] | None = None
     latency_ms: float = 0.0
+    groundedness: dict[str, Any] | None = Field(default=None, description="Optional groundedness result when ENABLE_GROUNDEDNESS_CHECK=true")
 
 
 class MessageRead(BaseModel):

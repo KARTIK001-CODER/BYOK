@@ -268,6 +268,65 @@ class RAGService:
             trace.set_counter("citations", len(citations))
             trace.mark("citations_done")
 
+        # 10.5 Groundedness verification (Phase 2.3) — claim extraction → evidence selection → verification → aggregation
+        groundedness_dict: dict | None = None
+        groundedness_trace = None
+        verify_t0 = time.perf_counter()
+        try:
+            from app.services.verification.service import VerificationService
+            from app.services.verification.schemas import VerificationConfig
+
+            settings_verify = get_settings()
+            if getattr(settings_verify, "ENABLE_GROUNDEDNESS_CHECK", False):
+                # Prepare evidence from retrieved chunks (already reranked if enabled)
+                evidence_chunks = [
+                    {
+                        "chunk_id": r.chunk_id,
+                        "document_id": r.document_id,
+                        "document_name": r.document_name,
+                        "content": r.content,
+                        "retrieval_rank": r.rank,
+                        "rerank_rank": None,
+                    }
+                    for r in retrieval_resp.results
+                ]
+                # Fallback to context sources if no retrieval results (should be at least citation context)
+                if not evidence_chunks and assembled_context.sources:
+                    evidence_chunks = [
+                        {"chunk_id": s.chunk_id, "document_id": s.document_id, "document_name": s.document_name, "content": s.content, "retrieval_rank": s.citation_id}
+                        for s in assembled_context.sources
+                    ]
+                cfg = VerificationConfig(
+                    enabled=True,
+                    evidence_top_k=getattr(settings_verify, "VERIFICATION_EVIDENCE_TOP_K", 3),
+                    timeout_seconds=float(getattr(settings_verify, "VERIFICATION_TIMEOUT_SECONDS", 2.0)),
+                )
+                groundedness_res, groundedness_trace = await VerificationService.verify_answer(
+                    answer=llm_resp.content,
+                    evidence_chunks=evidence_chunks,
+                    config=cfg,
+                )
+                groundedness_dict = groundedness_res.model_dump()
+                if trace and groundedness_trace:
+                    trace.record("claim_extraction_ms", groundedness_trace.claim_extraction_ms)
+                    trace.record("verification_total_ms", groundedness_trace.verification_total_ms)
+                    trace.set_counter("claim_count", groundedness_trace.claim_count)
+                    trace.set_counter("groundedness_score", groundedness_trace.groundedness_score)
+                    trace.set_counter("supported_claims", groundedness_trace.supported_claims)
+                    trace.set_counter("contradicted_claims", groundedness_trace.contradicted_claims)
+                    trace.mark("verification_done")
+            else:
+                if trace:
+                    trace.set_counter("groundedness_enabled", False)
+        except Exception as e:
+            logger.warning("Groundedness verification failed, proceeding without: %s", e)
+            if trace:
+                trace.add_error(f"groundedness_failed: {e}")
+            groundedness_dict = None
+        verify_ms = (time.perf_counter() - verify_t0) * 1000.0
+        if trace:
+            trace.record("groundedness_verification_ms", verify_ms)
+
         # 11. Persist assistant message with metadata
         retrieval_summary = RetrievalSummary(
             search_mode=request.search_mode,
@@ -294,6 +353,7 @@ class RAGService:
             "latency_ms": round(total_latency_ms, 2),
             "generation_latency_ms": round(gen_latency_ms, 2),
             "retrieval_latency_ms": round(retrieval_latency_ms, 2),
+            "groundedness": groundedness_dict,
         }
 
         persist_t0 = time.perf_counter()
@@ -335,6 +395,7 @@ class RAGService:
             provider=provider.name,
             usage=usage_dict,
             latency_ms=round(total_latency_ms, 2),
+            groundedness=groundedness_dict,
         )
 
     async def stream_chat(
@@ -596,6 +657,52 @@ class RAGService:
             for cit in citations:
                 yield f"event: citation\ndata: {json.dumps(cit.model_dump())}\n\n"
 
+            # 9.5 Groundedness verification (Phase 2.3) — after citations, before persistence
+            groundedness_dict = None
+            verify_t0 = time.perf_counter()
+            try:
+                from app.services.verification.service import VerificationService
+                from app.services.verification.schemas import VerificationConfig
+
+                settings_v = get_settings()
+                if getattr(settings_v, "ENABLE_GROUNDEDNESS_CHECK", False):
+                    evidence_chunks = [
+                        {"chunk_id": r.chunk_id, "document_id": r.document_id, "document_name": r.document_name, "content": r.content, "retrieval_rank": r.rank}
+                        for r in retrieval_resp.results
+                    ]
+                    if not evidence_chunks and assembled_context.sources:
+                        evidence_chunks = [
+                            {"chunk_id": s.chunk_id, "document_id": s.document_id, "document_name": s.document_name, "content": s.content, "retrieval_rank": s.citation_id}
+                            for s in assembled_context.sources
+                        ]
+                    cfg = VerificationConfig(
+                        enabled=True,
+                        evidence_top_k=getattr(settings_v, "VERIFICATION_EVIDENCE_TOP_K", 3),
+                        timeout_seconds=float(getattr(settings_v, "VERIFICATION_TIMEOUT_SECONDS", 2.0)),
+                    )
+                    groundedness_res, groundedness_trace = await VerificationService.verify_answer(
+                        answer=full_answer,
+                        evidence_chunks=evidence_chunks,
+                        config=cfg,
+                    )
+                    groundedness_dict = groundedness_res.model_dump()
+                    if trace and groundedness_trace:
+                        trace.record("claim_extraction_ms", groundedness_trace.claim_extraction_ms)
+                        trace.record("verification_total_ms", groundedness_trace.verification_total_ms)
+                        trace.set_counter("groundedness_score", groundedness_trace.groundedness_score)
+                        trace.mark("verification_done")
+                    # Yield groundedness SSE event
+                    yield f"event: groundedness\ndata: {json.dumps(groundedness_dict)}\n\n"
+                else:
+                    if trace:
+                        trace.set_counter("groundedness_enabled", False)
+            except Exception as e:
+                logger.warning("Groundedness verification (stream) failed: %s", e)
+                if trace:
+                    trace.add_error(f"groundedness_failed: {e}")
+            if trace:
+                trace.record("groundedness_verification_ms", (time.perf_counter() - verify_t0) * 1000.0)
+
             # 10. Persist complete response
             if trace:
                 trace.mark("persistence_started")
@@ -633,6 +740,7 @@ class RAGService:
                 "time_to_first_token_ms": (
                     round(first_token_time, 2) if first_token_time else None
                 ),
+                "groundedness": groundedness_dict,
             }
 
             persist_t0 = time.perf_counter()
