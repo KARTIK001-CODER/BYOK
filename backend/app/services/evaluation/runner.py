@@ -108,10 +108,70 @@ class HybridAdapter:
         ]
 
 
+@dataclass
+class AdaptiveAdapter:
+    """Phase 2.1 — routes via Query Intelligence (deterministic, no LLM/DB)."""
+
+    name: str = "adaptive"
+
+    async def retrieve(
+        self, session: AsyncSession, organization_id: str, query: str, top_k: int, candidate_k: int = 50
+    ) -> list[RetrievedResult]:
+        # Force adaptive path even if global flag false — directly analyze and dispatch
+        from app.services.query_intelligence.analyzer import QueryAnalyzer
+        from app.core.config import get_settings
+
+        settings = get_settings()
+        analysis = QueryAnalyzer.analyze(query)
+        strat = analysis.strategy.strategy.value  # VECTOR / KEYWORD / HYBRID / HYBRID_WIDE
+
+        # Map to search mode + candidate_k
+        if strat == "KEYWORD":
+            req = RetrievalRequest(query=query, top_k=top_k, candidate_k=candidate_k, search_mode=SearchMode.KEYWORD)
+        elif strat == "VECTOR":
+            req = RetrievalRequest(query=query, top_k=top_k, candidate_k=candidate_k, search_mode=SearchMode.VECTOR)
+        elif strat == "HYBRID_WIDE":
+            ck = getattr(settings, "HYBRID_WIDE_CANDIDATE_K", 50)
+            req = RetrievalRequest(query=query, top_k=top_k, candidate_k=ck, search_mode=SearchMode.HYBRID)
+        else:
+            req = RetrievalRequest(query=query, top_k=top_k, candidate_k=candidate_k, search_mode=SearchMode.HYBRID)
+
+        # Temporarily enable flag so RetrievalService also records qi timings if needed, but we already analyzed
+        # To avoid double analysis, pass provider None; RetrievalService will re-analyze if flag true.
+        # Instead, disable flag for this inner call and use our already chosen req
+        original_flag = settings.ENABLE_QUERY_INTELLIGENCE
+        try:
+            # Disable inner adaptive to prevent double routing
+            settings.ENABLE_QUERY_INTELLIGENCE = False
+            resp = await RetrievalService.search(session=session, organization_id=organization_id, request=req)
+        finally:
+            settings.ENABLE_QUERY_INTELLIGENCE = original_flag
+
+        # Attach analysis to trace for reporting (store in adapter for later aggregation)
+        # We return retrieved + analysis via side channel using a thread-local is not needed; evaluation runner will record separately
+        # For now, stash analysis on retrieved objects via score field is not needed — we just return results
+        # The runner can re-analyze to get strategy distribution; we will handle there
+        return [
+            RetrievedResult(
+                rank=r.rank,
+                chunk_id=r.chunk_id,
+                document_id=r.document_id,
+                document_name=r.document_name,
+                score=r.score,
+                vector_rank=None,
+                keyword_rank=None,
+                rrf_score=r.rrf_score,
+                is_relevant=False,
+            )
+            for r in resp.results
+        ]
+
+
 ADAPTER_REGISTRY: dict[str, RetrieverAdapter] = {
     "vector": VectorAdapter(),
     "keyword": KeywordAdapter(),
     "hybrid": HybridAdapter(),
+    "adaptive": AdaptiveAdapter(),
 }
 
 
