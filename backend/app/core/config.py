@@ -133,6 +133,15 @@ class Settings(BaseSettings):
     RERANKER_MAX_DOCUMENT_LENGTH: int = 512
     RERANKER_TIMEOUT_SECONDS: float = 2.0
 
+    # Groundedness & Hallucination Detection — Phase 2.3 (opt-in, heuristic + optional LLM)
+    ENABLE_GROUNDEDNESS_CHECK: bool = False
+    ENABLE_LLM_VERIFICATION: bool = False
+    VERIFIER_PROVIDER: str = "heuristic"
+    VERIFICATION_EVIDENCE_TOP_K: int = 3
+    VERIFICATION_TIMEOUT_SECONDS: float = 2.0
+    GROUNDEDNESS_HIGH_THRESHOLD: float = 0.85
+    GROUNDEDNESS_MEDIUM_THRESHOLD: float = 0.6
+
     # BYOK Master Encryption Key Placeholder (Deferred to Future Phases)
     API_KEY_ENCRYPTION_KEY: str = Field(
         default="change-this-to-a-32-byte-hex-key-for-byok-encryption-vault"

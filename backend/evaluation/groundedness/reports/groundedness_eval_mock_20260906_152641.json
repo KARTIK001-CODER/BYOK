@@ -1,0 +1,712 @@
+{
+  "dataset_version": "1.0",
+  "verifier_provider": "mock",
+  "total": 50,
+  "correct": 21,
+  "accuracy": 0.42,
+  "precision": 0.42,
+  "recall": 0.42,
+  "f1": 0.42,
+  "unsupported_precision": 0.412,
+  "unsupported_recall": 0.7,
+  "contradicted_precision": 0.667,
+  "contradicted_recall": 0.182,
+  "confusion": {
+    "SUPPORTED": {
+      "SUPPORTED": 12,
+      "UNSUPPORTED": 3,
+      "CONTRADICTED": 0
+    },
+    "PARTIALLY_SUPPORTED": {
+      "UNSUPPORTED": 1,
+      "SUPPORTED": 6,
+      "CONTRADICTED": 0
+    },
+    "UNSUPPORTED": {
+      "UNSUPPORTED": 7,
+      "CONTRADICTED": 1,
+      "SUPPORTED": 2
+    },
+    "CONTRADICTED": {
+      "CONTRADICTED": 2,
+      "SUPPORTED": 6,
+      "UNSUPPORTED": 3
+    },
+    "UNCERTAIN": {
+      "SUPPORTED": 1,
+      "UNSUPPORTED": 2,
+      "CONTRADICTED": 0
+    },
+    "NON_VERIFIABLE": {
+      "UNSUPPORTED": 1,
+      "SUPPORTED": 3,
+      "CONTRADICTED": 0
+    }
+  },
+  "per_class_total": {
+    "SUPPORTED": 15,
+    "PARTIALLY_SUPPORTED": 7,
+    "UNSUPPORTED": 10,
+    "CONTRADICTED": 11,
+    "UNCERTAIN": 3,
+    "NON_VERIFIABLE": 4
+  },
+  "per_class_correct": {
+    "SUPPORTED": 12,
+    "UNSUPPORTED": 7,
+    "CONTRADICTED": 2
+  },
+  "failures": [
+    {
+      "id": "ground_006",
+      "claim": "Refunds are available for 14 days with low usage.",
+      "expected": "SUPPORTED",
+      "predicted": "UNSUPPORTED",
+      "category": "SUPPORTED",
+      "evidence": [
+        "Refund Policy: Full refund within 14 days if usage below 25%."
+      ],
+      "reason": "Mock deterministic"
+    },
+    {
+      "id": "ground_010",
+      "claim": "Users can request a refund within 30 days and enterprise users receive priority support with HNSW m=16.",
+      "expected": "SUPPORTED",
+      "predicted": "UNSUPPORTED",
+      "category": "SUPPORTED",
+      "evidence": [
+        "Refund within 30 days.",
+        "Enterprise priority support.",
+        "HNSW m=16 ef_construction=64."
+      ],
+      "reason": "Mock deterministic"
+    },
+    {
+      "id": "ground_011",
+      "claim": "Refunds are available within 30 days and include free shipping.",
+      "expected": "PARTIALLY_SUPPORTED",
+      "predicted": "UNSUPPORTED",
+      "category": "PARTIALLY_SUPPORTED",
+      "evidence": [
+        "Refund policy: Users may request a refund within 30 days."
+      ],
+      "reason": "Mock deterministic"
+    },
+    {
+      "id": "ground_012",
+      "claim": "The maximum file size is 25 MB and chunking uses 500 characters.",
+      "expected": "PARTIALLY_SUPPORTED",
+      "predicted": "SUPPORTED",
+      "category": "PARTIALLY_SUPPORTED",
+      "evidence": [
+        "Maximum file size 25 MB per document.",
+        "Chunking splits into 1000-character chunks."
+      ],
+      "reason": "Mock deterministic"
+    },
+    {
+      "id": "ground_013",
+      "claim": "Enterprise SLA is 99.99% with 4-hour support and 25 MB file limit.",
+      "expected": "PARTIALLY_SUPPORTED",
+      "predicted": "SUPPORTED",
+      "category": "PARTIALLY_SUPPORTED",
+      "evidence": [
+        "Enterprise SLA 99.99% with 4-hour support.",
+        "Maximum file size 25 MB."
+      ],
+      "reason": "Mock deterministic"
+    },
+    {
+      "id": "ground_014",
+      "claim": "Refunds within 14 days and cancellation_fee is 10% of remaining value.",
+      "expected": "PARTIALLY_SUPPORTED",
+      "predicted": "SUPPORTED",
+      "category": "PARTIALLY_SUPPORTED",
+      "evidence": [
+        "Refund within 14 days if usage below 25%.",
+        "Cancellation_fee 15% of remaining contract value."
+      ],
+      "reason": "Mock deterministic"
+    },
+    {
+      "id": "ground_015",
+      "claim": "HNSW uses m=16 and GIN index uses gin.",
+      "expected": "PARTIALLY_SUPPORTED",
+      "predicted": "SUPPORTED",
+      "category": "PARTIALLY_SUPPORTED",
+      "evidence": [
+        "HNSW m=16 ef_construction=64.",
+        "Full-text search uses GIN index."
+      ],
+      "reason": "Mock deterministic"
+    },
+    {
+      "id": "ground_018",
+      "claim": "Users can request refunds after 90 days.",
+      "expected": "UNSUPPORTED",
+      "predicted": "CONTRADICTED",
+      "category": "UNSUPPORTED",
+      "evidence": [
+        "Refund within 30 days.",
+        "No refunds after 30 days."
+      ],
+      "reason": "Mock deterministic"
+    },
+    {
+      "id": "ground_020",
+      "claim": "Embeddings are 512 dimensions.",
+      "expected": "UNSUPPORTED",
+      "predicted": "SUPPORTED",
+      "category": "UNSUPPORTED",
+      "evidence": [
+        "Embeddings via BAAI/bge-small-en-v1.5 producing 384-dimensional vectors."
+      ],
+      "reason": "Mock deterministic"
+    },
+    {
+      "id": "ground_022",
+      "claim": "The maximum file size is 50 MB.",
+      "expected": "CONTRADICTED",
+      "predicted": "SUPPORTED",
+      "category": "CONTRADICTED",
+      "evidence": [
+        "Maximum file size 25 MB per document."
+      ],
+      "reason": "Mock deterministic"
+    }
+  ],
+  "failure_types": {
+    "False Hallucination": 4,
+    "Verifier Failure": 14,
+    "False Support": 8,
+    "Contradiction Miss": 3
+  },
+  "latency": {
+    "p50": 0.02,
+    "p95": 0.04,
+    "p99": 0.04,
+    "avg": 0.02
+  },
+  "cases": [
+    {
+      "id": "ground_001",
+      "category": "SUPPORTED",
+      "difficulty": "easy",
+      "claim": "Users can request a refund within 30 days.",
+      "evidence": [
+        "Refund policy: Users may request a refund within 30 days."
+      ],
+      "expected_status": "SUPPORTED",
+      "notes": "Direct lexical match"
+    },
+    {
+      "id": "ground_002",
+      "category": "SUPPORTED",
+      "difficulty": "easy",
+      "claim": "The maximum file size is 25 MB.",
+      "evidence": [
+        "Pricing: Maximum file size 25 MB per document."
+      ],
+      "expected_status": "SUPPORTED"
+    },
+    {
+      "id": "ground_003",
+      "category": "SUPPORTED",
+      "difficulty": "easy",
+      "claim": "HNSW index uses m=16 and ef_construction=64.",
+      "evidence": [
+        "pgvector HNSW index configured with m=16 and ef_construction=64."
+      ],
+      "expected_status": "SUPPORTED"
+    },
+    {
+      "id": "ground_004",
+      "category": "SUPPORTED",
+      "difficulty": "easy",
+      "claim": "Enterprise users receive priority support.",
+      "evidence": [
+        "Enterprise users receive priority support with 4-hour response."
+      ],
+      "expected_status": "SUPPORTED"
+    },
+    {
+      "id": "ground_005",
+      "category": "SUPPORTED",
+      "difficulty": "easy",
+      "claim": "The embedding model is BAAI/bge-small-en-v1.5 with 384 dimensions.",
+      "evidence": [
+        "Embeddings via BAAI/bge-small-en-v1.5 producing 384-dimensional vectors."
+      ],
+      "expected_status": "SUPPORTED"
+    },
+    {
+      "id": "ground_006",
+      "category": "SUPPORTED",
+      "difficulty": "medium",
+      "claim": "Refunds are available for 14 days with low usage.",
+      "evidence": [
+        "Refund Policy: Full refund within 14 days if usage below 25%."
+      ],
+      "expected_status": "SUPPORTED"
+    },
+    {
+      "id": "ground_007",
+      "category": "SUPPORTED",
+      "difficulty": "medium",
+      "claim": "Chunking uses 1000 characters with 150 overlap.",
+      "evidence": [
+        "Chunking splits into 1000-character chunks with 150 overlap."
+      ],
+      "expected_status": "SUPPORTED"
+    },
+    {
+      "id": "ground_008",
+      "category": "SUPPORTED",
+      "difficulty": "medium",
+      "claim": "The company provides hybrid remote work with two office days per week.",
+      "evidence": [
+        "Work Policy: two days per week in the office, three days remote."
+      ],
+      "expected_status": "SUPPORTED"
+    },
+    {
+      "id": "ground_009",
+      "category": "SUPPORTED",
+      "difficulty": "medium",
+      "claim": "Users must submit a ticket before cancellation.",
+      "evidence": [
+        "To request a refund, submit a ticket via Support Portal."
+      ],
+      "expected_status": "SUPPORTED"
+    },
+    {
+      "id": "ground_010",
+      "category": "SUPPORTED",
+      "difficulty": "hard",
+      "claim": "Users can request a refund within 30 days and enterprise users receive priority support with HNSW m=16.",
+      "evidence": [
+        "Refund within 30 days.",
+        "Enterprise priority support.",
+        "HNSW m=16 ef_construction=64."
+      ],
+      "expected_status": "SUPPORTED",
+      "notes": "Multiple evidence chunks, paraphrase"
+    },
+    {
+      "id": "ground_011",
+      "category": "PARTIALLY_SUPPORTED",
+      "difficulty": "medium",
+      "claim": "Refunds are available within 30 days and include free shipping.",
+      "evidence": [
+        "Refund policy: Users may request a refund within 30 days."
+      ],
+      "expected_status": "PARTIALLY_SUPPORTED"
+    },
+    {
+      "id": "ground_012",
+      "category": "PARTIALLY_SUPPORTED",
+      "difficulty": "medium",
+      "claim": "The maximum file size is 25 MB and chunking uses 500 characters.",
+      "evidence": [
+        "Maximum file size 25 MB per document.",
+        "Chunking splits into 1000-character chunks."
+      ],
+      "expected_status": "PARTIALLY_SUPPORTED"
+    },
+    {
+      "id": "ground_013",
+      "category": "PARTIALLY_SUPPORTED",
+      "difficulty": "hard",
+      "claim": "Enterprise SLA is 99.99% with 4-hour support and 25 MB file limit.",
+      "evidence": [
+        "Enterprise SLA 99.99% with 4-hour support.",
+        "Maximum file size 25 MB."
+      ],
+      "expected_status": "PARTIALLY_SUPPORTED"
+    },
+    {
+      "id": "ground_014",
+      "category": "PARTIALLY_SUPPORTED",
+      "difficulty": "hard",
+      "claim": "Refunds within 14 days and cancellation_fee is 10% of remaining value.",
+      "evidence": [
+        "Refund within 14 days if usage below 25%.",
+        "Cancellation_fee 15% of remaining contract value."
+      ],
+      "expected_status": "PARTIALLY_SUPPORTED"
+    },
+    {
+      "id": "ground_015",
+      "category": "PARTIALLY_SUPPORTED",
+      "difficulty": "medium",
+      "claim": "HNSW uses m=16 and GIN index uses gin.",
+      "evidence": [
+        "HNSW m=16 ef_construction=64.",
+        "Full-text search uses GIN index."
+      ],
+      "expected_status": "PARTIALLY_SUPPORTED"
+    },
+    {
+      "id": "ground_016",
+      "category": "UNSUPPORTED",
+      "difficulty": "easy",
+      "claim": "Refunds include free shipping.",
+      "evidence": [
+        "Refund policy: Users may request a refund within 30 days."
+      ],
+      "expected_status": "UNSUPPORTED"
+    },
+    {
+      "id": "ground_017",
+      "category": "UNSUPPORTED",
+      "difficulty": "easy",
+      "claim": "The service launched in January 2025.",
+      "evidence": [
+        "Company founded in 2023, headquartered in Berlin."
+      ],
+      "expected_status": "UNSUPPORTED"
+    },
+    {
+      "id": "ground_018",
+      "category": "UNSUPPORTED",
+      "difficulty": "medium",
+      "claim": "Users can request refunds after 90 days.",
+      "evidence": [
+        "Refund within 30 days.",
+        "No refunds after 30 days."
+      ],
+      "expected_status": "UNSUPPORTED"
+    },
+    {
+      "id": "ground_019",
+      "category": "UNSUPPORTED",
+      "difficulty": "hard",
+      "claim": "The company offers unlimited knowledge bases for Starter plan.",
+      "evidence": [
+        "Starter: Up to 3 knowledge bases.",
+        "Pro: Up to 20 knowledge bases."
+      ],
+      "expected_status": "UNSUPPORTED"
+    },
+    {
+      "id": "ground_020",
+      "category": "UNSUPPORTED",
+      "difficulty": "medium",
+      "claim": "Embeddings are 512 dimensions.",
+      "evidence": [
+        "Embeddings via BAAI/bge-small-en-v1.5 producing 384-dimensional vectors."
+      ],
+      "expected_status": "UNSUPPORTED"
+    },
+    {
+      "id": "ground_021",
+      "category": "CONTRADICTED",
+      "difficulty": "easy",
+      "claim": "Refunds are available within 90 days.",
+      "evidence": [
+        "Refund period is 30 days."
+      ],
+      "expected_status": "CONTRADICTED"
+    },
+    {
+      "id": "ground_022",
+      "category": "CONTRADICTED",
+      "difficulty": "easy",
+      "claim": "The maximum file size is 50 MB.",
+      "evidence": [
+        "Maximum file size 25 MB per document."
+      ],
+      "expected_status": "CONTRADICTED"
+    },
+    {
+      "id": "ground_023",
+      "category": "CONTRADICTED",
+      "difficulty": "medium",
+      "claim": "Users cannot request refunds after 30 days is false, they can after 30 days.",
+      "evidence": [
+        "Users cannot request refunds after 30 days."
+      ],
+      "expected_status": "CONTRADICTED",
+      "notes": "Negation contradiction: claim says can, evidence says cannot"
+    },
+    {
+      "id": "ground_024",
+      "category": "CONTRADICTED",
+      "difficulty": "medium",
+      "claim": "Users can request refunds after 30 days.",
+      "evidence": [
+        "Users cannot request refunds after 30 days."
+      ],
+      "expected_status": "CONTRADICTED"
+    },
+    {
+      "id": "ground_025",
+      "category": "CONTRADICTED",
+      "difficulty": "hard",
+      "claim": "Cancellation fee is 10% of remaining value.",
+      "evidence": [
+        "Cancellation_fee is 15% of remaining contract value."
+      ],
+      "expected_status": "CONTRADICTED"
+    },
+    {
+      "id": "ground_026",
+      "category": "CONTRADICTED",
+      "difficulty": "hard",
+      "claim": "The service has 99.9% SLA for Enterprise.",
+      "evidence": [
+        "Enterprise SLA is 99.99% with 4-hour support."
+      ],
+      "expected_status": "CONTRADICTED"
+    },
+    {
+      "id": "ground_027",
+      "category": "CONTRADICTED",
+      "difficulty": "hard",
+      "claim": "Refunds are available for 30 days and include free shipping and have 90 days period.",
+      "evidence": [
+        "Refund within 30 days.",
+        "No free shipping mentioned."
+      ],
+      "expected_status": "CONTRADICTED"
+    },
+    {
+      "id": "ground_028",
+      "category": "UNCERTAIN",
+      "difficulty": "medium",
+      "claim": "The refund process involves managerial approval.",
+      "evidence": [
+        "Refund policy: Users may request a refund within 30 days."
+      ],
+      "expected_status": "UNCERTAIN"
+    },
+    {
+      "id": "ground_029",
+      "category": "UNCERTAIN",
+      "difficulty": "medium",
+      "claim": "The company will launch a new pricing tier soon.",
+      "evidence": [
+        "Pricing: Starter \u20ac49, Pro \u20ac199, Enterprise custom."
+      ],
+      "expected_status": "UNCERTAIN"
+    },
+    {
+      "id": "ground_030",
+      "category": "UNCERTAIN",
+      "difficulty": "hard",
+      "claim": "Users can request refunds within 30 days and the decision is made by the billing team within 1 day.",
+      "evidence": [
+        "Refund within 30 days."
+      ],
+      "expected_status": "UNCERTAIN",
+      "notes": "Partial evidence - billing team not in this evidence"
+    },
+    {
+      "id": "ground_031",
+      "category": "NON_VERIFIABLE",
+      "difficulty": "easy",
+      "claim": "This is an excellent policy.",
+      "evidence": [
+        "Refund policy: Users may request a refund within 30 days."
+      ],
+      "expected_status": "NON_VERIFIABLE"
+    },
+    {
+      "id": "ground_032",
+      "category": "NON_VERIFIABLE",
+      "difficulty": "easy",
+      "claim": "The refund policy is the best in the industry.",
+      "evidence": [
+        "Refund policy: Users may request a refund within 30 days."
+      ],
+      "expected_status": "NON_VERIFIABLE"
+    },
+    {
+      "id": "ground_033",
+      "category": "NON_VERIFIABLE",
+      "difficulty": "medium",
+      "claim": "I think the pricing is reasonable.",
+      "evidence": [
+        "Pricing: Starter \u20ac49, Pro \u20ac199."
+      ],
+      "expected_status": "NON_VERIFIABLE"
+    },
+    {
+      "id": "ground_034",
+      "category": "NON_VERIFIABLE",
+      "difficulty": "medium",
+      "claim": "This is a wonderful feature.",
+      "evidence": [
+        "Feature: hybrid search with RRF."
+      ],
+      "expected_status": "NON_VERIFIABLE"
+    },
+    {
+      "id": "ground_035",
+      "category": "SUPPORTED",
+      "difficulty": "hard",
+      "claim": "The company observes 28 days of paid annual leave and provides 2000 EUR learning budget.",
+      "evidence": [
+        "Company observes 28 days of paid annual leave.",
+        "Every engineer receives a 2,000 EUR annual learning budget."
+      ],
+      "expected_status": "SUPPORTED"
+    },
+    {
+      "id": "ground_036",
+      "category": "CONTRADICTED",
+      "difficulty": "hard",
+      "claim": "The company was founded in 2020.",
+      "evidence": [
+        "Founded in 2023, headquartered in Berlin."
+      ],
+      "expected_status": "CONTRADICTED"
+    },
+    {
+      "id": "ground_037",
+      "category": "UNSUPPORTED",
+      "difficulty": "hard",
+      "claim": "The company has offices in Tokyo.",
+      "evidence": [
+        "Headquartered in Berlin with remote teams across Europe and North America."
+      ],
+      "expected_status": "UNSUPPORTED"
+    },
+    {
+      "id": "ground_038",
+      "category": "PARTIALLY_SUPPORTED",
+      "difficulty": "hard",
+      "claim": "Onboarding is two weeks and includes security training and first ticket, and parental leave is 16 weeks.",
+      "evidence": [
+        "New hires complete a two-week onboarding. Week one covers security training.",
+        "Parental leave is 16 weeks fully paid."
+      ],
+      "expected_status": "PARTIALLY_SUPPORTED"
+    },
+    {
+      "id": "ground_039",
+      "category": "SUPPORTED",
+      "difficulty": "hard",
+      "claim": "HNSW index uses vector_cosine_ops with m=16 and ef_construction=64 for 384 dimensions.",
+      "evidence": [
+        "pgvector HNSW index configured with m=16 and ef_construction=64 for 384 dimensions.",
+        "vector_cosine_ops"
+      ],
+      "expected_status": "SUPPORTED"
+    },
+    {
+      "id": "ground_040",
+      "category": "UNSUPPORTED",
+      "difficulty": "hard",
+      "claim": "The company uses Pinecone for vector storage.",
+      "evidence": [
+        "Chunks and embeddings are stored in PostgreSQL using pgvector with HNSW."
+      ],
+      "expected_status": "UNSUPPORTED"
+    },
+    {
+      "id": "ground_041",
+      "category": "CONTRADICTED",
+      "difficulty": "medium",
+      "claim": "Users can request refunds within 14 days with 50% usage for full refund.",
+      "evidence": [
+        "Full refund within 14 days if usage below 25%."
+      ],
+      "expected_status": "CONTRADICTED"
+    },
+    {
+      "id": "ground_042",
+      "category": "SUPPORTED",
+      "difficulty": "medium",
+      "claim": "The API uses JWT access tokens with 15-minute expiry.",
+      "evidence": [
+        "JWT access tokens have a 15-minute expiration and contain user ID."
+      ],
+      "expected_status": "SUPPORTED"
+    },
+    {
+      "id": "ground_043",
+      "category": "UNSUPPORTED",
+      "difficulty": "medium",
+      "claim": "The company provides 24/7 phone support for all plans.",
+      "evidence": [
+        "Starter: Email support 48-hour SLA.",
+        "Pro: Priority support 12-hour SLA."
+      ],
+      "expected_status": "UNSUPPORTED"
+    },
+    {
+      "id": "ground_044",
+      "category": "SUPPORTED",
+      "difficulty": "easy",
+      "claim": "Annual billing saves 20% on all plans.",
+      "evidence": [
+        "Annual billing saves 20% on all plans."
+      ],
+      "expected_status": "SUPPORTED"
+    },
+    {
+      "id": "ground_045",
+      "category": "CONTRADICTED",
+      "difficulty": "easy",
+      "claim": "Annual billing saves 30% on all plans.",
+      "evidence": [
+        "Annual billing saves 20% on all plans."
+      ],
+      "expected_status": "CONTRADICTED"
+    },
+    {
+      "id": "ground_046",
+      "category": "UNSUPPORTED",
+      "difficulty": "easy",
+      "claim": "Refunds are processed within 24 hours.",
+      "evidence": [
+        "Refunds within 5\u20137 business days to original payment method."
+      ],
+      "expected_status": "UNSUPPORTED"
+    },
+    {
+      "id": "ground_047",
+      "category": "PARTIALLY_SUPPORTED",
+      "difficulty": "easy",
+      "claim": "Refunds within 30 days and Starter has 3 knowledge bases.",
+      "evidence": [
+        "Refund within 30 days.",
+        "Starter: Up to 3 knowledge bases."
+      ],
+      "expected_status": "PARTIALLY_SUPPORTED"
+    },
+    {
+      "id": "ground_048",
+      "category": "SUPPORTED",
+      "difficulty": "easy",
+      "claim": "Support portal ticket subject must be Refund Request: [Order ID].",
+      "evidence": [
+        "Submit a ticket via Support Portal with subject line Refund Request: [Order ID]."
+      ],
+      "expected_status": "SUPPORTED"
+    },
+    {
+      "id": "ground_049",
+      "category": "CONTRADICTED",
+      "difficulty": "medium",
+      "claim": "Trial data is retained for 30 days after expiration.",
+      "evidence": [
+        "Trial data is retained for 7 days after expiration before deletion."
+      ],
+      "expected_status": "CONTRADICTED"
+    },
+    {
+      "id": "ground_050",
+      "category": "UNSUPPORTED",
+      "difficulty": "medium",
+      "claim": "The company has a physical office in New York.",
+      "evidence": [
+        "Headquartered in Berlin with remote teams across Europe and North America."
+      ],
+      "expected_status": "UNSUPPORTED"
+    }
+  ],
+  "timestamp": "2026-09-06T15:26:41.130192+00:00",
+  "git_commit": "1869950"
+}
