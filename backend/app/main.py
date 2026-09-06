@@ -13,8 +13,10 @@ from app.core.config import get_settings
 from app.core.exceptions import register_exception_handlers
 from app.core.logging import (
     set_request_id,
+    set_trace_id,
     setup_logging,
 )
+from app.core.tracing import RequestTrace, set_current_trace
 from app.db.session import close_db_engine, get_db
 from app.schemas.health import HealthResponse, ReadinessResponse
 from app.services.health import HealthService
@@ -58,46 +60,68 @@ def create_application() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # 1. Request ID and Access Logging Middleware
+    # 1. Request ID + Trace ID and Access Logging Middleware (Phase 1.5)
     @app.middleware("http")
     async def request_id_and_logging_middleware(request: Request, call_next) -> Response:
-        # Extract or generate X-Request-ID
+        # Extract or generate X-Request-ID / X-Trace-ID
         req_id = request.headers.get("X-Request-ID")
         if not req_id or not req_id.strip():
             req_id = str(uuid.uuid4())
+        trace_id = request.headers.get("X-Trace-ID")
+        if not trace_id or not trace_id.strip():
+            trace_id = str(uuid.uuid4())
 
-        # Set context variable for structured logging
+        # Set context variables for structured logging & tracing
         set_request_id(req_id)
+        set_trace_id(trace_id)
         request.state.request_id = req_id
+        request.state.trace_id = trace_id
+
+        # Create a RequestTrace for this request
+        trace = RequestTrace(trace_id=trace_id, request_id=req_id)
+        trace.mark("request_start")
+        tok_trace = set_current_trace(trace)
 
         start_time = time.perf_counter()
         try:
             response = await call_next(request)
             duration_ms = (time.perf_counter() - start_time) * 1000.0
+            trace.record("http_total_ms", duration_ms)
 
-            # Attach X-Request-ID to response header
+            # Attach IDs to response headers
             response.headers["X-Request-ID"] = req_id
+            response.headers["X-Trace-ID"] = trace_id
+
+            # Log trace summary for chat endpoints (verbose tracing)
+            if request.url.path.startswith("/api/v1/chat"):
+                trace.log_summary()
 
             logger.info(
-                "%s %s -> %d (%.2f ms)",
+                "%s %s -> %d (%.2f ms) trace=%s",
                 request.method,
                 request.url.path,
                 response.status_code,
                 duration_ms,
+                trace_id,
             )
             return response
         except Exception as exc:
             duration_ms = (time.perf_counter() - start_time) * 1000.0
+            trace.record("http_total_ms", duration_ms)
+            trace.add_error(str(exc))
             logger.error(
-                "%s %s failed with exception: %s (%.2f ms)",
+                "%s %s failed with exception: %s (%.2f ms) trace=%s",
                 request.method,
                 request.url.path,
                 str(exc),
                 duration_ms,
+                trace_id,
             )
             raise
         finally:
             set_request_id(None)
+            set_trace_id(None)
+            set_current_trace(None)
 
     # 2. Configure CORS Middleware
     allowed_origins = [
@@ -116,7 +140,7 @@ def create_application() -> FastAPI:
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
-        expose_headers=["X-Request-ID"],
+        expose_headers=["X-Request-ID", "X-Trace-ID"],
     )
 
     # 3. Register Centralized Exception Handlers

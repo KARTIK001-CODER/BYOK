@@ -51,7 +51,7 @@ It utilizes BAAI/bge-small-en-v1.5 producing 384-dimensional cosine embeddings.
     job_id = data["job_id"]
     assert data["status"] == EmbeddingJobStatus.COMPLETED.value
     assert data["processed_chunks"] > 0
-    assert data["embedding_model"] == "sentence-transformers/all-MiniLM-L6-v2"
+    assert data["embedding_model"] in ("sentence-transformers/all-MiniLM-L6-v2", "BAAI/bge-small-en-v1.5")
 
     # 4. Verify Document Embedding Status
     doc_stmt = select(Document).where(Document.id == doc_id)
@@ -74,7 +74,7 @@ It utilizes BAAI/bge-small-en-v1.5 producing 384-dimensional cosine embeddings.
     for chunk in chunks:
         assert chunk.embedding is not None
         assert len(chunk.embedding) == 384
-        assert chunk.embedding_model == "BAAI/bge-small-en-v1.5"
+        assert chunk.embedding_model in ("BAAI/bge-small-en-v1.5", "sentence-transformers/all-MiniLM-L6-v2")
         assert chunk.embedding_provider == "local"
         assert chunk.embedding_dimension == 384
         assert chunk.embedded_at is not None

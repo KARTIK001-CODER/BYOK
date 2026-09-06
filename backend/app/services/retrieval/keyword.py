@@ -1,10 +1,13 @@
 import logging
 import re
+import time
 from typing import Any
 
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.tracing import get_current_trace
+from app.models.document import Document
 from app.models.document_chunk import DocumentChunk
 from app.services.retrieval.filters import RetrievalFilterBuilder
 from app.services.retrieval.fusion import CandidateMatch
@@ -71,54 +74,83 @@ class KeywordRetriever:
 
         dialect_name = session.bind.dialect.name if session.bind else "postgresql"
         candidates: list[CandidateMatch] = []
+        trace = get_current_trace()
 
         if dialect_name == "postgresql":
             # Native PostgreSQL Full-Text Search with plainto_tsquery and ts_rank_cd
+            prep_t0 = time.perf_counter()
             query_ts = func.plainto_tsquery("english", query)
             rank_expr = func.ts_rank_cd(DocumentChunk.search_vector, query_ts)
 
             stmt = (
-                select(DocumentChunk, rank_expr.label("rank_score"))
+                select(DocumentChunk, Document.name.label("document_name"), rank_expr.label("rank_score"))
+                .join(Document, DocumentChunk.document_id == Document.id)
                 .where(and_(*where_clauses, DocumentChunk.search_vector.op("@@")(query_ts)))
                 .order_by(rank_expr.desc())
                 .limit(candidate_k)
             )
+            prep_ms = (time.perf_counter() - prep_t0) * 1000.0
+            sql_t0 = time.perf_counter()
             result = await session.execute(stmt)
+            sql_ms = (time.perf_counter() - sql_t0) * 1000.0
+            proc_t0 = time.perf_counter()
             rows = result.all()
 
-            for rank, (chunk, score) in enumerate(rows, start=1):
+            for rank, (chunk, document_name, score) in enumerate(rows, start=1):
                 candidates.append(
                     CandidateMatch(
                         chunk=chunk,
                         score=float(score) if score is not None else 0.0,
                         rank=rank,
                         source="keyword",
+                        document_name=document_name,
                     )
                 )
+            proc_ms = (time.perf_counter() - proc_t0) * 1000.0
+            if trace:
+                trace.record("keyword_query_prep_ms", prep_ms)
+                trace.record("keyword_sql_execution_ms", sql_ms)
+                trace.record("keyword_result_processing_ms", proc_ms)
+                trace.set_counter("keyword_rows_returned", len(rows))
         else:
             # Fallback for SQLite in-memory unit tests
-            stmt = select(DocumentChunk).where(and_(*where_clauses))
+            prep_t0 = time.perf_counter()
+            stmt = (
+                select(DocumentChunk, Document.name.label("document_name"))
+                .join(Document, DocumentChunk.document_id == Document.id)
+                .where(and_(*where_clauses))
+            )
+            prep_ms = (time.perf_counter() - prep_t0) * 1000.0
+            sql_t0 = time.perf_counter()
             result = await session.execute(stmt)
-            chunks = result.scalars().all()
+            sql_ms = (time.perf_counter() - sql_t0) * 1000.0
+            proc_t0 = time.perf_counter()
+            rows = result.all()
 
-            scored_chunks: list[tuple[Any, float]] = []
-            for chunk in chunks:
+            scored_chunks: list[tuple[Any, float, str]] = []
+            for chunk, document_name in rows:
                 score = cls._sqlite_lexical_score(query, chunk.content, chunk.section_title)
                 if score > 0.0:
-                    scored_chunks.append((chunk, score))
+                    scored_chunks.append((chunk, score, document_name))
 
             scored_chunks.sort(key=lambda x: -x[1])
             top_candidates = scored_chunks[:candidate_k]
 
-            for rank, (chunk, score) in enumerate(top_candidates, start=1):
+            for rank, (chunk, score, document_name) in enumerate(top_candidates, start=1):
                 candidates.append(
                     CandidateMatch(
                         chunk=chunk,
                         score=score,
                         rank=rank,
                         source="keyword",
+                        document_name=document_name,
                     )
                 )
+            proc_ms = (time.perf_counter() - proc_t0) * 1000.0
+            if trace:
+                trace.record("keyword_query_prep_ms", prep_ms)
+                trace.record("keyword_sql_execution_ms", sql_ms)
+                trace.record("keyword_result_processing_ms", proc_ms)
 
         logger.debug(
             "Keyword retrieval found %d candidates for org_id=%s (candidate_k=%d)",

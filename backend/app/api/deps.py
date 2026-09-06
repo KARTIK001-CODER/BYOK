@@ -1,3 +1,5 @@
+import logging
+import time
 from collections.abc import Callable
 
 from fastapi import Depends
@@ -6,7 +8,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import ForbiddenException, NotFoundException, UnauthorizedException
 from app.core.security import decode_access_token
+from app.core.tracing import get_current_trace
 from app.db.session import get_db
+
+logger = logging.getLogger("app.api.deps")
 from app.models.document import Document
 from app.models.embedding_job import EmbeddingJob
 from app.models.ingestion_job import IngestionJob
@@ -34,17 +39,35 @@ async def get_current_user(
     session: AsyncSession = Depends(get_db),
 ) -> User:
     """Extract and validate JWT access token to retrieve current user."""
+    trace = get_current_trace()
+    t0 = time.perf_counter()
+
+    # JWT validation
+    jwt_t0 = time.perf_counter()
     payload = decode_access_token(token)
+    jwt_ms = (time.perf_counter() - jwt_t0) * 1000.0
+
     user_id: str | None = payload.get("sub")
     if not user_id:
         raise UnauthorizedException(message="Invalid token payload.")
 
+    # User lookup
+    lookup_t0 = time.perf_counter()
     user = await UserService.get_by_id(session, user_id)
+    lookup_ms = (time.perf_counter() - lookup_t0) * 1000.0
+
     if user is None:
         raise UnauthorizedException(message="User not found.")
 
     if not user.is_active:
         raise UnauthorizedException(message="User account is inactive.")
+
+    total_ms = (time.perf_counter() - t0) * 1000.0
+    if trace:
+        trace.record("jwt_validation_ms", jwt_ms)
+        trace.record("user_lookup_ms", lookup_ms)
+        trace.record("authentication_ms", total_ms)
+        trace.mark("auth_done")
 
     return user
 

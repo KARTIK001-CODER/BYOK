@@ -1,8 +1,10 @@
 import logging
+import time
 
 from fastembed import TextEmbedding
 
 from app.core.config import get_settings
+from app.core.tracing import get_current_trace
 from app.services.embeddings.base import BaseEmbeddingProvider
 from app.services.embeddings.errors import EmbeddingErrorCode, EmbeddingException
 
@@ -10,6 +12,8 @@ logger = logging.getLogger("app.services.embeddings.providers.local")
 
 # Cached model instance singleton across requests
 _GLOBAL_LOCAL_EMBEDDING_MODEL: TextEmbedding | None = None
+_GLOBAL_MODEL_LOAD_MS: float | None = None
+_GLOBAL_MODEL_LOAD_WAS_COLD: bool | None = None
 
 
 class LocalEmbeddingProvider(BaseEmbeddingProvider):
@@ -46,7 +50,10 @@ class LocalEmbeddingProvider(BaseEmbeddingProvider):
 
     def _get_or_load_model(self) -> TextEmbedding:
         """Load or retrieve the cached singleton fastembed model."""
-        global _GLOBAL_LOCAL_EMBEDDING_MODEL
+        global _GLOBAL_LOCAL_EMBEDDING_MODEL, _GLOBAL_MODEL_LOAD_MS, _GLOBAL_MODEL_LOAD_WAS_COLD
+        trace = get_current_trace()
+        t0 = time.perf_counter()
+        was_cold = _GLOBAL_LOCAL_EMBEDDING_MODEL is None
         if _GLOBAL_LOCAL_EMBEDDING_MODEL is None:
             logger.info("Initializing LocalEmbeddingProvider model: %s", self._model_name)
             try:
@@ -61,6 +68,19 @@ class LocalEmbeddingProvider(BaseEmbeddingProvider):
                     message=f"Failed to load embedding model '{self._model_name}': {exc!s}",
                     code=EmbeddingErrorCode.MODEL_LOAD_FAILED,
                 ) from exc
+        elapsed = (time.perf_counter() - t0) * 1000.0
+        # Record globally for cold vs warm reporting
+        if _GLOBAL_MODEL_LOAD_MS is None:
+            _GLOBAL_MODEL_LOAD_MS = elapsed
+            _GLOBAL_MODEL_LOAD_WAS_COLD = was_cold
+        if trace:
+            trace.record("embedding_model_init_ms", elapsed)
+            trace.set_counter("embedding_was_cold", was_cold)
+            # Also keep counters for analysis
+            if was_cold:
+                trace.set_counter("embedding_cold_init_ms", elapsed)
+            else:
+                trace.set_counter("embedding_warm_init_ms", elapsed)
         return _GLOBAL_LOCAL_EMBEDDING_MODEL
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
@@ -105,6 +125,8 @@ class LocalEmbeddingProvider(BaseEmbeddingProvider):
 
     def embed_query(self, query: str) -> list[float]:
         """Generate normalized vector embedding for a single retrieval query."""
+        trace = get_current_trace()
+        infer_t0 = time.perf_counter()
         cleaned_query = query.strip() if query else ""
         if not cleaned_query:
             raise EmbeddingException(
@@ -132,6 +154,9 @@ class LocalEmbeddingProvider(BaseEmbeddingProvider):
                     ),
                     code=EmbeddingErrorCode.EMBEDDING_DIMENSION_MISMATCH,
                 )
+            infer_ms = (time.perf_counter() - infer_t0) * 1000.0
+            if trace:
+                trace.record("embedding_inference_direct_ms", infer_ms)
             return vec_list
         except EmbeddingException:
             raise

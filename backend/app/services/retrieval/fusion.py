@@ -13,11 +13,13 @@ class CandidateMatch:
         score: float,
         rank: int,
         source: str,
+        document_name: str | None = None,
     ) -> None:
         self.chunk = chunk
         self.score = score
         self.rank = rank  # 1-indexed
         self.source = source
+        self.document_name = document_name
 
 
 class ReciprocalRankFusion:
@@ -67,6 +69,7 @@ class ReciprocalRankFusion:
             if chunk_id not in fused_map:
                 fused_map[chunk_id] = {
                     "chunk": chunk,
+                    "document_name": candidate.document_name,
                     "rrf_score": rrf_score_contribution,
                     "vector_score": candidate.score,
                     "keyword_score": None,
@@ -86,6 +89,7 @@ class ReciprocalRankFusion:
             if chunk_id not in fused_map:
                 fused_map[chunk_id] = {
                     "chunk": chunk,
+                    "document_name": candidate.document_name,
                     "rrf_score": rrf_score_contribution,
                     "vector_score": None,
                     "keyword_score": candidate.score,
@@ -113,6 +117,7 @@ class ReciprocalRankFusion:
                 organization_id=chunk.organization_id,
                 knowledge_base_id=chunk.knowledge_base_id,
                 document_id=chunk.document_id,
+                document_name=item.get("document_name"),
                 document_version_id=chunk.document_version_id,
                 chunk_id=chunk.id,
                 chunk_index=chunk.chunk_index,
@@ -124,6 +129,7 @@ class ReciprocalRankFusion:
             result = RetrievalResult(
                 chunk_id=chunk.id,
                 document_id=chunk.document_id,
+                document_name=item.get("document_name"),
                 document_version_id=chunk.document_version_id,
                 knowledge_base_id=chunk.knowledge_base_id,
                 content=chunk.content,

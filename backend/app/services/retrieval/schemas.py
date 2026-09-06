@@ -100,6 +100,7 @@ class ChunkProvenance(BaseModel):
     organization_id: str
     knowledge_base_id: str
     document_id: str
+    document_name: str | None = None
     document_version_id: str
     chunk_id: str
     chunk_index: int
@@ -115,6 +116,7 @@ class RetrievalResult(BaseModel):
 
     chunk_id: str
     document_id: str
+    document_name: str | None = None
     document_version_id: str
     knowledge_base_id: str
     content: str
