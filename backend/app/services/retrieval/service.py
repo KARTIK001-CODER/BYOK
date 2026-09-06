@@ -186,6 +186,11 @@ class RetrievalService:
         embed_init_ms = 0.0
         embed_infer_ms = 0.0
 
+        # Phase 2.2 — Reranking: determine initial retrieval size
+        reranking_enabled = getattr(settings, "ENABLE_RERANKING", False)
+        initial_top_k = getattr(settings, "RERANKER_CANDIDATE_K", 30) if reranking_enabled else request.top_k
+        final_top_k = request.top_k
+
         if effective_search_mode in (SearchMode.VECTOR, SearchMode.HYBRID):
             # Measure provider instantiation (model init) separately from inference
             init_t0 = time.perf_counter()
@@ -246,9 +251,9 @@ class RetrievalService:
                 trace.record("vector_search_ms", vector_duration_ms)
                 # vector internal breakdown added via VectorRetriever itself if trace present
 
-            # Format top_k results
+            # Format results — when reranking, keep candidate_k sized for reranker; else top_k
             ser_t0 = time.perf_counter()
-            for rank, c in enumerate(vector_candidates[: request.top_k], start=1):
+            for rank, c in enumerate(vector_candidates[: initial_top_k], start=1):
                 chunk: DocumentChunk = c.chunk
                 provenance = ChunkProvenance(
                     organization_id=chunk.organization_id,
@@ -303,7 +308,7 @@ class RetrievalService:
             keyword_candidates_count = len(keyword_candidates)
 
             ser_t0 = time.perf_counter()
-            for rank, c in enumerate(keyword_candidates[: request.top_k], start=1):
+            for rank, c in enumerate(keyword_candidates[: initial_top_k], start=1):
                 chunk: DocumentChunk = c.chunk
                 provenance = ChunkProvenance(
                     organization_id=chunk.organization_id,
@@ -344,6 +349,8 @@ class RetrievalService:
         elif effective_search_mode == SearchMode.HYBRID:
             assert query_embedding is not None
             hybrid_retriever = HybridRetriever()
+            # When reranking, fuse more candidates (RERANKER_CANDIDATE_K) for reranker to reorder
+            hybrid_top_k = initial_top_k
             (
                 results,
                 v_candidates,
@@ -354,7 +361,7 @@ class RetrievalService:
                 organization_id=organization_id,
                 query=normalized_query,
                 query_embedding=query_embedding,
-                top_k=request.top_k,
+                top_k=hybrid_top_k,
                 candidate_k=effective_candidate_k,
                 knowledge_base_ids=request.knowledge_base_ids,
                 document_ids=request.document_ids,
@@ -384,6 +391,82 @@ class RetrievalService:
                 trace.set_counter("vector_candidates", vector_candidates_count)
                 trace.set_counter("keyword_candidates", keyword_candidates_count)
 
+        # Phase 2.2 — Reranking after candidate retrieval (bounded, opt-in, fallback)
+        reranker_trace = None
+        reranking_enabled = getattr(settings, "ENABLE_RERANKING", False)
+        if reranking_enabled and results:
+            try:
+                from app.services.reranking.service import RerankingService
+
+                # Prepare candidates for reranker (preserve provenance)
+                candidate_dicts: list[dict] = []
+                for r in results:
+                    candidate_dicts.append(
+                        {
+                            "chunk_id": r.chunk_id,
+                            "document_id": r.document_id,
+                            "document_name": r.document_name,
+                            "content": r.content,
+                            "retrieval_score": r.score,
+                            "retrieval_rank": r.rank,
+                            "source": r.source,
+                            "provenance": r.provenance,
+                            "vector_score": r.vector_score,
+                            "keyword_score": r.keyword_score,
+                            "rrf_score": r.rrf_score,
+                        }
+                    )
+                # Rerank (candidate preparation dedup inside service)
+                reranked_dicts, reranker_trace = await RerankingService.rerank(
+                    query=normalized_query,
+                    candidates=candidate_dicts,
+                    top_k=request.top_k,
+                    candidate_k=getattr(settings, "RERANKER_CANDIDATE_K", 30),
+                )
+                # Convert back to RetrievalResult preserving order and adding rerank scores
+                reranked_results: list[RetrievalResult] = []
+                for rd in reranked_dicts:
+                    # Find original result for provenance consistency
+                    orig = next((x for x in results if x.chunk_id == rd["chunk_id"]), None)
+                    if not orig:
+                        continue
+                    reranked_results.append(
+                        RetrievalResult(
+                            chunk_id=orig.chunk_id,
+                            document_id=orig.document_id,
+                            document_name=orig.document_name,
+                            document_version_id=orig.document_version_id,
+                            knowledge_base_id=orig.knowledge_base_id,
+                            content=orig.content,
+                            score=round(float(rd.get("rerank_score", orig.score)), 4),
+                            rank=rd.get("rerank_rank", orig.rank),
+                            source=orig.source + "_reranked" if orig.source else "reranked",
+                            vector_score=orig.vector_score,
+                            keyword_score=orig.keyword_score,
+                            rrf_score=orig.rrf_score,
+                            page_number=orig.page_number,
+                            section_title=orig.section_title,
+                            metadata={
+                                **(orig.metadata or {}),
+                                "original_score": orig.score,
+                                "original_rank": rd.get("original_rank"),
+                                "rerank_score": rd.get("rerank_score"),
+                            },
+                            provenance=orig.provenance,
+                        )
+                    )
+                # Only replace if reranking succeeded (not fallback to original order without change)
+                if reranked_results and not reranker_trace.fallback:
+                    results = reranked_results
+                if trace and reranker_trace:
+                    trace.record("reranker_total_ms", reranker_trace.total_ms)
+                    trace.set_counter("reranking_enabled", True)
+                    trace.set_counter("reranking_fallback", reranker_trace.fallback)
+            except Exception as e:
+                logger.warning("Reranking integration failed, fallback to original: %s", e)
+                if trace:
+                    trace.add_error(f"rerank_failed: {e}")
+
         total_duration_ms = (time.perf_counter() - total_start) * 1000.0
         if trace:
             trace.record("retrieval_overall_ms", total_duration_ms)
@@ -394,6 +477,14 @@ class RetrievalService:
             effective_mode_str = "hybrid_wide"
             if trace:
                 trace.set_counter("effective_candidate_k", effective_candidate_k)
+        # Merge reranking trace into query_analysis for diagnostics
+        if reranker_trace:
+            if query_analysis_dict is None:
+                query_analysis_dict = {}
+            query_analysis_dict["reranking"] = reranker_trace.model_dump()
+        if reranker_trace and trace:
+            trace.set_counter("reranking_enabled", reranker_trace.enabled)
+            trace.set_counter("reranking_candidate_count", reranker_trace.candidate_count)
 
         retr_trace = RetrievalTrace(
             query_hash=query_hash,

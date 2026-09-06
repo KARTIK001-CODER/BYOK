@@ -124,6 +124,15 @@ class Settings(BaseSettings):
     AMBIGUITY_THRESHOLD: float = 0.5
     HYBRID_WIDE_CANDIDATE_K: int = 50
 
+    # Reranking — Phase 2.2 (local cross-encoder, opt-in, bounded)
+    ENABLE_RERANKING: bool = False
+    RERANKER_PROVIDER: str = "local"
+    RERANKER_MODEL: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+    RERANKER_CANDIDATE_K: int = 30
+    RERANKER_TOP_K: int = 5
+    RERANKER_MAX_DOCUMENT_LENGTH: int = 512
+    RERANKER_TIMEOUT_SECONDS: float = 2.0
+
     # BYOK Master Encryption Key Placeholder (Deferred to Future Phases)
     API_KEY_ENCRYPTION_KEY: str = Field(
         default="change-this-to-a-32-byte-hex-key-for-byok-encryption-vault"

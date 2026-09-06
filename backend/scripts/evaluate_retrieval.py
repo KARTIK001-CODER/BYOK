@@ -132,8 +132,8 @@ async def evaluate_single(retriever: str, dataset_path: Path, top_k: int, output
 
 
 async def main():
-    parser = argparse.ArgumentParser(description="BYOK Retrieval Evaluation (Phase 2.0 + 2.1 adaptive)")
-    parser.add_argument("--retriever", default="all", choices=["vector", "keyword", "hybrid", "adaptive", "all"], help="Retriever to evaluate (adaptive = Phase 2.1 query intelligence)")
+    parser = argparse.ArgumentParser(description="BYOK Retrieval Evaluation (Phase 2.0 + 2.1 adaptive + 2.2 reranking)")
+    parser.add_argument("--retriever", default="all", choices=["vector", "keyword", "hybrid", "adaptive", "hybrid_reranked", "adaptive_reranked", "all"], help="Retriever to evaluate (adaptive = Phase 2.1, reranked = Phase 2.2)")
     parser.add_argument("--dataset", default=str(DEFAULT_DATASET), help="Dataset path")
     parser.add_argument("--top-k", type=int, default=5, help="Top K for evaluation")
     parser.add_argument("--candidate-k", type=int, default=None, help="Candidate K (default top_k*4)")
@@ -159,9 +159,9 @@ async def main():
     if not output_dir.is_absolute():
         output_dir = Path(__file__).resolve().parents[1] / output_dir
 
-    # Expand "all" to include adaptive if present
+    # Expand "all" to include adaptive and reranked if present
     if args.retriever == "all":
-        retrievers = ["vector", "keyword", "hybrid", "adaptive"]
+        retrievers = ["vector", "keyword", "hybrid", "adaptive", "hybrid_reranked", "adaptive_reranked"]
     else:
         retrievers = [args.retriever]
 

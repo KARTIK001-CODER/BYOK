@@ -29,12 +29,16 @@ def console_report(report: EvaluationReport) -> str:
     if report.overall.hit_at_10 is not None:
         lines.append(f"  Hit@10:      {report.overall.hit_at_10:.3f}")
     lines.append(f"  MRR:         {report.overall.mrr:.3f}")
+    lines.append(f"  NDCG@3:      {report.overall.ndcg_at_3:.3f}")
+    lines.append(f"  NDCG@5:      {report.overall.ndcg_at_5:.3f}")
+    if report.overall.ndcg_at_10 is not None:
+        lines.append(f"  NDCG@10:     {report.overall.ndcg_at_10:.3f}")
     lines.append(f"  Precision@{report.top_k}: {report.overall.precision_at_k:.3f}")
     lines.append(f"  Recall@{report.top_k}:    {report.overall.recall_at_k:.3f}")
     lines.append("")
     lines.append("BY CATEGORY")
     for cat, metrics in sorted(report.by_category.items()):
-        lines.append(f"  {cat:12s} Hit@5: {metrics.hit_at_5:.3f}  MRR: {metrics.mrr:.3f}  Prec@{report.top_k}: {metrics.precision_at_k:.3f}")
+        lines.append(f"  {cat:12s} Hit@5: {metrics.hit_at_5:.3f}  MRR: {metrics.mrr:.3f}  NDCG@5: {metrics.ndcg_at_5:.3f}  Prec@{report.top_k}: {metrics.precision_at_k:.3f}")
     if report.by_difficulty:
         lines.append("")
         lines.append("BY DIFFICULTY")
@@ -92,15 +96,19 @@ def write_markdown_report(report: EvaluationReport, output_dir: Path | str) -> P
     if report.overall.hit_at_10 is not None:
         lines.append(f"| Hit@10 | {report.overall.hit_at_10:.3f} |")
     lines.append(f"| MRR | {report.overall.mrr:.3f} |")
+    lines.append(f"| NDCG@3 | {report.overall.ndcg_at_3:.3f} |")
+    lines.append(f"| NDCG@5 | {report.overall.ndcg_at_5:.3f} |")
+    if report.overall.ndcg_at_10 is not None:
+        lines.append(f"| NDCG@10 | {report.overall.ndcg_at_10:.3f} |")
     lines.append(f"| Precision@{report.top_k} | {report.overall.precision_at_k:.3f} |")
     lines.append(f"| Recall@{report.top_k} | {report.overall.recall_at_k:.3f} |")
     lines.append("")
     lines.append("## By Category")
     lines.append("")
-    lines.append("| Category | Hit@5 | MRR | Prec | Recall | Cases |")
-    lines.append("|---|---:|---:|---:|---:|---:|")
+    lines.append("| Category | Hit@5 | MRR | NDCG@5 | Prec | Recall | Cases |")
+    lines.append("|---|---:|---:|---:|---:|---:|---:|")
     for cat, m in sorted(report.by_category.items()):
-        lines.append(f"| {cat} | {m.hit_at_5:.3f} | {m.mrr:.3f} | {m.precision_at_k:.3f} | {m.recall_at_k:.3f} | {m.total_cases} |")
+        lines.append(f"| {cat} | {m.hit_at_5:.3f} | {m.mrr:.3f} | {m.ndcg_at_5:.3f} | {m.precision_at_k:.3f} | {m.recall_at_k:.3f} | {m.total_cases} |")
     lines.append("")
     if report.by_difficulty:
         lines.append("## By Difficulty")
