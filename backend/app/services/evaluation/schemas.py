@@ -15,6 +15,13 @@ class EvaluationCategory(str, Enum):
     factual = "factual"
     multi_hop = "multi_hop"
     ambiguous = "ambiguous"
+    # Phase 2.4 extended categories
+    simple = "simple"
+    complex = "complex"
+    numerical = "numerical"
+    temporal = "temporal"
+    entity = "entity"
+    no_answer = "no_answer"
 
 
 class EvaluationDifficulty(str, Enum):

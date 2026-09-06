@@ -1,0 +1,721 @@
+{
+  "version": "1.0",
+  "description": "BYOK Phase 2.4 Retrieval Intelligence Baseline \u00e2\u20ac\u201d 60 queries across Simple, Semantic, Keyword, Ambiguous, Complex, Multi-Hop, Numerical, Temporal, Entity, No-Answer",
+  "created_at": "2026-09-06T00:00:00Z",
+  "cases": [
+    {
+      "id": "ri_001",
+      "query": "What is the refund period?",
+      "category": "simple",
+      "difficulty": "easy",
+      "expected": [
+        {
+          "document_name": "Refund Policy"
+        }
+      ]
+    },
+    {
+      "id": "ri_002",
+      "query": "Where is the company headquartered?",
+      "category": "simple",
+      "difficulty": "easy",
+      "expected": [
+        {
+          "document_name": "Company Handbook"
+        }
+      ]
+    },
+    {
+      "id": "ri_003",
+      "query": "What is the maximum file size?",
+      "category": "simple",
+      "difficulty": "easy",
+      "expected": [
+        {
+          "document_name": "Pricing"
+        }
+      ]
+    },
+    {
+      "id": "ri_004",
+      "query": "Who is the Data Protection Officer?",
+      "category": "simple",
+      "difficulty": "easy",
+      "expected": [
+        {
+          "document_name": "Company Handbook"
+        }
+      ]
+    },
+    {
+      "id": "ri_005",
+      "query": "What embedding model is used?",
+      "category": "simple",
+      "difficulty": "easy",
+      "expected": [
+        {
+          "document_name": "Technical Docs"
+        }
+      ]
+    },
+    {
+      "id": "ri_006",
+      "query": "How do I get my money back after buying a plan?",
+      "category": "semantic",
+      "difficulty": "easy",
+      "expected": [
+        {
+          "document_name": "Refund Policy"
+        }
+      ]
+    },
+    {
+      "id": "ri_007",
+      "query": "Tell me how to receive a reimbursement for my subscription",
+      "category": "semantic",
+      "difficulty": "medium",
+      "expected": [
+        {
+          "document_name": "Refund Policy"
+        }
+      ]
+    },
+    {
+      "id": "ri_008",
+      "query": "Explain how my data stays private and where it is stored",
+      "category": "semantic",
+      "difficulty": "medium",
+      "expected": [
+        {
+          "document_name": "Company Handbook"
+        }
+      ]
+    },
+    {
+      "id": "ri_009",
+      "query": "Describe the chunking process that splits documents",
+      "category": "semantic",
+      "difficulty": "medium",
+      "expected": [
+        {
+          "document_name": "Technical Docs"
+        }
+      ]
+    },
+    {
+      "id": "ri_010",
+      "query": "How can I delete my knowledge and what about backups?",
+      "category": "semantic",
+      "difficulty": "hard",
+      "expected": [
+        {
+          "document_name": "Support FAQ"
+        }
+      ]
+    },
+    {
+      "id": "ri_011",
+      "query": "What does the onboarding look like for new engineers?",
+      "category": "semantic",
+      "difficulty": "easy",
+      "expected": [
+        {
+          "document_name": "Company Handbook"
+        }
+      ]
+    },
+    {
+      "id": "ri_012",
+      "query": "I want to understand the company's work-from-home rules",
+      "category": "semantic",
+      "difficulty": "easy",
+      "expected": [
+        {
+          "document_name": "Company Handbook"
+        }
+      ]
+    },
+    {
+      "id": "ri_013",
+      "query": "What is the cancellation_fee?",
+      "category": "keyword",
+      "difficulty": "easy",
+      "expected": [
+        {
+          "document_name": "Refund Policy"
+        }
+      ]
+    },
+    {
+      "id": "ri_014",
+      "query": "STORAGE: 25 MB",
+      "category": "keyword",
+      "difficulty": "easy",
+      "expected": [
+        {
+          "document_name": "Pricing"
+        }
+      ]
+    },
+    {
+      "id": "ri_015",
+      "query": "vector_cosine_ops",
+      "category": "keyword",
+      "difficulty": "medium",
+      "expected": [
+        {
+          "document_name": "Technical Docs"
+        }
+      ]
+    },
+    {
+      "id": "ri_016",
+      "query": "RRF_K=60",
+      "category": "keyword",
+      "difficulty": "medium",
+      "expected": [
+        {
+          "document_name": "Technical Docs"
+        }
+      ]
+    },
+    {
+      "id": "ri_017",
+      "query": "pool_size=10",
+      "category": "keyword",
+      "difficulty": "medium",
+      "expected": [
+        {
+          "document_name": "Technical Docs"
+        }
+      ]
+    },
+    {
+      "id": "ri_018",
+      "query": "ENABLE_ARXIV_FALLBACK",
+      "category": "keyword",
+      "difficulty": "hard",
+      "expected": [
+        {
+          "document_name": "Support FAQ"
+        }
+      ]
+    },
+    {
+      "id": "ri_019",
+      "query": "How does it work?",
+      "category": "ambiguous",
+      "difficulty": "hard",
+      "expected": [
+        {
+          "document_name": "Technical Docs"
+        }
+      ]
+    },
+    {
+      "id": "ri_020",
+      "query": "What are the limits?",
+      "category": "ambiguous",
+      "difficulty": "hard",
+      "expected": [
+        {
+          "document_name": "Pricing"
+        }
+      ]
+    },
+    {
+      "id": "ri_021",
+      "query": "Tell me about the policy",
+      "category": "ambiguous",
+      "difficulty": "medium",
+      "expected": [
+        {
+          "document_name": "Refund Policy"
+        }
+      ]
+    },
+    {
+      "id": "ri_022",
+      "query": "How can I get help?",
+      "category": "ambiguous",
+      "difficulty": "easy",
+      "expected": [
+        {
+          "document_name": "Support FAQ"
+        }
+      ]
+    },
+    {
+      "id": "ri_023",
+      "query": "What about that?",
+      "category": "ambiguous",
+      "difficulty": "hard",
+      "expected": [
+        {
+          "document_name": "Company Handbook"
+        }
+      ]
+    },
+    {
+      "id": "ri_024",
+      "query": "Compare the refund policy for standard and enterprise users.",
+      "category": "complex",
+      "difficulty": "hard",
+      "expected": [
+        {
+          "document_name": "Refund Policy"
+        },
+        {
+          "document_name": "Pricing"
+        }
+      ]
+    },
+    {
+      "id": "ri_025",
+      "query": "How does the company's remote work policy affect employee equipment reimbursement?",
+      "category": "complex",
+      "difficulty": "hard",
+      "expected": [
+        {
+          "document_name": "Company Handbook"
+        },
+        {
+          "document_name": "Support FAQ"
+        }
+      ]
+    },
+    {
+      "id": "ri_026",
+      "query": "What happens if I cancel my subscription after the refund period?",
+      "category": "complex",
+      "difficulty": "medium",
+      "expected": [
+        {
+          "document_name": "Refund Policy"
+        }
+      ]
+    },
+    {
+      "id": "ri_027",
+      "query": "Compare pricing for Starter, Pro, and Enterprise including knowledge bases and SLA.",
+      "category": "complex",
+      "difficulty": "hard",
+      "expected": [
+        {
+          "document_name": "Pricing"
+        }
+      ]
+    },
+    {
+      "id": "ri_028",
+      "query": "How do on-call rotations and incident response relate to RAG pipeline latency?",
+      "category": "complex",
+      "difficulty": "hard",
+      "expected": [
+        {
+          "document_name": "Technical Docs"
+        },
+        {
+          "document_name": "Company Handbook"
+        }
+      ]
+    },
+    {
+      "id": "ri_029",
+      "query": "If I buy an annual plan and cancel after 20 days with 30% usage, what refund and fee apply?",
+      "category": "multi_hop",
+      "difficulty": "hard",
+      "expected": [
+        {
+          "document_name": "Refund Policy"
+        },
+        {
+          "document_name": "Pricing"
+        }
+      ]
+    },
+    {
+      "id": "ri_030",
+      "query": "What happens when a user cancels during trial and then requests a refund after conversion?",
+      "category": "multi_hop",
+      "difficulty": "hard",
+      "expected": [
+        {
+          "document_name": "Refund Policy"
+        },
+        {
+          "document_name": "Support FAQ"
+        }
+      ]
+    },
+    {
+      "id": "ri_031",
+      "query": "Explain how a document goes from upload (25 MB limit) through chunking (1000/150) to HNSW indexing",
+      "category": "multi_hop",
+      "difficulty": "hard",
+      "expected": [
+        {
+          "document_name": "Technical Docs"
+        },
+        {
+          "document_name": "Pricing"
+        }
+      ]
+    },
+    {
+      "id": "ri_032",
+      "query": "How does hybrid retrieval work from query to RRF fusion to context for LLM?",
+      "category": "multi_hop",
+      "difficulty": "hard",
+      "expected": [
+        {
+          "document_name": "Technical Docs"
+        }
+      ]
+    },
+    {
+      "id": "ri_033",
+      "query": "What is the refund period and how does it affect pricing for Pro vs Enterprise?",
+      "category": "multi_hop",
+      "difficulty": "medium",
+      "expected": [
+        {
+          "document_name": "Refund Policy"
+        },
+        {
+          "document_name": "Pricing"
+        }
+      ]
+    },
+    {
+      "id": "ri_034",
+      "query": "How does remote work policy affect equipment reimbursement and onboarding?",
+      "category": "multi_hop",
+      "difficulty": "hard",
+      "expected": [
+        {
+          "document_name": "Company Handbook"
+        },
+        {
+          "document_name": "Support FAQ"
+        },
+        {
+          "document_name": "Technical Docs"
+        }
+      ]
+    },
+    {
+      "id": "ri_035",
+      "query": "What is the cancellation_fee for enterprise annual contracts with 50% usage?",
+      "category": "numerical",
+      "difficulty": "hard",
+      "expected": [
+        {
+          "document_name": "Refund Policy"
+        }
+      ]
+    },
+    {
+      "id": "ri_036",
+      "query": "How many knowledge bases are allowed in Pro plan with 500 documents?",
+      "category": "numerical",
+      "difficulty": "medium",
+      "expected": [
+        {
+          "document_name": "Pricing"
+        }
+      ]
+    },
+    {
+      "id": "ri_037",
+      "query": "What are the HNSW index parameters m=16 and ef_construction=64 for 384 dimensions?",
+      "category": "numerical",
+      "difficulty": "medium",
+      "expected": [
+        {
+          "document_name": "Technical Docs"
+        }
+      ]
+    },
+    {
+      "id": "ri_038",
+      "query": "How much is the learning budget in EUR and how many days of leave?",
+      "category": "numerical",
+      "difficulty": "medium",
+      "expected": [
+        {
+          "document_name": "Company Handbook"
+        }
+      ]
+    },
+    {
+      "id": "ri_039",
+      "query": "What is 25 MB in characters with 1000 chunk size and 150 overlap for max chunks?",
+      "category": "numerical",
+      "difficulty": "hard",
+      "expected": [
+        {
+          "document_name": "Technical Docs"
+        },
+        {
+          "document_name": "Pricing"
+        }
+      ]
+    },
+    {
+      "id": "ri_040",
+      "query": "When did the company launch and when was pgvector added?",
+      "category": "temporal",
+      "difficulty": "medium",
+      "expected": [
+        {
+          "document_name": "Company Handbook"
+        },
+        {
+          "document_name": "Technical Docs"
+        }
+      ]
+    },
+    {
+      "id": "ri_041",
+      "query": "What happens after the 14-day trial period ends on day 15?",
+      "category": "temporal",
+      "difficulty": "easy",
+      "expected": [
+        {
+          "document_name": "Refund Policy"
+        }
+      ]
+    },
+    {
+      "id": "ri_042",
+      "query": "How long is data retained after trial expiration before deletion?",
+      "category": "temporal",
+      "difficulty": "easy",
+      "expected": [
+        {
+          "document_name": "Refund Policy"
+        }
+      ]
+    },
+    {
+      "id": "ri_043",
+      "query": "When are promotions evaluated in March and September?",
+      "category": "temporal",
+      "difficulty": "easy",
+      "expected": [
+        {
+          "document_name": "Company Handbook"
+        }
+      ]
+    },
+    {
+      "id": "ri_044",
+      "query": "Since when is the Berlin office hybrid with 28 days leave?",
+      "category": "temporal",
+      "difficulty": "hard",
+      "expected": [
+        {
+          "document_name": "Company Handbook"
+        }
+      ]
+    },
+    {
+      "id": "ri_045",
+      "query": "What is the difference between MAX_UPLOAD_SIZE and MAX_CONTEXT_TOKENS?",
+      "category": "entity",
+      "difficulty": "medium",
+      "expected": [
+        {
+          "document_name": "Technical Docs"
+        },
+        {
+          "document_name": "Pricing"
+        }
+      ]
+    },
+    {
+      "id": "ri_046",
+      "query": "Is VECTOR and KEYWORD the same as hybrid or separate strategies?",
+      "category": "entity",
+      "difficulty": "hard",
+      "expected": [
+        {
+          "document_name": "Technical Docs"
+        }
+      ]
+    },
+    {
+      "id": "ri_047",
+      "query": "What does RRF stand for versus HNSW and GIN?",
+      "category": "entity",
+      "difficulty": "medium",
+      "expected": [
+        {
+          "document_name": "Technical Docs"
+        }
+      ]
+    },
+    {
+      "id": "ri_048",
+      "query": "Explain JWT vs refresh token vs argon2id",
+      "category": "entity",
+      "difficulty": "medium",
+      "expected": [
+        {
+          "document_name": "Technical Docs"
+        },
+        {
+          "document_name": "Company Handbook"
+        }
+      ]
+    },
+    {
+      "id": "ri_049",
+      "query": "What is the policy for refund for a user named John Doe?",
+      "category": "no_answer",
+      "difficulty": "medium",
+      "expected": [
+        {
+          "document_name": "Refund Policy"
+        }
+      ]
+    },
+    {
+      "id": "ri_050",
+      "query": "What is the quantum computing strategy for RAGForge in 2030?",
+      "category": "no_answer",
+      "difficulty": "hard",
+      "expected": [
+        {
+          "document_name": "Company Handbook"
+        }
+      ]
+    },
+    {
+      "id": "ri_051",
+      "query": "Tell me the salary of the CEO",
+      "category": "no_answer",
+      "difficulty": "hard",
+      "expected": [
+        {
+          "document_name": "Company Handbook"
+        }
+      ]
+    },
+    {
+      "id": "ri_052",
+      "query": "What is the refund policy for a 100 MB file upload?",
+      "category": "no_answer",
+      "difficulty": "medium",
+      "expected": [
+        {
+          "document_name": "Refund Policy"
+        }
+      ]
+    },
+    {
+      "id": "ri_053",
+      "query": "How does the system handle 1 million RPS with current pool_size 10?",
+      "category": "no_answer",
+      "difficulty": "hard",
+      "expected": [
+        {
+          "document_name": "Technical Docs"
+        }
+      ]
+    },
+    {
+      "id": "ri_054",
+      "query": "What is the company's revenue in 2025?",
+      "category": "no_answer",
+      "difficulty": "hard",
+      "expected": [
+        {
+          "document_name": "Pricing"
+        }
+      ]
+    },
+    {
+      "id": "ri_055",
+      "query": "Explain the refund policy for standard and enterprise users with equipment reimbursement and HNSW parameters",
+      "category": "complex",
+      "difficulty": "hard",
+      "expected": [
+        {
+          "document_name": "Refund Policy"
+        },
+        {
+          "document_name": "Pricing"
+        },
+        {
+          "document_name": "Technical Docs"
+        }
+      ]
+    },
+    {
+      "id": "ri_056",
+      "query": "Refund policy money back guarantee and cancellation_fee details for 30 days",
+      "category": "keyword",
+      "difficulty": "medium",
+      "expected": [
+        {
+          "document_name": "Refund Policy"
+        }
+      ]
+    },
+    {
+      "id": "ri_057",
+      "query": "How does RAGForge handle 5 million characters max extracted text with 10k chunks per doc?",
+      "category": "numerical",
+      "difficulty": "hard",
+      "expected": [
+        {
+          "document_name": "Technical Docs"
+        }
+      ]
+    },
+    {
+      "id": "ri_058",
+      "query": "What is 15-minute JWT expiry versus 7-day refresh and SHA-256 hash rotation?",
+      "category": "temporal",
+      "difficulty": "hard",
+      "expected": [
+        {
+          "document_name": "Technical Docs"
+        }
+      ]
+    },
+    {
+      "id": "ri_059",
+      "query": "What is the maximum file size and what happens if I exceed it?",
+      "category": "simple",
+      "difficulty": "easy",
+      "expected": [
+        {
+          "document_name": "Pricing"
+        },
+        {
+          "document_name": "Support FAQ"
+        }
+      ]
+    },
+    {
+      "id": "ri_060",
+      "query": "This is a very long query that contains a lot of information about refund policies and pricing plans and technical documentation and how the system works with multiple entities and comparison between enterprise and standard and also includes numbers like 30 days and 25 MB and asks about HNSW m16 and GIN indexes and how they affect retrieval quality for ambiguous queries",
+      "category": "complex",
+      "difficulty": "hard",
+      "expected": [
+        {
+          "document_name": "Refund Policy"
+        },
+        {
+          "document_name": "Pricing"
+        },
+        {
+          "document_name": "Technical Docs"
+        }
+      ]
+    }
+  ]
+}

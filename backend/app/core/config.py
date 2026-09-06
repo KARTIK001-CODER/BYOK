@@ -142,6 +142,21 @@ class Settings(BaseSettings):
     GROUNDEDNESS_HIGH_THRESHOLD: float = 0.85
     GROUNDEDNESS_MEDIUM_THRESHOLD: float = 0.6
 
+    # Retrieval Intelligence & Adaptive Retrieval — Phase 2.4 (opt-in)
+    ENABLE_ADAPTIVE_RETRIEVAL: bool = False
+    ENABLE_QUERY_EXPANSION: bool = False
+    ENABLE_MULTI_QUERY: bool = False
+    ENABLE_QUERY_DECOMPOSITION: bool = False
+    ENABLE_RETRIEVAL_FAILURE_DETECTION: bool = False
+    SIMPLE_TOP_K: int = 5
+    COMPLEX_TOP_K: int = 8
+    SIMPLE_CANDIDATE_K: int = 20
+    COMPLEX_CANDIDATE_K: int = 50
+    MAX_EXPANDED_QUERIES: int = 3
+    MAX_SUB_QUERIES: int = 3
+    MAX_RETRIEVAL_ATTEMPTS: int = 2
+    MAX_TOTAL_CANDIDATES: int = 100
+
     # BYOK Master Encryption Key Placeholder (Deferred to Future Phases)
     API_KEY_ENCRYPTION_KEY: str = Field(
         default="change-this-to-a-32-byte-hex-key-for-byok-encryption-vault"
