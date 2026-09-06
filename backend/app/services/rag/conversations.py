@@ -79,7 +79,6 @@ class ConversationService:
                     Conversation.id == conversation_id,
                     Conversation.organization_id == organization_id,
                 )
-                .options(selectinload(Conversation.messages))
             )
             result = await session.execute(stmt)
             conv = result.scalar_one_or_none()
@@ -182,16 +181,22 @@ class ConversationService:
         role: MessageRole | str,
         content: str,
         metadata: dict | None = None,
+        message_id: str | None = None,
     ) -> Message:
         """Append a message to a conversation thread and touch the conversation's updated_at timestamp."""
         role_enum = MessageRole(role) if isinstance(role, str) else role
-        msg = Message(
-            conversation_id=conversation_id,
-            role=role_enum,
-            content=content,
-            message_metadata=metadata,
-            created_at=datetime.now(UTC),
-        )
+        
+        msg_kwargs = {
+            "conversation_id": conversation_id,
+            "role": role_enum,
+            "content": content,
+            "message_metadata": metadata,
+            "created_at": datetime.now(UTC),
+        }
+        if message_id is not None:
+            msg_kwargs["id"] = message_id
+            
+        msg = Message(**msg_kwargs)
         session.add(msg)
         await session.flush()
         await session.refresh(msg)

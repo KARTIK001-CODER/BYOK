@@ -10,6 +10,10 @@ request_id_ctx_var: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "request_id", default=None
 )
 
+trace_id_ctx_var: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "trace_id", default=None
+)
+
 
 def get_request_id() -> str | None:
     """Retrieve current request ID from context variable."""
@@ -19,6 +23,14 @@ def get_request_id() -> str | None:
 def set_request_id(req_id: str | None) -> contextvars.Token[str | None]:
     """Set current request ID in context variable."""
     return request_id_ctx_var.set(req_id)
+
+
+def get_trace_id() -> str | None:
+    return trace_id_ctx_var.get()
+
+
+def set_trace_id(trace_id: str | None) -> contextvars.Token[str | None]:
+    return trace_id_ctx_var.set(trace_id)
 
 
 class SensitiveDataFilter(logging.Filter):
@@ -56,13 +68,14 @@ class StructuredTextFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord) -> str:
         req_id = get_request_id() or getattr(record, "request_id", "-")
+        trace_id = get_trace_id() or getattr(record, "trace_id", "-")
         # Format ISO timestamp in UTC
         iso_time = datetime.fromtimestamp(record.created, tz=UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
         levelname = record.levelname
         name = record.name
         message = record.getMessage()
 
-        base = f"{iso_time} {levelname:<5} request_id={req_id} [{name}] {message}"
+        base = f"{iso_time} {levelname:<5} request_id={req_id} trace_id={trace_id} [{name}] {message}"
         if record.exc_info:
             base += "\n" + self.formatException(record.exc_info)
         return base
@@ -79,6 +92,7 @@ class JSONFormatter(logging.Formatter):
             "level": record.levelname,
             "logger": record.name,
             "request_id": get_request_id() or getattr(record, "request_id", None),
+            "trace_id": get_trace_id() or getattr(record, "trace_id", None),
             "message": record.getMessage(),
         }
         if record.exc_info:

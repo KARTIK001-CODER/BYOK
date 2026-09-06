@@ -20,16 +20,24 @@ class ArxivClient:
         encoded_query = urllib.parse.quote(query)
         url = f"{cls.BASE_URL}?search_query=all:{encoded_query}&start=0&max_results={top_k}"
         
+        # Phase 1.6: bounded timeout 2s, no retry, fail-fast per spec Part 15-17
+        # Use settings timeout if available, else 2s
+        try:
+            from app.core.config import get_settings as _get_settings
+            timeout = _get_settings().ARXIV_TIMEOUT_SECONDS
+        except Exception:
+            timeout = 2.0
         try:
             async with httpx.AsyncClient(follow_redirects=True) as client:
-                response = await client.get(url, timeout=10.0)
+                response = await client.get(url, timeout=float(timeout))
                 response.raise_for_status()
                 
             return cls._parse_response(response.text, organization_id)
         except Exception as e:
             import logging
             logger = logging.getLogger("app.services.retrieval.arxiv_client")
-            logger.warning(f"Failed to fetch from arXiv: {e}")
+            # Fail fast, do not block chat; log at warning with truncated error
+            logger.warning(f"Arxiv fallback failed/timeout (bounded {timeout}s): {e}")
             return []
 
     @classmethod

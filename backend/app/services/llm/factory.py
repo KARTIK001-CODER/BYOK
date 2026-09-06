@@ -1,6 +1,8 @@
 import logging
+import time
 
 from app.core.config import get_settings
+from app.core.tracing import get_current_trace
 from app.services.llm.base import LLMProvider, ProviderCredentials
 from app.services.llm.errors import LLMErrorCode, LLMException
 from app.services.llm.providers.gemini import GeminiProvider
@@ -79,7 +81,9 @@ class LLMProviderFactory:
 
         api_key = credentials.api_key if credentials else None
 
-        # Instantiate provider
+        # Instantiate provider — timed
+        trace = get_current_trace()
+        inst_t0 = time.perf_counter()
         match selected_provider:
             case "groq":
                 inst = GroqProvider(api_key=api_key)
@@ -95,5 +99,10 @@ class LLMProviderFactory:
                     code=LLMErrorCode.LLM_PROVIDER_UNSUPPORTED,
                     status_code=400,
                 )
+        inst_ms = (time.perf_counter() - inst_t0) * 1000.0
+        if trace:
+            trace.record("provider_instantiation_ms", inst_ms)
+            trace.set_counter("provider_selected", selected_provider)
+            trace.set_counter("model_selected", resolved_model or "")
 
         return inst, resolved_model

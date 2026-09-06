@@ -1,9 +1,13 @@
+import logging
+import time
+
 from fastapi import APIRouter, Depends, Header, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import ROLE_HIERARCHY, get_current_active_user
 from app.core.exceptions import ForbiddenException, ValidationException
+from app.core.tracing import get_current_trace
 from app.db.session import get_db
 from app.models.membership import OrganizationRole
 from app.models.user import User
@@ -12,6 +16,8 @@ from app.services.llm.registry import ModelRegistry, ProviderInfo
 from app.services.organizations.service import OrganizationService
 from app.services.rag.schemas import RAGChatRequest, RAGChatResponse
 from app.services.rag.service import RAGService
+
+logger = logging.getLogger("app.api.chat")
 
 router = APIRouter(prefix="/chat", tags=["Generation Engine & Production RAG"])
 
@@ -23,18 +29,29 @@ async def _resolve_organization_and_verify(
     kb_ids: list[str] | None,
 ) -> str:
     """Resolve target organization ID and ensure caller has at least MEMBER role."""
-    org_id = x_organization_id
+    trace = get_current_trace()
+    t0 = time.perf_counter()
 
+    # -- knowledge_base_resolution when needed
+    org_id = x_organization_id
+    kb_resolve_ms = 0.0
     if not org_id and kb_ids:
+        kb_t0 = time.perf_counter()
         kb = await KnowledgeBaseService.get_by_id(session, kb_ids[0])
         org_id = kb.organization_id
+        kb_resolve_ms = (time.perf_counter() - kb_t0) * 1000.0
 
+    # -- organization_resolution
+    org_t0 = time.perf_counter()
     if not org_id:
         memberships = await OrganizationService.get_user_memberships(session, current_user.id)
         if not memberships:
             raise ValidationException(message="User does not belong to any organization.")
         org_id = memberships[0].organization_id
+    org_resolve_ms = (time.perf_counter() - org_t0) * 1000.0
 
+    # -- authorization (membership + role check)
+    authz_t0 = time.perf_counter()
     membership = await OrganizationService.get_membership(session, org_id, current_user.id)
     if membership is None:
         raise ForbiddenException(message="Access denied: You do not belong to this organization.")
@@ -43,6 +60,19 @@ async def _resolve_organization_and_verify(
     if user_level < ROLE_HIERARCHY[OrganizationRole.MEMBER]:
         raise ForbiddenException(
             message="Insufficient permissions: Chat generation requires at least MEMBER role."
+        )
+    authz_ms = (time.perf_counter() - authz_t0) * 1000.0
+
+    total_ms = (time.perf_counter() - t0) * 1000.0
+    if trace:
+        trace.record("organization_resolution_ms", org_resolve_ms)
+        trace.record("knowledge_base_resolution_ms", kb_resolve_ms)
+        trace.record("authorization_ms", authz_ms)
+        trace.record("org_verify_total_ms", total_ms)
+        trace.mark("org_verify_done")
+        logger.debug(
+            "org_verify trace=%s total=%.2f ms (org=%.2f kb=%.2f authz=%.2f)",
+            trace.trace_id, total_ms, org_resolve_ms, kb_resolve_ms, authz_ms,
         )
 
     return org_id

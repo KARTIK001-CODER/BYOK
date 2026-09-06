@@ -114,6 +114,10 @@ class Settings(BaseSettings):
     DEFAULT_TEMPERATURE: float = 0.2
     MAX_GENERATION_TOKENS: int = 4096
 
+    # External Research Fallback (Arxiv) — Phase 1.6: bounded, opt-in, fail-fast
+    ENABLE_ARXIV_FALLBACK: bool = False
+    ARXIV_TIMEOUT_SECONDS: int = 2
+
     # BYOK Master Encryption Key Placeholder (Deferred to Future Phases)
     API_KEY_ENCRYPTION_KEY: str = Field(
         default="change-this-to-a-32-byte-hex-key-for-byok-encryption-vault"

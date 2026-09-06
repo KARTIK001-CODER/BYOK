@@ -1,10 +1,13 @@
 import logging
 import math
+import time
 from collections.abc import Sequence
 
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.tracing import get_current_trace
+from app.models.document import Document
 from app.models.document_chunk import DocumentChunk
 from app.services.retrieval.filters import RetrievalFilterBuilder
 from app.services.retrieval.fusion import CandidateMatch
@@ -55,20 +58,27 @@ class VectorRetriever:
         dialect_name = session.bind.dialect.name if session.bind else "postgresql"
 
         candidates: list[CandidateMatch] = []
+        trace = get_current_trace()
 
         if dialect_name == "postgresql":
             # Native PostgreSQL with pgvector <=> cosine distance operator
+            prep_t0 = time.perf_counter()
             cosine_dist = DocumentChunk.embedding.cosine_distance(query_embedding)
             stmt = (
-                select(DocumentChunk, cosine_dist.label("distance"))
+                select(DocumentChunk, Document.name.label("document_name"), cosine_dist.label("distance"))
+                .join(Document, DocumentChunk.document_id == Document.id)
                 .where(and_(*where_clauses))
                 .order_by(cosine_dist.asc())
                 .limit(candidate_k)
             )
+            prep_ms = (time.perf_counter() - prep_t0) * 1000.0
+            sql_t0 = time.perf_counter()
             result = await session.execute(stmt)
+            sql_ms = (time.perf_counter() - sql_t0) * 1000.0
+            proc_t0 = time.perf_counter()
             rows = result.all()
 
-            for rank, (chunk, distance) in enumerate(rows, start=1):
+            for rank, (chunk, document_name, distance) in enumerate(rows, start=1):
                 # pgvector cosine distance is 1 - cosine_similarity (range [0, 2])
                 dist_val = float(distance) if distance is not None else 1.0
                 similarity_score = max(0.0, min(1.0, 1.0 - dist_val))
@@ -78,34 +88,56 @@ class VectorRetriever:
                         score=similarity_score,
                         rank=rank,
                         source="vector",
+                        document_name=document_name,
                     )
                 )
+            proc_ms = (time.perf_counter() - proc_t0) * 1000.0
+            if trace:
+                trace.record("vector_query_prep_ms", prep_ms)
+                trace.record("vector_sql_execution_ms", sql_ms)
+                trace.record("vector_result_processing_ms", proc_ms)
+                trace.set_counter("vector_rows_returned", len(rows))
         else:
             # Fallback for SQLite in-memory unit tests
-            stmt = select(DocumentChunk).where(and_(*where_clauses))
+            prep_t0 = time.perf_counter()
+            stmt = (
+                select(DocumentChunk, Document.name.label("document_name"))
+                .join(Document, DocumentChunk.document_id == Document.id)
+                .where(and_(*where_clauses))
+            )
+            prep_ms = (time.perf_counter() - prep_t0) * 1000.0
+            sql_t0 = time.perf_counter()
             result = await session.execute(stmt)
-            chunks = result.scalars().all()
+            sql_ms = (time.perf_counter() - sql_t0) * 1000.0
+            proc_t0 = time.perf_counter()
+            rows = result.all()
 
             scored_chunks = []
-            for chunk in chunks:
+            for chunk, document_name in rows:
                 if chunk.embedding is not None:
                     sim = cls._cosine_similarity(query_embedding, chunk.embedding)
                     sim = max(0.0, min(1.0, sim))
-                    scored_chunks.append((chunk, sim))
+                    scored_chunks.append((chunk, sim, document_name))
 
             # Sort descending by similarity
             scored_chunks.sort(key=lambda x: -x[1])
             top_candidates = scored_chunks[:candidate_k]
 
-            for rank, (chunk, score) in enumerate(top_candidates, start=1):
+            for rank, (chunk, score, document_name) in enumerate(top_candidates, start=1):
                 candidates.append(
                     CandidateMatch(
                         chunk=chunk,
                         score=score,
                         rank=rank,
                         source="vector",
+                        document_name=document_name,
                     )
                 )
+            proc_ms = (time.perf_counter() - proc_t0) * 1000.0
+            if trace:
+                trace.record("vector_query_prep_ms", prep_ms)
+                trace.record("vector_sql_execution_ms", sql_ms)
+                trace.record("vector_result_processing_ms", proc_ms)
 
         logger.debug(
             "Vector retrieval found %d candidates for org_id=%s (candidate_k=%d)",
