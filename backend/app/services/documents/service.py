@@ -1,4 +1,5 @@
 import logging
+import re
 import uuid
 from datetime import UTC, datetime
 
@@ -11,7 +12,10 @@ from app.core.exceptions import (
     ValidationException,
 )
 from app.models.document import Document, DocumentStatus
+from app.models.document_chunk import DocumentChunk
 from app.models.document_version import DocumentVersion
+from app.models.embedding_job import EmbeddingJob, EmbeddingJobStatus
+from app.models.ingestion_job import IngestionJob, IngestionJobStatus
 from app.models.knowledge_base import KnowledgeBase
 from app.services.documents.storage import StorageService, get_storage_service
 from app.services.documents.validation import (
@@ -20,6 +24,19 @@ from app.services.documents.validation import (
 )
 
 logger = logging.getLogger("app.services.documents")
+
+
+def sanitize_error_message(msg: str | None) -> str | None:
+    """Sanitize error messages to prevent leakage of credentials or internal filesystem paths."""
+    if not msg:
+        return None
+    # Strip database credentials / URIs
+    msg = re.sub(r"://[^:]+:[^@]+@", "://***:***@", msg)
+    # Strip local filesystem paths
+    msg = re.sub(r"(?:[a-zA-Z]:[\\/]|/)[^\s:;,]+\.[a-zA-Z0-9]+", "[internal path]", msg)
+    if len(msg) > 300:
+        msg = msg[:297] + "..."
+    return msg
 
 
 class DocumentService:
@@ -153,15 +170,53 @@ class DocumentService:
         document_id: str,
         organization_id: str | None = None,
     ) -> Document:
-        """Retrieve a document by ID with optional tenant check."""
-        stmt = select(Document).where(Document.id == document_id)
+        """Retrieve a document by ID with optional tenant check, aggregated chunk count, and latest error."""
+        chunk_count_subq = (
+            select(func.count(DocumentChunk.id))
+            .where(DocumentChunk.document_id == Document.id)
+            .correlate(Document)
+            .scalar_subquery()
+        )
+        ingestion_err_subq = (
+            select(IngestionJob.error_message)
+            .where(
+                IngestionJob.document_id == Document.id,
+                IngestionJob.status == IngestionJobStatus.FAILED,
+            )
+            .order_by(IngestionJob.created_at.desc())
+            .limit(1)
+            .correlate(Document)
+            .scalar_subquery()
+        )
+        embedding_err_subq = (
+            select(EmbeddingJob.error_message)
+            .where(
+                EmbeddingJob.document_id == Document.id,
+                EmbeddingJob.status == EmbeddingJobStatus.FAILED,
+            )
+            .order_by(EmbeddingJob.created_at.desc())
+            .limit(1)
+            .correlate(Document)
+            .scalar_subquery()
+        )
+        err_msg_col = func.coalesce(ingestion_err_subq, embedding_err_subq).label("error_message")
+
+        stmt = (
+            select(Document, chunk_count_subq.label("chunk_count"), err_msg_col)
+            .where(Document.id == document_id)
+        )
         if organization_id:
             stmt = stmt.where(Document.organization_id == organization_id)
 
         result = await session.execute(stmt)
-        doc = result.scalar_one_or_none()
-        if doc is None or doc.deleted_at is not None:
+        row = result.first()
+        if row is None:
             raise NotFoundException(message="Document not found.")
+        doc, count, err_msg = row
+        if doc.deleted_at is not None:
+            raise NotFoundException(message="Document not found.")
+        doc.chunk_count = count or 0
+        doc.error_message = sanitize_error_message(err_msg)
         return doc
 
     @staticmethod
@@ -175,8 +230,38 @@ class DocumentService:
         sort_by: str = "created_at",
         order: str = "desc",
     ) -> tuple[list[Document], int]:
-        """List documents in a knowledge base with pagination, sorting, and status filtering."""
-        stmt = select(Document).where(
+        """List documents in a knowledge base with pagination, sorting, status filtering, chunk counts, and errors."""
+        chunk_count_subq = (
+            select(func.count(DocumentChunk.id))
+            .where(DocumentChunk.document_id == Document.id)
+            .correlate(Document)
+            .scalar_subquery()
+        )
+        ingestion_err_subq = (
+            select(IngestionJob.error_message)
+            .where(
+                IngestionJob.document_id == Document.id,
+                IngestionJob.status == IngestionJobStatus.FAILED,
+            )
+            .order_by(IngestionJob.created_at.desc())
+            .limit(1)
+            .correlate(Document)
+            .scalar_subquery()
+        )
+        embedding_err_subq = (
+            select(EmbeddingJob.error_message)
+            .where(
+                EmbeddingJob.document_id == Document.id,
+                EmbeddingJob.status == EmbeddingJobStatus.FAILED,
+            )
+            .order_by(EmbeddingJob.created_at.desc())
+            .limit(1)
+            .correlate(Document)
+            .scalar_subquery()
+        )
+        err_msg_col = func.coalesce(ingestion_err_subq, embedding_err_subq).label("error_message")
+
+        stmt = select(Document, chunk_count_subq.label("chunk_count"), err_msg_col).where(
             Document.knowledge_base_id == kb_id,
             Document.organization_id == organization_id,
             Document.deleted_at.is_(None),
@@ -211,7 +296,12 @@ class DocumentService:
         # Paginated results
         stmt = stmt.limit(min(limit, 100)).offset(offset)
         items_res = await session.execute(stmt)
-        items = list(items_res.scalars().all())
+        rows = items_res.all()
+        items = []
+        for doc, count, err_msg in rows:
+            doc.chunk_count = count or 0
+            doc.error_message = sanitize_error_message(err_msg)
+            items.append(doc)
 
         return items, total
 
@@ -228,8 +318,12 @@ class DocumentService:
         if status is not None:
             document.status = status
 
+        existing_count = getattr(document, "_chunk_count", 0)
+        existing_err = getattr(document, "_error_message", None)
         await session.commit()
         await session.refresh(document)
+        document.chunk_count = existing_count
+        document.error_message = existing_err
         logger.info("Updated Document id=%s (status=%s)", document.id, document.status)
         return document
 

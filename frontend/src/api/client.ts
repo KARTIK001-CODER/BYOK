@@ -93,7 +93,8 @@ export class ApiClient {
     payload: unknown,
     onEvent: (event: string, data: unknown) => void,
     onError: (error: ApiError) => void,
-    onComplete: () => void
+    onComplete: () => void,
+    opts?: { signal?: AbortSignal }
   ): Promise<void> {
     const url = `${API_BASE_URL}${endpoint}`;
     const headers: Record<string, string> = {
@@ -112,6 +113,7 @@ export class ApiClient {
         method: "POST",
         headers,
         body: JSON.stringify(payload),
+        signal: opts?.signal,
       });
 
       if (!response.ok) {
@@ -130,44 +132,64 @@ export class ApiClient {
         return;
       }
 
-      const decoder = new TextDecoder();
-      let buffer = "";
+      try {
+        const decoder = new TextDecoder();
+        let buffer = "";
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
 
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n\n");
-        buffer = lines.pop() || "";
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n\n");
+          buffer = lines.pop() || "";
 
-        for (const block of lines) {
-          if (!block.trim()) continue;
+          for (const block of lines) {
+            if (!block.trim()) continue;
 
-          let eventType = "message";
-          let dataStr = "";
+            let eventType = "message";
+            let dataStr = "";
 
-          for (const line of block.split("\n")) {
-            if (line.startsWith("event:")) {
-              eventType = line.replace("event:", "").trim();
-            } else if (line.startsWith("data:")) {
-              dataStr = line.replace("data:", "").trim();
+            for (const line of block.split("\n")) {
+              if (line.startsWith("event:")) {
+                eventType = line.replace("event:", "").trim();
+              } else if (line.startsWith("data:")) {
+                // SSE spec: repeated data: lines join with \n
+                const piece = line.replace("data:", "").trim();
+                dataStr = dataStr ? `${dataStr}\n${piece}` : piece;
+              }
             }
-          }
 
-          if (dataStr) {
-            try {
-              const parsed = JSON.parse(dataStr);
-              onEvent(eventType, parsed);
-            } catch {
-              onEvent(eventType, dataStr);
+            if (dataStr) {
+              try {
+                const parsed = JSON.parse(dataStr);
+                onEvent(eventType, parsed);
+              } catch {
+                onEvent(eventType, dataStr);
+              }
             }
           }
         }
-      }
 
-      onComplete();
+        onComplete();
+      } catch (readErr: unknown) {
+        // User pressed Stop: end quietly so the app keeps the partial answer.
+        if (opts?.signal?.aborted || (readErr instanceof DOMException && readErr.name === "AbortError")) {
+          try {
+            await reader.cancel();
+          } catch {
+            /* reader already closed */
+          }
+          onComplete();
+          return;
+        }
+        throw readErr;
+      }
     } catch (err: unknown) {
+      if (opts?.signal?.aborted || (err instanceof DOMException && err.name === "AbortError")) {
+        onComplete();
+        return;
+      }
       onError({
         code: "NETWORK_ERROR",
         message: err instanceof Error ? err.message : "Network error during streaming.",

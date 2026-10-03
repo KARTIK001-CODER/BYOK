@@ -68,11 +68,18 @@ async def _resolve_organization_and_verify(
         trace.record("organization_resolution_ms", org_resolve_ms)
         trace.record("knowledge_base_resolution_ms", kb_resolve_ms)
         trace.record("authorization_ms", authz_ms)
+        trace.record("authorization_check_ms", authz_ms)
+        trace.record("authorization_total_ms", total_ms)
         trace.record("org_verify_total_ms", total_ms)
         trace.mark("org_verify_done")
+        trace.mark("authorization_complete")
         logger.debug(
             "org_verify trace=%s total=%.2f ms (org=%.2f kb=%.2f authz=%.2f)",
-            trace.trace_id, total_ms, org_resolve_ms, kb_resolve_ms, authz_ms,
+            trace.trace_id,
+            total_ms,
+            org_resolve_ms,
+            kb_resolve_ms,
+            authz_ms,
         )
 
     return org_id

@@ -15,6 +15,7 @@ from app.schemas.common import PaginatedResponse
 from app.schemas.knowledge_bases import (
     KnowledgeBaseCreate,
     KnowledgeBaseResponse,
+    KnowledgeBaseStatsResponse,
     KnowledgeBaseUpdate,
 )
 from app.services.knowledge_bases.service import KnowledgeBaseService
@@ -165,3 +166,23 @@ async def delete_knowledge_base(
 
     await KnowledgeBaseService.delete_knowledge_base(session, kb)
     return {"message": "Knowledge base deleted successfully."}
+
+
+@router.get(
+    "/{kb_id}/stats",
+    response_model=KnowledgeBaseStatsResponse,
+    summary="Get Knowledge Base Statistics",
+    description="Returns document inventory and processing health overview for a knowledge base.",
+)
+async def get_knowledge_base_stats(
+    kb_and_membership: tuple[KnowledgeBase, OrganizationMembership] = Depends(
+        get_knowledge_base_or_404
+    ),
+    session: AsyncSession = Depends(get_db),
+) -> KnowledgeBaseStatsResponse:
+    kb, membership = kb_and_membership
+    return await KnowledgeBaseService.get_knowledge_base_stats(
+        session=session,
+        kb_id=kb.id,
+        organization_id=membership.organization_id,
+    )

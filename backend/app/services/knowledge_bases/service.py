@@ -1,11 +1,15 @@
 import logging
 import re
 
-from sqlalchemy import func, select
+from sqlalchemy import and_, case, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import NotFoundException
+from app.models.document import Document, DocumentStatus, EmbeddingStatus
+from app.models.document_chunk import DocumentChunk
+from app.models.document_version import DocumentVersion
 from app.models.knowledge_base import KnowledgeBase
+from app.schemas.knowledge_bases import KnowledgeBaseStatsResponse
 
 logger = logging.getLogger("app.services.knowledge_bases")
 
@@ -162,3 +166,88 @@ class KnowledgeBaseService:
         await session.delete(kb)
         await session.commit()
         logger.info("Deleted KnowledgeBase id=%s", kb.id)
+
+    @staticmethod
+    async def get_knowledge_base_stats(
+        session: AsyncSession,
+        kb_id: str,
+        organization_id: str,
+    ) -> KnowledgeBaseStatsResponse:
+        """
+        Aggregate document inventory and processing health metrics in a single SQL statement.
+        Guarantees tenant scoping, excludes soft-deleted documents, and avoids N+1 queries.
+        """
+        chunk_subq = (
+            select(func.coalesce(func.count(DocumentChunk.id), 0))
+            .join(DocumentVersion, DocumentChunk.document_version_id == DocumentVersion.id)
+            .join(Document, DocumentVersion.document_id == Document.id)
+            .where(
+                Document.knowledge_base_id == kb_id,
+                Document.organization_id == organization_id,
+                Document.deleted_at.is_(None),
+                DocumentVersion.version_number == Document.current_version,
+            )
+            .scalar_subquery()
+        )
+
+        stmt = select(
+            func.count(Document.id).label("total_documents"),
+            chunk_subq.label("total_chunks"),
+            func.coalesce(func.sum(Document.file_size), 0).label("total_file_size_bytes"),
+            func.count(
+                case((Document.status == DocumentStatus.READY, 1))
+            ).label("ready_documents"),
+            func.count(
+                case(
+                    (
+                        or_(
+                            Document.status.in_([DocumentStatus.UPLOADING, DocumentStatus.PROCESSING]),
+                            and_(
+                                Document.status == DocumentStatus.READY,
+                                Document.embedding_status.in_([EmbeddingStatus.PROCESSING, EmbeddingStatus.PENDING]),
+                            ),
+                        ),
+                        1,
+                    )
+                )
+            ).label("processing_documents"),
+            func.count(
+                case((Document.status == DocumentStatus.FAILED, 1))
+            ).label("failed_documents"),
+            func.count(
+                case(
+                    (
+                        and_(
+                            Document.status == DocumentStatus.READY,
+                            or_(
+                                Document.embedding_status.is_(None),
+                                Document.embedding_status == EmbeddingStatus.PENDING,
+                            ),
+                        ),
+                        1,
+                    )
+                )
+            ).label("pending_embeddings"),
+            func.count(
+                case((Document.embedding_status == EmbeddingStatus.FAILED, 1))
+            ).label("failed_embeddings"),
+        ).where(
+            Document.knowledge_base_id == kb_id,
+            Document.organization_id == organization_id,
+            Document.deleted_at.is_(None),
+        )
+
+        res = await session.execute(stmt)
+        row = res.one()
+
+        return KnowledgeBaseStatsResponse(
+            knowledge_base_id=kb_id,
+            total_documents=row.total_documents or 0,
+            total_chunks=row.total_chunks or 0,
+            total_file_size_bytes=int(row.total_file_size_bytes or 0),
+            ready_documents=row.ready_documents or 0,
+            processing_documents=row.processing_documents or 0,
+            failed_documents=row.failed_documents or 0,
+            pending_embeddings=row.pending_embeddings or 0,
+            failed_embeddings=row.failed_embeddings or 0,
+        )

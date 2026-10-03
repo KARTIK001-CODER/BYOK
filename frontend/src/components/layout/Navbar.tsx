@@ -79,6 +79,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         )}
 
         <div className="model-badge">
+          <span className="status-dot status-dot-online" aria-hidden />
           <Layers size={14} />
           <span>{selectedProvider.toUpperCase()} · {selectedModel}</span>
         </div>

@@ -80,6 +80,8 @@ export interface MessageMetadata {
   } | null;
   latency_ms?: number;
   time_to_first_token_ms?: number | null;
+  stopped?: boolean;
+  groundedness?: unknown;
 }
 
 export interface Message {

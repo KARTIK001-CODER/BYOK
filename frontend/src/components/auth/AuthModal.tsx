@@ -29,6 +29,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onSuccess }) => {
       if (isLogin) {
         const resp = await AuthApi.login({ email, password });
         ApiClient.setToken(resp.access_token);
+        const user = await AuthApi.getCurrentUser();
         const memberships = await AuthApi.getUserOrganizations();
         const primaryOrg = memberships[0]?.organization || (memberships[0] ? {
           id: memberships[0].organization_id,
@@ -38,7 +39,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onSuccess }) => {
         if (primaryOrg) {
           ApiClient.setOrganizationId(primaryOrg.id);
         }
-        onSuccess(resp.user, primaryOrg);
+        onSuccess(user, primaryOrg);
       } else {
         const resp = await AuthApi.register({
           email,
@@ -46,7 +47,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onSuccess }) => {
           full_name: fullName,
           organization_name: orgName,
         });
-        ApiClient.setToken(resp.access_token);
+        ApiClient.setToken(resp.tokens.access_token);
         ApiClient.setOrganizationId(resp.organization.id);
         onSuccess(resp.user, resp.organization);
       }

@@ -71,9 +71,16 @@ async def upload_document(
         content_type=file.content_type,
     )
 
+    user_level = ROLE_HIERARCHY.get(membership.role, 0)
+    doc_resp = DocumentResponse.model_validate(doc)
+    ver_resp = DocumentVersionResponse.model_validate(version)
+    if user_level < ROLE_HIERARCHY[OrganizationRole.ADMIN]:
+        doc_resp.storage_key = None
+        ver_resp.storage_key = None
+
     return DocumentUploadResponse(
-        document=DocumentResponse.model_validate(doc),
-        version=DocumentVersionResponse.model_validate(version),
+        document=doc_resp,
+        version=ver_resp,
         message="Document uploaded successfully.",
     )
 
@@ -112,8 +119,16 @@ async def list_documents(
         order=order,
     )
 
+    user_level = ROLE_HIERARCHY.get(membership.role, 0)
+    doc_items = []
+    for d in items:
+        resp = DocumentResponse.model_validate(d)
+        if user_level < ROLE_HIERARCHY[OrganizationRole.ADMIN]:
+            resp.storage_key = None
+        doc_items.append(resp)
+
     return PaginatedResponse(
-        items=[DocumentResponse.model_validate(d) for d in items],
+        items=doc_items,
         total=total,
         limit=limit,
         offset=offset,
@@ -129,8 +144,12 @@ async def list_documents(
 async def get_document(
     doc_and_membership: tuple[Document, OrganizationMembership] = Depends(get_document_or_404),
 ) -> DocumentResponse:
-    doc, _ = doc_and_membership
-    return DocumentResponse.model_validate(doc)
+    doc, membership = doc_and_membership
+    resp = DocumentResponse.model_validate(doc)
+    user_level = ROLE_HIERARCHY.get(membership.role, 0)
+    if user_level < ROLE_HIERARCHY[OrganizationRole.ADMIN]:
+        resp.storage_key = None
+    return resp
 
 
 @router.patch(
