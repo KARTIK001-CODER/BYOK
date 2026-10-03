@@ -20,8 +20,16 @@ def select_strategy(
     ambiguity_threshold: float | None = None,
 ) -> RetrievalStrategyDecision:
     settings = get_settings()
-    conf_thresh = confidence_threshold if confidence_threshold is not None else getattr(settings, "QUERY_CLASSIFICATION_CONFIDENCE_THRESHOLD", 0.6)
-    amb_thresh = ambiguity_threshold if ambiguity_threshold is not None else getattr(settings, "AMBIGUITY_THRESHOLD", 0.5)
+    conf_thresh = (
+        confidence_threshold
+        if confidence_threshold is not None
+        else getattr(settings, "QUERY_CLASSIFICATION_CONFIDENCE_THRESHOLD", 0.6)
+    )
+    amb_thresh = (
+        ambiguity_threshold
+        if ambiguity_threshold is not None
+        else getattr(settings, "AMBIGUITY_THRESHOLD", 0.5)
+    )
 
     # Defaults
     strategy = RetrievalStrategy.HYBRID
@@ -32,7 +40,12 @@ def select_strategy(
     # Rule 1: Strong identifier → KEYWORD (requires high confidence)
     if classification.primary_class.value == "keyword" and classification.confidence >= conf_thresh:
         # Additional guard: need actual identifier or exact phrase
-        if features.contains_identifier and (features.has_snake_case or features.has_upper_case or features.contains_exact_phrase or features.word_count == 1):
+        if features.contains_identifier and (
+            features.has_snake_case
+            or features.has_upper_case
+            or features.contains_exact_phrase
+            or features.word_count == 1
+        ):
             strategy = RetrievalStrategy.KEYWORD
             reason = "strong_identifier"
             confidence = classification.confidence
@@ -57,7 +70,11 @@ def select_strategy(
             signals = ambiguity.signals
 
     # Rule 3: High semantic confidence, low ambiguity → VECTOR
-    elif classification.primary_class.value == "semantic" and classification.confidence >= conf_thresh and not ambiguity.is_ambiguous:
+    elif (
+        classification.primary_class.value == "semantic"
+        and classification.confidence >= conf_thresh
+        and not ambiguity.is_ambiguous
+    ):
         strategy = RetrievalStrategy.VECTOR
         reason = "high_semantic_low_ambiguity"
         signals = ["semantic_confident", "low_ambiguity"]
@@ -75,7 +92,10 @@ def select_strategy(
         signals = ["multi_hop"] + ambiguity.signals
 
     # Rule 6: Low confidence → safe fallback HYBRID
-    if classification.confidence < conf_thresh and strategy in (RetrievalStrategy.VECTOR, RetrievalStrategy.KEYWORD):
+    if classification.confidence < conf_thresh and strategy in (
+        RetrievalStrategy.VECTOR,
+        RetrievalStrategy.KEYWORD,
+    ):
         # Demote aggressive routing if not confident
         strategy = RetrievalStrategy.HYBRID
         reason = "low_confidence_fallback_hybrid"

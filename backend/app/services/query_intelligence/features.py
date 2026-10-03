@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import re
-from typing import Any
 
 from app.services.query_intelligence.schemas import QueryFeatures, QuestionType
 
@@ -12,7 +11,9 @@ RE_SNAKE = re.compile(r"\b[a-z]+_[a-z0-9_]+\b")
 RE_CAMEL = re.compile(r"\b[a-z]+[A-Z][a-zA-Z0-9]*\b")
 RE_UPPER_UNDERSCORE = re.compile(r"\b[A-Z][A-Z0-9_]{2,}\b")
 RE_VERSION = re.compile(r"\bv?\d+\.\d+(?:\.\d+)?\b")
-RE_IDENTIFIER = re.compile(r"\b(?:[A-Za-z]*[_\-][A-Za-z0-9_\-]+|[A-Z]{2,}[A-Z0-9_]*|[a-z]+[A-Z][a-zA-Z0-9]*)\b")
+RE_IDENTIFIER = re.compile(
+    r"\b(?:[A-Za-z]*[_\-][A-Za-z0-9_\-]+|[A-Z]{2,}[A-Z0-9_]*|[a-z]+[A-Z][a-zA-Z0-9]*)\b"
+)
 RE_QUOTES = re.compile(r'["\'`‘’“”]')
 RE_BACKTICK = re.compile(r"`[^`]+`")
 RE_NUMBER = re.compile(r"\d")
@@ -21,11 +22,35 @@ RE_UPPER_WORD = re.compile(r"\b[A-Z]{2,}\b")
 RE_CAPITALIZED = re.compile(r"\b[A-Z][a-z]+\b")
 RE_RARE = re.compile(r"\b\w{8,}\b")  # heuristic rare long token
 
-QUESTION_WORDS = {"what", "how", "where", "when", "who", "why", "which", "can", "does", "is", "are", "should", "will", "did"}
+QUESTION_WORDS = {
+    "what",
+    "how",
+    "where",
+    "when",
+    "who",
+    "why",
+    "which",
+    "can",
+    "does",
+    "is",
+    "are",
+    "should",
+    "will",
+    "did",
+}
 PROCEDURE_PREFIXES = ("how do", "how does", "how to", "how can", "steps to", "procedure")
 DEFINITION_PREFIXES = ("what is", "what does", "what are", "define", "explain")
 POLICY_PREFIXES = ("refund", "policy", "cancellation", "pricing", "privacy", "handbook")
-TROUBLESHOOTING_KEYWORDS = {"error", "err_", "fail", "bug", "issue", "not working", "cannot", "unable"}
+TROUBLESHOOTING_KEYWORDS = {
+    "error",
+    "err_",
+    "fail",
+    "bug",
+    "issue",
+    "not working",
+    "cannot",
+    "unable",
+}
 
 
 def detect_question_type(normalized: str) -> QuestionType:
@@ -45,13 +70,19 @@ def detect_question_type(normalized: str) -> QuestionType:
         return QuestionType.troubleshooting
     if lower.startswith(("compare", "difference between", "versus", "vs ")):
         return QuestionType.comparison
-    if lower.startswith(("what", "where", "when", "who", "why", "which", "can", "does", "is", "are")):
+    if lower.startswith(
+        ("what", "where", "when", "who", "why", "which", "can", "does", "is", "are")
+    ):
         return QuestionType.factual
     return QuestionType.unknown
 
 
 def extract_features(original_query: str, normalized_query: str | None = None) -> QueryFeatures:
-    normalized = normalized_query if normalized_query is not None else " ".join(original_query.strip().split())
+    normalized = (
+        normalized_query
+        if normalized_query is not None
+        else " ".join(original_query.strip().split())
+    )
     # Basic counts
     char_count = len(normalized)
     words = re.findall(r"\b\w+\b", normalized)
@@ -71,12 +102,18 @@ def extract_features(original_query: str, normalized_query: str | None = None) -
     upper_matches = RE_UPPER_UNDERSCORE.findall(normalized)
     version_matches = RE_VERSION.findall(normalized)
     # Generic identifier candidates
-    identifier_candidates = list(set(snake_matches + camel_matches + upper_matches + version_matches))
+    identifier_candidates = list(
+        set(snake_matches + camel_matches + upper_matches + version_matches)
+    )
     # Also catch any identifier pattern
     if not identifier_candidates:
         identifier_candidates = RE_IDENTIFIER.findall(normalized)
         # filter short false positives (e.g., 'a-b')
-        identifier_candidates = [t for t in identifier_candidates if len(t) > 3 and ("_" in t or "-" in t or any(c.isupper() for c in t[1:]))]
+        identifier_candidates = [
+            t
+            for t in identifier_candidates
+            if len(t) > 3 and ("_" in t or "-" in t or any(c.isupper() for c in t[1:]))
+        ]
 
     has_snake = bool(snake_matches)
     has_camel = bool(camel_matches)
@@ -85,7 +122,9 @@ def extract_features(original_query: str, normalized_query: str | None = None) -
     contains_identifier = bool(identifier_candidates)
 
     # Exact phrase: quotes or backticks or strong identifier
-    contains_exact_phrase = contains_quotes or contains_backticks or (contains_identifier and word_count <= 6)
+    contains_exact_phrase = (
+        contains_quotes or contains_backticks or (contains_identifier and word_count <= 6)
+    )
 
     # Special terms heuristic: rare long tokens not in common vocab
     rare_candidates = [w for w in words if len(w) >= 8 and w.lower() not in QUESTION_WORDS]

@@ -4,7 +4,12 @@ from __future__ import annotations
 
 from app.services.query_intelligence.ambiguity import analyze_ambiguity
 from app.services.query_intelligence.features import extract_features
-from app.services.query_intelligence.schemas import AmbiguityAnalysis, QueryCategory, QueryClassification, QueryFeatures
+from app.services.query_intelligence.schemas import (
+    AmbiguityAnalysis,
+    QueryCategory,
+    QueryClassification,
+    QueryFeatures,
+)
 
 # Heuristic scoring weights for each class (not ML)
 # Each signal adds points; highest wins if confidence >= threshold
@@ -58,7 +63,11 @@ def classify_query(
         scores[QueryCategory.keyword.value] += 0.30
 
     # Semantic signals — paraphrased, question word, no identifier, medium length
-    if not features.contains_identifier and features.contains_question_word and not ambiguity.is_ambiguous:
+    if (
+        not features.contains_identifier
+        and features.contains_question_word
+        and not ambiguity.is_ambiguous
+    ):
         scores[QueryCategory.semantic.value] += 0.25
         signals.append("question_word_no_identifier")
     if features.word_count >= 6 and not features.contains_identifier and not ambiguity.is_ambiguous:
@@ -75,22 +84,33 @@ def classify_query(
     if features.question_type.value in ("factual",):
         scores[QueryCategory.factual.value] += 0.20
         signals.append("factual_question_type")
-    if 4 <= features.word_count <= 10 and not ambiguity.is_ambiguous and not features.contains_identifier:
+    if (
+        4 <= features.word_count <= 10
+        and not ambiguity.is_ambiguous
+        and not features.contains_identifier
+    ):
         scores[QueryCategory.factual.value] += 0.10
         signals.append("factual_length")
 
     # Multi-hop signals — contains conjunctions requiring multiple docs, or explicit multi-entity
     lower = features.normalized_query.lower()
-    if any(phrase in lower for phrase in ["and", "after", "then", "if i", "when i", "plus", "also"]):
-        # Only if query mentions two distinct topics (heuristic: and + length > 10)
-        if features.word_count >= 10:
-            scores[QueryCategory.multi_hop.value] += 0.25
-            signals.append("multi_hop_conjunction")
+    # Only if query mentions two distinct topics (heuristic: and + length > 10)
+    if (
+        any(
+            phrase in lower for phrase in ["and", "after", "then", "if i", "when i", "plus", "also"]
+        )
+        and features.word_count >= 10
+    ):
+        scores[QueryCategory.multi_hop.value] += 0.25
+        signals.append("multi_hop_conjunction")
     if lower.count("?") >= 1 and features.word_count >= 12:
         scores[QueryCategory.multi_hop.value] += 0.15
         signals.append("long_query_multi_hop")
     # Specific multi-hop fixture patterns
-    if any(kw in lower for kw in ["trial", "refund", "pricing", "upload", "chunk", "hnsw"]) and features.word_count >= 12:
+    if (
+        any(kw in lower for kw in ["trial", "refund", "pricing", "upload", "chunk", "hnsw"])
+        and features.word_count >= 12
+    ):
         scores[QueryCategory.multi_hop.value] += 0.10
 
     # Ambiguous signals — from ambiguity analyzer
@@ -129,7 +149,11 @@ def classify_query(
         primary = QueryCategory(top_class)
 
     # If ambiguity high, override to ambiguous regardless of other scores? Only if ambiguity is clearly top
-    if ambiguity.is_ambiguous and ambiguity.ambiguity_score >= 0.7 and scores[QueryCategory.ambiguous.value] >= 0.4:
+    if (
+        ambiguity.is_ambiguous
+        and ambiguity.ambiguity_score >= 0.7
+        and scores[QueryCategory.ambiguous.value] >= 0.4
+    ):
         primary = QueryCategory.ambiguous
         confidence = min(1.0, ambiguity.ambiguity_score)
 

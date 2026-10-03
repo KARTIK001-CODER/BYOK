@@ -27,6 +27,8 @@ def test_unknown_low_confidence():
 
 
 def test_multi_hop():
-    a = QueryAnalyzer.analyze("If I buy annual and cancel after 20 days with 30% usage, what refund and fee apply?")
+    a = QueryAnalyzer.analyze(
+        "If I buy annual and cancel after 20 days with 30% usage, what refund and fee apply?"
+    )
     # Should be multi_hop or at least not keyword
     assert a.classification.primary_class.value in ["multi_hop", "semantic", "factual", "unknown"]

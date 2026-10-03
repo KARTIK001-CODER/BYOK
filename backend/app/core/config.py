@@ -92,6 +92,8 @@ class Settings(BaseSettings):
     EMBEDDING_BATCH_SIZE: int = 32
     EMBEDDING_DEVICE: Literal["auto", "cpu", "cuda"] = "cpu"
     MAX_EMBEDDING_CHUNKS_PER_JOB: int = 10000
+    ENABLE_QUERY_EMBEDDING_CACHE: bool = True
+    QUERY_EMBEDDING_CACHE_SIZE: int = 1000
 
     # Retrieval Engine & Hybrid Search Settings (Phase 6)
     DEFAULT_SEARCH_MODE: Literal["vector", "keyword", "hybrid"] = "hybrid"
@@ -101,6 +103,7 @@ class Settings(BaseSettings):
     MAX_CANDIDATE_K: int = 500
     RRF_K: int = 60
     MAX_QUERY_LENGTH: int = 2000
+    ENABLE_PARALLEL_HYBRID_SEARCH: bool = True
 
     # Generation Engine & LLM Provider Settings (Phase 7)
     DEFAULT_LLM_PROVIDER: Literal["groq", "openai", "gemini", "mock"] = "groq"
@@ -154,8 +157,10 @@ class Settings(BaseSettings):
     COMPLEX_CANDIDATE_K: int = 50
     MAX_EXPANDED_QUERIES: int = 3
     MAX_SUB_QUERIES: int = 3
+    MAX_DECOMPOSED_QUERIES: int = 3
     MAX_RETRIEVAL_ATTEMPTS: int = 2
-    MAX_TOTAL_CANDIDATES: int = 100
+    MAX_TOTAL_CANDIDATES: int = 50
+    MAX_PARALLEL_RETRIEVAL_QUERIES: int = 3
 
     # BYOK Master Encryption Key Placeholder (Deferred to Future Phases)
     API_KEY_ENCRYPTION_KEY: str = Field(
@@ -171,6 +176,7 @@ class Settings(BaseSettings):
     def parse_cors_origins(cls, value: Any) -> list[str]:
         if isinstance(value, str):
             import json
+
             try:
                 parsed = json.loads(value)
                 if isinstance(parsed, list):
@@ -218,6 +224,15 @@ class Settings(BaseSettings):
             raise ValueError("RRF_K must be greater than 0")
         if self.MAX_QUERY_LENGTH <= 0:
             raise ValueError("MAX_QUERY_LENGTH must be greater than 0")
+        return self
+
+    @model_validator(mode="after")
+    def validate_production_secrets(self) -> "Settings":
+        if self.APP_ENV == "production":
+            if self.JWT_SECRET_KEY.startswith("change-this"):
+                raise ValueError("JWT_SECRET_KEY must be overridden in production")
+            if self.API_KEY_ENCRYPTION_KEY.startswith("change-this"):
+                raise ValueError("API_KEY_ENCRYPTION_KEY must be overridden in production")
         return self
 
     @property

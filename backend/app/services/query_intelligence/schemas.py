@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-from enum import Enum
-from typing import Any
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
 
-class QuestionType(str, Enum):
+class QuestionType(StrEnum):
     definition = "definition"
     procedure = "procedure"
     factual = "factual"
@@ -18,7 +17,7 @@ class QuestionType(str, Enum):
     unknown = "unknown"
 
 
-class QueryCategory(str, Enum):
+class QueryCategory(StrEnum):
     semantic = "semantic"
     keyword = "keyword"
     factual = "factual"
@@ -27,11 +26,18 @@ class QueryCategory(str, Enum):
     unknown = "unknown"
 
 
-class RetrievalStrategy(str, Enum):
+class RetrievalStrategy(StrEnum):
     VECTOR = "VECTOR"
     KEYWORD = "KEYWORD"
     HYBRID = "HYBRID"
     HYBRID_WIDE = "HYBRID_WIDE"
+
+
+class QueryComplexity(StrEnum):
+    SIMPLE = "SIMPLE"
+    MODERATE = "MODERATE"
+    COMPLEX = "COMPLEX"
+    MULTI_HOP = "MULTI_HOP"
 
 
 class QueryFeatures(BaseModel):
@@ -93,6 +99,15 @@ class RetrievalStrategyDecision(BaseModel):
     model_config = {"extra": "forbid"}
 
 
+class QueryComplexityDetail(BaseModel):
+    level: QueryComplexity = QueryComplexity.SIMPLE
+    score: float = Field(ge=0.0, le=1.0, default=0.0)
+    requires_multiple_sources: bool = False
+    signals: list[str] = Field(default_factory=list)
+
+    model_config = {"extra": "forbid"}
+
+
 class QueryAnalysis(BaseModel):
     """Root — every query analyzed before retrieval."""
 
@@ -100,6 +115,10 @@ class QueryAnalysis(BaseModel):
     classification: QueryClassification
     ambiguity: AmbiguityAnalysis
     strategy: RetrievalStrategyDecision
+    complexity: QueryComplexityDetail | None = None
+    # convenience flags for spec example — derived, not duplicated logic
+    requires_multiple_sources: bool = False
+    contains_keywords: bool = False
     # optional context
     duration_ms: float = 0.0
     version: str = "1.0"
