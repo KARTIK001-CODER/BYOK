@@ -2,7 +2,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.models.document import DocumentStatus
+from app.models.document import DocumentStatus, EmbeddingStatus
 
 
 class DocumentVersionResponse(BaseModel):
@@ -13,7 +13,7 @@ class DocumentVersionResponse(BaseModel):
     id: str
     document_id: str
     version_number: int
-    storage_key: str
+    storage_key: str | None = None
     checksum: str
     file_size: int
     content_type: str
@@ -34,10 +34,13 @@ class DocumentResponse(BaseModel):
     original_filename: str
     content_type: str
     file_size: int
-    storage_key: str
+    storage_key: str | None = None
     checksum: str
     status: DocumentStatus
+    embedding_status: EmbeddingStatus | None = None
     current_version: int
+    chunk_count: int = 0
+    error_message: str | None = None
     deleted_at: datetime | None = None
     created_at: datetime
     updated_at: datetime

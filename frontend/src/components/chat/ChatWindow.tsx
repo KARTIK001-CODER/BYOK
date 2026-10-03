@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from "react";
-import { Sparkles, ArrowRight } from "lucide-react";
+import { Sparkles, ArrowRight, TriangleAlert, RotateCcw } from "lucide-react";
 import { Message, CitationItem } from "../../types";
 import { MessageItem } from "./MessageItem";
 import { Composer } from "./Composer";
@@ -10,8 +10,12 @@ interface ChatWindowProps {
   loadingPhase: "searching" | "generating" | null;
   streamingMessage: Message | null;
   onSendMessage: (message: string) => void;
+  onStop: () => void;
+  onRegenerate: () => void;
+  canRegenerate: boolean;
   onOpenSource: (citations: CitationItem[], selectedId?: number) => void;
   hasKnowledgeBase?: boolean;
+  kbName?: string | null;
 }
 
 const STARTER_QUESTIONS = [
@@ -27,8 +31,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   loadingPhase,
   streamingMessage,
   onSendMessage,
+  onStop,
+  onRegenerate,
+  canRegenerate,
   onOpenSource,
-  // hasKnowledgeBase is reserved for future inline warning banner
+  hasKnowledgeBase,
+  kbName,
 }) => {
   const scrollBottomRef = useRef<HTMLDivElement>(null);
 
@@ -40,6 +48,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
   return (
     <div className="main-chat-area">
+      {hasKnowledgeBase === false && (
+        <div className="banner banner-warning" role="alert">
+          <TriangleAlert size={14} />
+          <span>No knowledge base selected — answers won't be grounded. Create or pick one from Knowledge.</span>
+        </div>
+      )}
       <div className="messages-container">
         {isEmpty ? (
           <div className="empty-state">
@@ -97,6 +111,14 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                 </div>
               </div>
             )}
+
+            {!isLoading && canRegenerate && (
+              <div className="message-wrapper" style={{ alignItems: "center" }}>
+                <button className="regen-btn" onClick={onRegenerate}>
+                  <RotateCcw size={13} /> Regenerate response
+                </button>
+              </div>
+            )}
           </>
         )}
         <div ref={scrollBottomRef} />
@@ -104,7 +126,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
       <Composer
         onSendMessage={onSendMessage}
+        onStop={onStop}
         isLoading={isLoading}
+        kbName={kbName}
       />
     </div>
   );

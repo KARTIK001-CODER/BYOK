@@ -40,3 +40,20 @@ class KnowledgeBaseResponse(BaseModel):
     created_by: str | None = None
     created_at: datetime
     updated_at: datetime
+
+
+class KnowledgeBaseStatsResponse(BaseModel):
+    """Aggregated document inventory and processing health metrics for a Knowledge Base."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    knowledge_base_id: str
+    total_documents: int = 0
+    total_chunks: int = 0
+    total_file_size_bytes: int = 0
+    ready_documents: int = 0
+    processing_documents: int = 0
+    failed_documents: int = 0
+    pending_embeddings: int = 0
+    failed_embeddings: int = 0
+

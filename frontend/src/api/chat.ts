@@ -59,6 +59,7 @@ export const ChatApi = {
         section_title?: string | null;
         content_preview?: string | null;
       }) => void;
+      onGroundedness?: (data: unknown) => void;
       onDone?: (data: {
         message_id: string;
         conversation_id: string;
@@ -72,7 +73,8 @@ export const ChatApi = {
       }) => void;
       onError?: (error: ApiError) => void;
       onComplete?: () => void;
-    }
+    },
+    opts?: { signal?: AbortSignal }
   ): Promise<void> {
     return ApiClient.stream(
       "/chat/stream",
@@ -91,6 +93,9 @@ export const ChatApi = {
           case "citation":
             callbacks.onCitation?.(data as Parameters<NonNullable<typeof callbacks.onCitation>>[0]);
             break;
+          case "groundedness":
+            callbacks.onGroundedness?.(data);
+            break;
           case "done":
             callbacks.onDone?.(data as Parameters<NonNullable<typeof callbacks.onDone>>[0]);
             break;
@@ -104,7 +109,8 @@ export const ChatApi = {
       },
       () => {
         callbacks.onComplete?.();
-      }
+      },
+      { signal: opts?.signal }
     );
   },
 };

@@ -10,8 +10,6 @@ from app.core.exceptions import ForbiddenException, NotFoundException, Unauthori
 from app.core.security import decode_access_token
 from app.core.tracing import get_current_trace
 from app.db.session import get_db
-
-logger = logging.getLogger("app.api.deps")
 from app.models.document import Document
 from app.models.embedding_job import EmbeddingJob
 from app.models.ingestion_job import IngestionJob
@@ -24,6 +22,8 @@ from app.services.ingestion.service import IngestionService
 from app.services.knowledge_bases.service import KnowledgeBaseService
 from app.services.organizations.service import OrganizationService
 from app.services.users.service import UserService
+
+logger = logging.getLogger("app.api.deps")
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
@@ -46,6 +46,8 @@ async def get_current_user(
     jwt_t0 = time.perf_counter()
     payload = decode_access_token(token)
     jwt_ms = (time.perf_counter() - jwt_t0) * 1000.0
+    if trace:
+        trace.mark("jwt_validated")
 
     user_id: str | None = payload.get("sub")
     if not user_id:
@@ -55,6 +57,8 @@ async def get_current_user(
     lookup_t0 = time.perf_counter()
     user = await UserService.get_by_id(session, user_id)
     lookup_ms = (time.perf_counter() - lookup_t0) * 1000.0
+    if trace:
+        trace.mark("user_loaded")
 
     if user is None:
         raise UnauthorizedException(message="User not found.")
@@ -67,6 +71,7 @@ async def get_current_user(
         trace.record("jwt_validation_ms", jwt_ms)
         trace.record("user_lookup_ms", lookup_ms)
         trace.record("authentication_ms", total_ms)
+        trace.record("authentication_total_ms", total_ms)
         trace.mark("auth_done")
 
     return user
@@ -128,6 +133,8 @@ async def get_knowledge_base_or_404(
 ) -> tuple[KnowledgeBase, OrganizationMembership]:
     """Retrieve KnowledgeBase and verify caller has organization access."""
     kb = await KnowledgeBaseService.get_by_id(session, kb_id)
+    if kb is None:
+        raise NotFoundException(message="Knowledge Base not found.")
     membership = await OrganizationService.get_membership(
         session=session,
         organization_id=kb.organization_id,
@@ -145,6 +152,8 @@ async def get_document_or_404(
 ) -> tuple[Document, OrganizationMembership]:
     """Retrieve Document and verify caller has organization access."""
     doc = await DocumentService.get_by_id(session, document_id)
+    if doc is None:
+        raise NotFoundException(message="Document not found.")
     membership = await OrganizationService.get_membership(
         session=session,
         organization_id=doc.organization_id,
@@ -162,6 +171,8 @@ async def get_ingestion_job_or_404(
 ) -> tuple[IngestionJob, OrganizationMembership]:
     """Retrieve IngestionJob and verify caller has organization access."""
     job = await IngestionService.get_job_by_id(session, job_id)
+    if job is None:
+        raise NotFoundException(message="Ingestion job not found.")
     membership = await OrganizationService.get_membership(
         session=session,
         organization_id=job.organization_id,
@@ -179,6 +190,8 @@ async def get_embedding_job_or_404(
 ) -> tuple[EmbeddingJob, OrganizationMembership]:
     """Retrieve EmbeddingJob and verify caller has organization access."""
     job = await EmbeddingService.get_job_by_id(session, job_id)
+    if job is None:
+        raise NotFoundException(message="Embedding job not found.")
     membership = await OrganizationService.get_membership(
         session=session,
         organization_id=job.organization_id,

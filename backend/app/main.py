@@ -12,11 +12,13 @@ from app.api.router import api_router
 from app.core.config import get_settings
 from app.core.exceptions import register_exception_handlers
 from app.core.logging import (
+    request_id_ctx_var,
     set_request_id,
     set_trace_id,
     setup_logging,
+    trace_id_ctx_var,
 )
-from app.core.tracing import RequestTrace, set_current_trace
+from app.core.tracing import RequestTrace, _current_trace_ctx, set_current_trace
 from app.db.session import close_db_engine, get_db
 from app.schemas.health import HealthResponse, ReadinessResponse
 from app.services.health import HealthService
@@ -38,9 +40,37 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
         settings.DEBUG,
     )
 
+    # 2. Warm critical path so the first real request never pays cold-init:
+    # DB pool connections (Neon wakes on first connect) + embedding model.
+    # Skipped in tests (in-memory DB, mock providers).
+    import sys as _sys
+
+    if settings.APP_ENV != "test" and "pytest" not in _sys.modules:
+        try:
+            from sqlalchemy import text as _text
+
+            from app.db.session import get_session_factory
+
+            factory = get_session_factory()
+            async with factory() as warm_session:
+                await warm_session.execute(_text("SELECT 1"))
+            logger.info("DB pool warmed.")
+        except Exception as e:
+            logger.warning("DB pool warmup failed (non-fatal): %s", e)
+        try:
+            import asyncio as _asyncio
+
+            from app.services.embeddings.providers import get_embedding_provider
+
+            provider = get_embedding_provider()
+            await _asyncio.to_thread(provider.embed_query, "warmup")
+            logger.info("Embedding model warmed (%s).", provider.model_name)
+        except Exception as e:
+            logger.warning("Embedding warmup failed (non-fatal, lazy-loads later): %s", e)
+
     yield
 
-    # 2. Cleanup resources on shutdown
+    # 3. Cleanup resources on shutdown
     logger.info("Shutting down %s...", settings.APP_NAME)
     await close_db_engine()
     logger.info("Application shutdown complete.")
@@ -72,14 +102,15 @@ def create_application() -> FastAPI:
             trace_id = str(uuid.uuid4())
 
         # Set context variables for structured logging & tracing
-        set_request_id(req_id)
-        set_trace_id(trace_id)
+        tok_req = set_request_id(req_id)
+        tok_trace_id = set_trace_id(trace_id)
         request.state.request_id = req_id
         request.state.trace_id = trace_id
 
         # Create a RequestTrace for this request
         trace = RequestTrace(trace_id=trace_id, request_id=req_id)
         trace.mark("request_start")
+        trace.mark("request_received")
         tok_trace = set_current_trace(trace)
 
         start_time = time.perf_counter()
@@ -87,14 +118,23 @@ def create_application() -> FastAPI:
             response = await call_next(request)
             duration_ms = (time.perf_counter() - start_time) * 1000.0
             trace.record("http_total_ms", duration_ms)
+            trace.record("http_request_total_ms", duration_ms)
+            trace.record("request_total_ms", duration_ms)
+            trace.record("end_to_end_total_ms", duration_ms)
+            trace.mark("request_completed")
 
             # Attach IDs to response headers
             response.headers["X-Request-ID"] = req_id
             response.headers["X-Trace-ID"] = trace_id
 
-            # Log trace summary for chat endpoints (verbose tracing)
-            if request.url.path.startswith("/api/v1/chat"):
+            # Log trace summary for non-stream chat endpoints
+            if request.url.path.startswith("/api/v1/chat") and not request.url.path.endswith("/stream"):
                 trace.log_summary()
+                if not trace._summary_emitted:
+                    trace.emit_performance_summary(
+                        outcome="SUCCESS" if response.status_code < 400 else "FAILED",
+                        error_category="HTTP_ERROR" if response.status_code >= 400 else None,
+                    )
 
             logger.info(
                 "%s %s -> %d (%.2f ms) trace=%s",
@@ -108,7 +148,13 @@ def create_application() -> FastAPI:
         except Exception as exc:
             duration_ms = (time.perf_counter() - start_time) * 1000.0
             trace.record("http_total_ms", duration_ms)
+            trace.record("http_request_total_ms", duration_ms)
+            trace.record("request_total_ms", duration_ms)
+            trace.record("end_to_end_total_ms", duration_ms)
             trace.add_error(str(exc))
+            trace.mark("request_completed")
+            if not trace._summary_emitted:
+                trace.emit_performance_summary(outcome="FAILED", error_category="MIDDLEWARE_EXCEPTION")
             logger.error(
                 "%s %s failed with exception: %s (%.2f ms) trace=%s",
                 request.method,
@@ -119,9 +165,9 @@ def create_application() -> FastAPI:
             )
             raise
         finally:
-            set_request_id(None)
-            set_trace_id(None)
-            set_current_trace(None)
+            request_id_ctx_var.reset(tok_req)
+            trace_id_ctx_var.reset(tok_trace_id)
+            _current_trace_ctx.reset(tok_trace)
 
     # 2. Configure CORS Middleware
     allowed_origins = [

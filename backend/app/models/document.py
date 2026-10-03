@@ -159,3 +159,21 @@ class Document(Base, UUIDPrimaryKeyMixin, TimestampMixin):
         cascade="all, delete-orphan",
         order_by="DocumentChunk.chunk_index.asc()",
     )
+
+    @property
+    def chunk_count(self) -> int:
+        return getattr(self, "_chunk_count", 0)
+
+    @chunk_count.setter
+    def chunk_count(self, value: int) -> None:
+        self._chunk_count = value
+
+    @property
+    def error_message(self) -> str | None:
+        return getattr(self, "_error_message", None)
+
+    @error_message.setter
+    def error_message(self, value: str | None) -> None:
+        self._error_message = value
+
+

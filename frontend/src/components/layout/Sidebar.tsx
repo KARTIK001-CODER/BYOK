@@ -109,7 +109,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <Bot size={12} style={{ display: "inline", marginRight: "4px" }} />
             Model Provider
           </label>
-          <div style={{ display: "flex", gap: "6px" }}>
+          <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+            <span
+              className={`status-dot ${currentProviderObj?.is_configured ? "status-dot-online" : "status-dot-busy"}`}
+              title={currentProviderObj?.is_configured ? "Provider configured" : "Provider not configured — check API key"}
+            />
             <select
               id="provider-select"
               className="custom-select"

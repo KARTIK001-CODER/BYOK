@@ -1,16 +1,19 @@
 import { ApiClient } from "./client";
 import { Organization, User } from "../types";
 
-export interface LoginResponse {
+export interface TokenPayload {
   access_token: string;
+  refresh_token: string;
   token_type: string;
-  user: User;
+  expires_in: number;
 }
+
+export interface LoginResponse extends TokenPayload {}
 
 export interface RegisterResponse {
   user: User;
   organization: Organization;
-  access_token: string;
+  tokens: TokenPayload;
 }
 
 export const AuthApi = {

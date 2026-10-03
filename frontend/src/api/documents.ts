@@ -12,8 +12,36 @@ export interface DocumentResponse {
   status: string;
   embedding_status?: string | null;
   current_version: number;
+  chunk_count?: number;
+  storage_key?: string;
+  error_message?: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface DocumentChunkResponse {
+  id: string;
+  document_id: string;
+  document_version_id: string;
+  chunk_index: number;
+  content: string;
+  character_count: number;
+  word_count: number;
+  page_number?: number | null;
+  section_title?: string | null;
+  chunk_metadata?: Record<string, unknown> | null;
+  embedding_model?: string | null;
+  embedding_provider?: string | null;
+  embedding_dimension?: number | null;
+  embedded_at?: string | null;
+  created_at: string;
+}
+
+export interface PaginatedChunks {
+  items: DocumentChunkResponse[];
+  total: number;
+  limit: number;
+  offset: number;
 }
 
 export interface DocumentVersionResponse {
@@ -73,7 +101,8 @@ export const DocumentsApi = {
     await ApiClient.request(`/documents/${documentId}/embed`, { method: "POST" });
   },
 
-  async getChunks(documentId: string, limit = 20, offset = 0): Promise<unknown> {
-    return ApiClient.request(`/documents/${documentId}/chunks?limit=${limit}&offset=${offset}`);
+  async getChunks(documentId: string, limit = 20, offset = 0): Promise<PaginatedChunks> {
+    return ApiClient.request<PaginatedChunks>(`/documents/${documentId}/chunks?limit=${limit}&offset=${offset}`);
   },
 };
+

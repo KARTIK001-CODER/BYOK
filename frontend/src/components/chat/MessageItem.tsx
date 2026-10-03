@@ -1,5 +1,7 @@
-import React from "react";
-import { Bot, FileText, Cpu, Clock, Layers } from "lucide-react";
+import React, { useMemo, useState } from "react";
+import { Bot, FileText, Cpu, Clock, Layers, Copy, Check, ShieldCheck, OctagonX, Zap } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Message, CitationItem } from "../../types";
 
 interface MessageItemProps {
@@ -14,36 +16,39 @@ export const MessageItem: React.FC<MessageItemProps> = ({
   onOpenSource,
 }) => {
   const isUser = message.role === "user";
+  const citations = message.message_metadata?.citations || [];
+  const meta = message.message_metadata;
+  const [copied, setCopied] = useState(false);
 
-  // Helper to render text with interactive [1], [2] citation badges
-  const renderFormattedContent = (content: string, citations?: CitationItem[]) => {
-    const parts = content.split(/(\[\d+(?:\s*,\s*\d+)*\])/g);
-
-    return parts.map((part, index) => {
-      const citationMatch = part.match(/\[(\d+(?:\s*,\s*\d+)*)\]/);
-      if (citationMatch) {
-        const idStrings = citationMatch[1].split(",");
-        return (
-          <span key={index} style={{ display: "inline-flex", gap: "2px" }}>
-            {idStrings.map((idStr, subIdx) => {
-              const num = parseInt(idStr.trim(), 10);
-              return (
-                <button
-                  key={subIdx}
-                  className="citation-pill"
-                  title={`View Source [${num}]`}
-                  onClick={() => citations && onOpenSource(citations, num)}
-                >
-                  {num}
-                </button>
-              );
-            })}
-          </span>
-        );
-      }
-      return <span key={index}>{part}</span>;
-    });
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(message.content);
+    } catch {
+      // Clipboard API unavailable (permissions/HTTP) — fallback via selection
+      const ta = document.createElement("textarea");
+      ta.value = message.content;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+    }
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1500);
   };
+
+  // Turn [1] / [1, 2] into markdown links so ReactMarkdown renders them
+  // and our custom <a> turns them back into interactive pills.
+  const markdownContent = useMemo(() => {
+    if (isUser) return message.content;
+    return message.content.replace(
+      /\[(\d+(?:\s*,\s*\d+)*)\]/g,
+      (_m, ids: string) =>
+        ids
+          .split(",")
+          .map((s) => `[${s.trim()}](#citation-${s.trim()})`)
+          .join(" ")
+    );
+  }, [message.content, isUser]);
 
   if (isUser) {
     return (
@@ -53,9 +58,6 @@ export const MessageItem: React.FC<MessageItemProps> = ({
     );
   }
 
-  const citations = message.message_metadata?.citations || [];
-  const meta = message.message_metadata;
-
   return (
     <div className="message-wrapper">
       <div className="assistant-message">
@@ -64,6 +66,16 @@ export const MessageItem: React.FC<MessageItemProps> = ({
             <Bot size={16} />
           </div>
           <span className="assistant-name">RAGForge</span>
+          {meta?.groundedness !== undefined && meta?.groundedness !== null && (
+            <span className="grounded-badge" title="Answer verified against retrieved sources">
+              <ShieldCheck size={12} /> Grounded
+            </span>
+          )}
+          {meta?.stopped && (
+            <span className="stopped-badge" title="Generation was stopped early">
+              <OctagonX size={12} /> Stopped
+            </span>
+          )}
           {meta?.model && (
             <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginLeft: "auto" }}>
               {meta.provider?.toUpperCase()} · {meta.model}
@@ -71,8 +83,34 @@ export const MessageItem: React.FC<MessageItemProps> = ({
           )}
         </div>
 
-        <div className="message-content">
-          {renderFormattedContent(message.content, citations)}
+        <div className="message-content markdown-body">
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={{
+              a: ({ href, children }) => {
+                const m = href?.match(/^#citation-(\d+)$/);
+                if (m) {
+                  const num = parseInt(m[1], 10);
+                  return (
+                    <button
+                      className="citation-pill"
+                      title={`View Source [${num}]`}
+                      onClick={() => onOpenSource(citations, num)}
+                    >
+                      {children}
+                    </button>
+                  );
+                }
+                return (
+                  <a href={href} target="_blank" rel="noreferrer">
+                    {children}
+                  </a>
+                );
+              },
+            }}
+          >
+            {markdownContent}
+          </ReactMarkdown>
           {isStreaming && <span className="streaming-cursor" />}
         </div>
 
@@ -112,6 +150,12 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                 {meta.retrieval.result_count} chunks ({meta.retrieval.search_mode})
               </span>
             )}
+            {meta.time_to_first_token_ms != null && (
+              <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                <Zap size={12} />
+                {(meta.time_to_first_token_ms / 1000).toFixed(1)}s to first token
+              </span>
+            )}
             {meta.latency_ms && (
               <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
                 <Clock size={12} />
@@ -124,6 +168,16 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                 {meta.usage.total_tokens} tokens
               </span>
             )}
+          </div>
+        )}
+
+        {/* Message actions */}
+        {!isStreaming && (
+          <div className="message-actions">
+            <button className="msg-action-btn" onClick={handleCopy} title="Copy answer">
+              {copied ? <Check size={13} /> : <Copy size={13} />}
+              <span>{copied ? "Copied" : "Copy"}</span>
+            </button>
           </div>
         )}
       </div>

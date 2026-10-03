@@ -33,6 +33,7 @@ export const App: React.FC = () => {
 
   const [knowledgeBases, setKnowledgeBases] = useState<KnowledgeBase[]>([]);
   const [selectedKbId, setSelectedKbId] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
   const [showKbModal, setShowKbModal] = useState(false);
   const [activeView, setActiveView] = useState<"chat" | "knowledge">("chat");
 
@@ -43,6 +44,15 @@ export const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [loadingPhase, setLoadingPhase] = useState<"searching" | "generating" | null>(null);
   const [streamingMessage, setStreamingMessage] = useState<Message | null>(null);
+  const abortRef = React.useRef<AbortController | null>(null);
+  const streamRef = React.useRef<{
+    answer: string;
+    citations: CitationItem[];
+    convId: string | null;
+    retrieval?: { search_mode: string; result_count: number; latency_ms: number };
+    groundedness?: unknown;
+    finalized: boolean;
+  }>({ answer: "", citations: [], convId: null, finalized: false });
 
   const [drawerOpen, setDrawerOpen] = useState<boolean>(false);
   const [activeCitations, setActiveCitations] = useState<CitationItem[]>([]);
@@ -87,6 +97,7 @@ export const App: React.FC = () => {
       const u = await AuthApi.getCurrentUser();
       setUser(u);
       const memberships = await AuthApi.getUserOrganizations();
+      setUserRole(memberships[0]?.role || null);
       const primaryOrg = memberships[0]?.organization || (memberships[0] ? {
         id: memberships[0].organization_id,
         name: "Workspace",
@@ -174,30 +185,89 @@ export const App: React.FC = () => {
     setShowKbModal(false);
   };
 
+  const handleKbUpdated = (updatedKb: KnowledgeBase) => {
+    setKnowledgeBases((prev) => prev.map((k) => (k.id === updatedKb.id ? updatedKb : k)));
+  };
+
   const handleKbDeleted = (id: string) => {
     setKnowledgeBases((prev) => prev.filter((k) => k.id !== id));
     if (selectedKbId === id) setSelectedKbId(null);
   };
 
-  const handleSendMessage = async (queryText: string) => {
+  const finalizeAssistant = (
+    stopped: boolean,
+    doneData?: {
+      message_id: string;
+      conversation_id: string;
+      latency_ms: number;
+      time_to_first_token_ms?: number | null;
+      usage?: {
+        prompt_tokens?: number | null;
+        completion_tokens?: number | null;
+        total_tokens?: number | null;
+      } | null;
+    }
+  ) => {
+    const s = streamRef.current;
+    if (s.finalized) return;
+    s.finalized = true;
+    if (!s.answer.trim()) {
+      setStreamingMessage(null);
+      setIsLoading(false);
+      setLoadingPhase(null);
+      return;
+    }
+    const finalAssistantMsg: Message = {
+      id: doneData?.message_id || `stopped-${Date.now()}`,
+      conversation_id: doneData?.conversation_id || s.convId || "active",
+      role: "assistant",
+      content: s.answer,
+      created_at: new Date().toISOString(),
+      message_metadata: {
+        provider: selectedProvider,
+        model: selectedModel,
+        citations: s.citations,
+        retrieval: s.retrieval,
+        latency_ms: doneData?.latency_ms,
+        time_to_first_token_ms: doneData?.time_to_first_token_ms,
+        usage: doneData?.usage,
+        groundedness: s.groundedness,
+        stopped,
+      },
+    };
+    setMessages((prev) => [...prev, finalAssistantMsg]);
+    setStreamingMessage(null);
+    setIsLoading(false);
+    setLoadingPhase(null);
+    abortRef.current = null;
+  };
+
+  const handleSendMessage = async (queryText: string, echoUser = true) => {
     if (!queryText.trim() || isLoading) return;
 
-    const userMsg: Message = {
-      id: `temp-${Date.now()}`,
-      conversation_id: activeConversationId || "new",
-      role: "user",
-      content: queryText,
-      created_at: new Date().toISOString(),
-    };
-
-    setMessages((prev) => [...prev, userMsg]);
+    if (echoUser) {
+      const userMsg: Message = {
+        id: `temp-${Date.now()}`,
+        conversation_id: activeConversationId || "new",
+        role: "user",
+        content: queryText,
+        created_at: new Date().toISOString(),
+      };
+      setMessages((prev) => [...prev, userMsg]);
+    }
     setIsLoading(true);
     setLoadingPhase("searching");
 
-    let currentAnswerText = "";
-    const currentCitations: CitationItem[] = [];
-    let currentConvId = activeConversationId;
-    let retrievalSummary: { search_mode: string; result_count: number; latency_ms: number } | undefined;
+    streamRef.current = {
+      answer: "",
+      citations: [],
+      convId: activeConversationId,
+      retrieval: undefined,
+      groundedness: undefined,
+      finalized: false,
+    };
+    const controller = new AbortController();
+    abortRef.current = controller;
 
     const requestPayload: RAGChatRequest = {
       message: queryText,
@@ -209,90 +279,108 @@ export const App: React.FC = () => {
       top_k: 8,
     };
 
-    await ChatApi.streamChat(requestPayload, {
-      onStart: (data) => {
-        currentConvId = data.conversation_id;
-        if (!activeConversationId) {
-          setActiveConversationId(data.conversation_id);
-          ConversationsApi.list().then(setConversations).catch(() => {});
-        }
+    await ChatApi.streamChat(
+      requestPayload,
+      {
+        onStart: (data) => {
+          streamRef.current.convId = data.conversation_id;
+          if (!activeConversationId) {
+            setActiveConversationId(data.conversation_id);
+            ConversationsApi.list().then(setConversations).catch(() => {});
+          }
+        },
+        onRetrieval: (data) => {
+          streamRef.current.retrieval = data;
+          setLoadingPhase("generating");
+        },
+        onToken: (data) => {
+          setLoadingPhase(null);
+          const s = streamRef.current;
+          s.answer += data.delta;
+          setStreamingMessage({
+            id: "streaming-msg",
+            conversation_id: s.convId || "active",
+            role: "assistant",
+            content: s.answer,
+            created_at: new Date().toISOString(),
+            message_metadata: {
+              provider: selectedProvider,
+              model: selectedModel,
+              citations: s.citations,
+              retrieval: s.retrieval,
+            },
+          });
+        },
+        onCitation: (data) => {
+          const s = streamRef.current;
+          s.citations.push(data);
+          setStreamingMessage((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  message_metadata: {
+                    ...prev.message_metadata,
+                    citations: [...s.citations],
+                  },
+                }
+              : null
+          );
+        },
+        onGroundedness: (data) => {
+          const s = streamRef.current;
+          s.groundedness = data;
+          setStreamingMessage((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  message_metadata: { ...prev.message_metadata, groundedness: data },
+                }
+              : null
+          );
+        },
+        onDone: (data) => {
+          finalizeAssistant(false, data);
+        },
+        onError: (err) => {
+          const s = streamRef.current;
+          s.finalized = true;
+          abortRef.current = null;
+          const errorMsg: Message = {
+            id: `err-${Date.now()}`,
+            conversation_id: s.convId || "active",
+            role: "assistant",
+            content: `We couldn't generate an answer: ${err.message}`,
+            created_at: new Date().toISOString(),
+          };
+          setMessages((prev) => [...prev, errorMsg]);
+          setStreamingMessage(null);
+          setIsLoading(false);
+          setLoadingPhase(null);
+        },
+        onComplete: () => {
+          // Natural end already finalized via onDone; abort path lands here
+          // with a partial answer to keep.
+          finalizeAssistant(true);
+        },
       },
-      onRetrieval: (data) => {
-        retrievalSummary = data;
-        setLoadingPhase("generating");
-      },
-      onToken: (data) => {
-        setLoadingPhase(null);
-        currentAnswerText += data.delta;
-        setStreamingMessage({
-          id: "streaming-msg",
-          conversation_id: currentConvId || "active",
-          role: "assistant",
-          content: currentAnswerText,
-          created_at: new Date().toISOString(),
-          message_metadata: {
-            provider: selectedProvider,
-            model: selectedModel,
-            citations: currentCitations,
-            retrieval: retrievalSummary,
-          },
-        });
-      },
-      onCitation: (data) => {
-        currentCitations.push(data);
-        setStreamingMessage((prev) =>
-          prev
-            ? {
-                ...prev,
-                message_metadata: {
-                  ...prev.message_metadata,
-                  citations: [...currentCitations],
-                },
-              }
-            : null
-        );
-      },
-      onDone: (data) => {
-        const finalAssistantMsg: Message = {
-          id: data.message_id,
-          conversation_id: data.conversation_id,
-          role: "assistant",
-          content: currentAnswerText,
-          created_at: new Date().toISOString(),
-          message_metadata: {
-            provider: selectedProvider,
-            model: selectedModel,
-            citations: currentCitations,
-            retrieval: retrievalSummary,
-            latency_ms: data.latency_ms,
-            time_to_first_token_ms: data.time_to_first_token_ms,
-            usage: data.usage,
-          },
-        };
+      { signal: controller.signal }
+    );
+  };
 
-        setMessages((prev) => [...prev, finalAssistantMsg]);
-        setStreamingMessage(null);
-        setIsLoading(false);
-        setLoadingPhase(null);
-      },
-      onError: (err) => {
-        const errorMsg: Message = {
-          id: `err-${Date.now()}`,
-          conversation_id: currentConvId || "active",
-          role: "assistant",
-          content: `We couldn't generate an answer: ${err.message}`,
-          created_at: new Date().toISOString(),
-        };
-        setMessages((prev) => [...prev, errorMsg]);
-        setStreamingMessage(null);
-        setIsLoading(false);
-        setLoadingPhase(null);
-      },
-      onComplete: () => {
-        setIsLoading(false);
-        setLoadingPhase(null);
-      },
+  const handleStop = () => {
+    abortRef.current?.abort();
+  };
+
+  const handleRegenerate = () => {
+    if (isLoading) return;
+    const lastUser = [...messages].reverse().find((m) => m.role === "user");
+    if (!lastUser) return;
+    // Drop trailing assistant messages after the last user message, then resend.
+    setMessages((prev) => {
+      const idx = prev.map((m) => m.id).lastIndexOf(lastUser.id);
+      return idx >= 0 ? prev.slice(0, idx + 1) : prev;
     });
+    void handleSendMessage(lastUser.content, false);
   };
 
   const handleLogout = () => {
@@ -346,7 +434,7 @@ export const App: React.FC = () => {
         <div style={{ flex: 1, display: "flex", height: "calc(100% - 56px)", overflow: "hidden" }}>
           {activeView === "knowledge" ? (
             <div style={{ flex: 1, display: "flex", flexDirection: "column", background: "var(--bg-primary)", overflow: "hidden" }}>
-              <DocumentPanel kbId={selectedKbId} kbName={selectedKb?.name} />
+              <DocumentPanel kbId={selectedKbId} kbName={selectedKb?.name} userRole={userRole} />
             </div>
           ) : (
             <ChatWindow
@@ -354,9 +442,13 @@ export const App: React.FC = () => {
               isLoading={isLoading}
               loadingPhase={loadingPhase}
               streamingMessage={streamingMessage}
-              onSendMessage={handleSendMessage}
+              onSendMessage={(text) => void handleSendMessage(text, true)}
+              onStop={handleStop}
+              onRegenerate={handleRegenerate}
+              canRegenerate={!isLoading && messages.some((m) => m.role === "user")}
               onOpenSource={handleOpenSource}
               hasKnowledgeBase={!!selectedKbId || knowledgeBases.length > 0}
+              kbName={selectedKb?.name ?? null}
             />
           )}
 
@@ -375,6 +467,7 @@ export const App: React.FC = () => {
         onClose={() => setShowKbModal(false)}
         knowledgeBases={knowledgeBases}
         onCreated={handleKbCreated}
+        onUpdated={handleKbUpdated}
         onDeleted={handleKbDeleted}
         onSelect={(id) => { setSelectedKbId(id); setShowKbModal(false); }}
         selectedId={selectedKbId}

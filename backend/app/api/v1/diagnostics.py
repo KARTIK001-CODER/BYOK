@@ -1,7 +1,8 @@
 """Phase 1.5 diagnostics: pool, embedding cold/warm, query plans, provider benchmark."""
+
 import asyncio
-import time
 import logging
+import time
 
 from fastapi import APIRouter, Depends
 from sqlalchemy import text
@@ -12,7 +13,7 @@ from app.core.config import get_settings
 from app.db.session import get_db, get_engine, get_pool_status
 from app.models.user import User
 from app.services.embeddings.providers import get_embedding_provider
-from app.services.llm.base import LLMRequest, LLMMessage
+from app.services.llm.base import LLMMessage, LLMRequest
 from app.services.llm.factory import LLMProviderFactory
 from app.services.llm.providers.mock import MockLLMProvider
 
@@ -35,7 +36,9 @@ async def pool_status(_: User = Depends(get_current_active_user)):
             "pool_pre_ping": True,
         },
         "dialect": engine.dialect.name,
-        "url_host": settings.DATABASE_URL.split("@")[-1].split("/")[0] if "@" in settings.DATABASE_URL else "unknown",
+        "url_host": settings.DATABASE_URL.split("@")[-1].split("/")[0]
+        if "@" in settings.DATABASE_URL
+        else "unknown",
     }
 
 
@@ -47,7 +50,9 @@ async def embedding_benchmark(
     # cold vs warm measured via provider internals — we explicitly time init+infer
     t0 = time.perf_counter()
     provider = get_embedding_provider()
-    init_ms = (time.perf_counter() - t0) * 1000.0  # init already timed inside provider but we double-measure
+    init_ms = (
+        time.perf_counter() - t0
+    ) * 1000.0  # init already timed inside provider but we double-measure
 
     infer_t0 = time.perf_counter()
     vec = await asyncio.to_thread(provider.embed_query, query)
@@ -58,15 +63,23 @@ async def embedding_benchmark(
     provider2 = get_embedding_provider()
     warm_init_ms = (time.perf_counter() - warm_t0) * 1000.0
     warm_infer_t0 = time.perf_counter()
-    vec2 = await asyncio.to_thread(provider2.embed_query, query)
+    _vec2 = await asyncio.to_thread(provider2.embed_query, query)
     warm_infer_ms = (time.perf_counter() - warm_infer_t0) * 1000.0
 
     return {
         "query": query,
         "dimension": provider.dimension,
         "model": provider.model_name,
-        "cold": {"init_ms": round(init_ms, 2), "infer_ms": round(infer_ms, 2), "total_ms": round(init_ms + infer_ms, 2)},
-        "warm": {"init_ms": round(warm_init_ms, 2), "infer_ms": round(warm_infer_ms, 2), "total_ms": round(warm_init_ms + warm_infer_ms, 2)},
+        "cold": {
+            "init_ms": round(init_ms, 2),
+            "infer_ms": round(infer_ms, 2),
+            "total_ms": round(init_ms + infer_ms, 2),
+        },
+        "warm": {
+            "init_ms": round(warm_init_ms, 2),
+            "infer_ms": round(warm_infer_ms, 2),
+            "total_ms": round(warm_init_ms + warm_infer_ms, 2),
+        },
         "vector_sample": vec[:3],
         "singleton_is_same_model": provider._model is provider2._model,
     }
@@ -169,32 +182,38 @@ async def query_plan(
     try:
         cnt = await session.execute(text("SELECT count(*) FROM document_chunks;"))
         results["total_chunks"] = cnt.scalar_one()
-        cnt_neon = await session.execute(text("SELECT count(*) FROM document_chunks WHERE embedding IS NOT NULL;"))
+        cnt_neon = await session.execute(
+            text("SELECT count(*) FROM document_chunks WHERE embedding IS NOT NULL;")
+        )
         results["embedded_chunks"] = cnt_neon.scalar_one()
     except Exception as e:
         results["count_error"] = str(e)
 
     # EXPLAIN (cost only, no ANALYZE to avoid heavy scan)
     try:
-        expl_vec = await session.execute(text("""
+        expl_vec = await session.execute(
+            text("""
             EXPLAIN (COSTS true, FORMAT JSON)
             SELECT id, embedding <=> (SELECT embedding FROM document_chunks WHERE embedding IS NOT NULL LIMIT 1) AS distance
             FROM document_chunks
             WHERE embedding IS NOT NULL
             ORDER BY distance
             LIMIT 10;
-        """))
+        """)
+        )
         results["vector_explain"] = expl_vec.scalar_one()
     except Exception as e:
         results["vector_explain_error"] = str(e)
 
     try:
-        expl_kw = await session.execute(text("""
+        expl_kw = await session.execute(
+            text("""
             EXPLAIN (COSTS true, FORMAT JSON)
             SELECT id FROM document_chunks
             WHERE search_vector @@ plainto_tsquery('english','test query')
             LIMIT 10;
-        """))
+        """)
+        )
         results["keyword_explain"] = expl_kw.scalar_one()
     except Exception as e:
         results["keyword_explain_error"] = str(e)
