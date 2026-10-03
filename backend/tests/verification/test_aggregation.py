@@ -4,7 +4,9 @@ from app.services.verification.schemas import Claim, ClaimVerificationResult, Ve
 
 def make_result(status, claim_id="c1"):
     claim = Claim(claim_id=claim_id, text="test")
-    return ClaimVerificationResult(claim=claim, status=status, confidence=0.9, evidence=[], provider="heuristic")
+    return ClaimVerificationResult(
+        claim=claim, status=status, confidence=0.9, evidence=[], provider="heuristic"
+    )
 
 
 def test_groundedness_score():
@@ -30,10 +32,16 @@ def test_non_verifiable_excluded():
 
 
 def test_contradicted_status():
-    results = [make_result(VerificationStatus.CONTRADICTED), make_result(VerificationStatus.CONTRADICTED), make_result(VerificationStatus.SUPPORTED)]
+    results = [
+        make_result(VerificationStatus.CONTRADICTED),
+        make_result(VerificationStatus.CONTRADICTED),
+        make_result(VerificationStatus.SUPPORTED),
+    ]
     agg = aggregate_groundedness(results)
     assert agg.contradicted_claims == 2
-    assert agg.answer_status.value == "CONTRADICTED" or agg.answer_status.value == "LOW_GROUNDEDNESS"
+    assert (
+        agg.answer_status.value == "CONTRADICTED" or agg.answer_status.value == "LOW_GROUNDEDNESS"
+    )
     assert agg.hallucination_risk.value == "HIGH"
 
 

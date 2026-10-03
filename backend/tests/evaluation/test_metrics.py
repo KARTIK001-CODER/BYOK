@@ -1,4 +1,5 @@
 import pytest
+
 from app.services.evaluation.metrics import EvaluationMetrics
 
 
@@ -37,7 +38,11 @@ def test_precision_recall():
 
 
 def test_aggregate():
-    from app.services.evaluation.schemas import CaseResult, EvaluationCategory, EvaluationDifficulty, RetrievedResult
+    from app.services.evaluation.schemas import (
+        CaseResult,
+        EvaluationCategory,
+        EvaluationDifficulty,
+    )
 
     def make_case(hit):
         return CaseResult(
@@ -65,7 +70,9 @@ def test_aggregate():
 
 def test_no_relevant():
     assert EvaluationMetrics.hit_at_k(["a", "b"], [], 5) is False
-    assert EvaluationMetrics.precision_at_k(["a", "b"], [], 5) == 0.0  # actually precision with no relevant but retrieved: 0
+    assert (
+        EvaluationMetrics.precision_at_k(["a", "b"], [], 5) == 0.0
+    )  # actually precision with no relevant but retrieved: 0
 
 
 def test_duplicate_results():
@@ -73,4 +80,6 @@ def test_duplicate_results():
     retrieved = ["a", "a", "b"]
     relevant = ["a"]
     assert EvaluationMetrics.hit_at_k(retrieved, relevant, 2) is True
-    assert EvaluationMetrics.precision_at_k(retrieved, relevant, 3) == pytest.approx(1 / 3)  # only one unique relevant? set based so 1/3
+    assert EvaluationMetrics.precision_at_k(retrieved, relevant, 3) == pytest.approx(
+        1 / 3
+    )  # only one unique relevant? set based so 1/3

@@ -10,7 +10,6 @@ from typing import Any
 from app.core.config import get_settings
 from app.core.tracing import get_current_trace
 from app.services.verification.aggregation import aggregate_groundedness
-from app.services.verification.claim_extraction import RuleBasedClaimExtractor
 from app.services.verification.evidence_selection import EvidenceSelector
 from app.services.verification.factory import ClaimExtractorFactory, VerifierFactory
 from app.services.verification.schemas import (
@@ -51,9 +50,9 @@ class VerificationService:
         if not cfg.enabled and getattr(settings, "ENABLE_GROUNDEDNESS_CHECK", False):
             cfg.enabled = True
         if cfg.evidence_top_k == 3 and hasattr(settings, "VERIFICATION_EVIDENCE_TOP_K"):
-            cfg.evidence_top_k = getattr(settings, "VERIFICATION_EVIDENCE_TOP_K")
+            cfg.evidence_top_k = settings.VERIFICATION_EVIDENCE_TOP_K
         if cfg.timeout_seconds == 2.0 and hasattr(settings, "VERIFICATION_TIMEOUT_SECONDS"):
-            cfg.timeout_seconds = float(getattr(settings, "VERIFICATION_TIMEOUT_SECONDS"))
+            cfg.timeout_seconds = float(settings.VERIFICATION_TIMEOUT_SECONDS)
 
         trace = get_current_trace()
         total_t0 = time.perf_counter()
@@ -61,7 +60,12 @@ class VerificationService:
         # If not enabled, return highly grounded dummy
         if not cfg.enabled:
             tr = VerificationTrace(verification_total_ms=0.0, groundedness_score=1.0)
-            gr = GroundednessResult(total_claims=0, groundedness_score=1.0, answer_status="HIGHLY_GROUNDED", claim_results=[])
+            gr = GroundednessResult(
+                total_claims=0,
+                groundedness_score=1.0,
+                answer_status="HIGHLY_GROUNDED",
+                claim_results=[],
+            )
             return gr, tr
 
         # 1. Claim extraction
@@ -81,7 +85,7 @@ class VerificationService:
         for idx, ch in enumerate(evidence_chunks):
             evidence_candidates.append(
                 Evidence(
-                    evidence_id=f"ev_{idx+1:03d}",
+                    evidence_id=f"ev_{idx + 1:03d}",
                     chunk_id=ch.get("chunk_id") or ch.get("id") or f"chunk_{idx}",
                     document_id=ch.get("document_id") or "doc_unknown",
                     document_name=ch.get("document_name"),
@@ -116,19 +120,24 @@ class VerificationService:
         # For verifiable, select evidence and verify
         for claim in verifiable_claims:
             # Evidence selection (per claim, top_k)
-            sel_t0 = time.perf_counter()
-            selected, sel_ms = EvidenceSelector.select(claim, evidence_candidates, top_k=cfg.evidence_top_k)
-            # Accumulate selection time later
+            selected, sel_ms = EvidenceSelector.select(
+                claim, evidence_candidates, top_k=cfg.evidence_top_k
+            )
             heuristic_t0 = time.perf_counter()
             # Heuristic first
             verifier = VerifierFactory.create(provider="heuristic")
             try:
                 # Timeout bounded
-                h_result = await asyncio.wait_for(verifier.verify(claim, selected), timeout=cfg.timeout_seconds)
+                h_result = await asyncio.wait_for(
+                    verifier.verify(claim, selected), timeout=cfg.timeout_seconds
+                )
                 h_ms = (time.perf_counter() - heuristic_t0) * 1000.0
                 heuristic_ms_total += h_ms
                 # If heuristic high confidence, final
-                if h_result.confidence >= 0.75 and h_result.status in (VerificationStatus.SUPPORTED, VerificationStatus.CONTRADICTED):
+                if h_result.confidence >= 0.75 and h_result.status in (
+                    VerificationStatus.SUPPORTED,
+                    VerificationStatus.CONTRADICTED,
+                ):
                     results.append(h_result)
                     continue
                 # Else if LLM fallback enabled
@@ -136,7 +145,9 @@ class VerificationService:
                     llm_t0 = time.perf_counter()
                     llm_verifier = VerifierFactory.create(provider="llm")
                     try:
-                        llm_result = await asyncio.wait_for(llm_verifier.verify(claim, selected), timeout=cfg.timeout_seconds)
+                        llm_result = await asyncio.wait_for(
+                            llm_verifier.verify(claim, selected), timeout=cfg.timeout_seconds
+                        )
                         llm_ms_total += (time.perf_counter() - llm_t0) * 1000.0
                         llm_calls += 1
                         # Prefer LLM if higher confidence
@@ -144,7 +155,7 @@ class VerificationService:
                             results.append(llm_result)
                         else:
                             results.append(h_result)
-                    except asyncio.TimeoutError:
+                    except TimeoutError:
                         logger.warning("LLM verifier timeout for claim %s", claim.claim_id)
                         fallbacks += 1
                         results.append(h_result)
@@ -155,7 +166,7 @@ class VerificationService:
                 else:
                     # No LLM, keep heuristic (may be UNCERTAIN)
                     results.append(h_result)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 logger.warning("Heuristic verifier timeout for claim %s", claim.claim_id)
                 fallbacks += 1
                 results.append(
@@ -166,7 +177,9 @@ class VerificationService:
                         reason="Heuristic timeout",
                         evidence=selected,
                         provider="heuristic",
-                        verification_latency_ms=round((time.perf_counter() - heuristic_t0)*1000, 2),
+                        verification_latency_ms=round(
+                            (time.perf_counter() - heuristic_t0) * 1000, 2
+                        ),
                         fallback_used=True,
                     )
                 )
@@ -189,8 +202,12 @@ class VerificationService:
         # 4. Aggregate groundedness
         groundedness = aggregate_groundedness(
             results,
-            high_threshold=cfg.groundedness_high_threshold if hasattr(cfg, "groundedness_high_threshold") else getattr(settings, "GROUNDEDNESS_HIGH_THRESHOLD", 0.85),
-            medium_threshold=cfg.groundedness_medium_threshold if hasattr(cfg, "groundedness_medium_threshold") else getattr(settings, "GROUNDEDNESS_MEDIUM_THRESHOLD", 0.6),
+            high_threshold=cfg.groundedness_high_threshold
+            if hasattr(cfg, "groundedness_high_threshold")
+            else getattr(settings, "GROUNDEDNESS_HIGH_THRESHOLD", 0.85),
+            medium_threshold=cfg.groundedness_medium_threshold
+            if hasattr(cfg, "groundedness_medium_threshold")
+            else getattr(settings, "GROUNDEDNESS_MEDIUM_THRESHOLD", 0.6),
         )
 
         total_ms = (time.perf_counter() - total_t0) * 1000.0

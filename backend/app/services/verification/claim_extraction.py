@@ -13,9 +13,16 @@ SENT_SPLIT = re.compile(r"(?<=[.!?])\s+")
 
 # Heuristics for claim type
 NUMERIC_RE = re.compile(r"\b\d+(\.\d+)?\s*(%|days?|months?|years?|EUR|USD|€|MB|GB|chunks?)\b", re.I)
-TEMPORAL_RE = re.compile(r"\b(19|20)\d{2}|January|February|March|April|May|June|July|August|September|October|November|December|today|tomorrow|yesterday\b", re.I)
-POLICY_RE = re.compile(r"\b(must|should|required|cancellation|refund|policy|request|submit|contact)\b", re.I)
-NON_VERIFIABLE_RE = re.compile(r"\b(excellent|great|best|wonderful|amazing|I think|opinion)\b", re.I)
+TEMPORAL_RE = re.compile(
+    r"\b(19|20)\d{2}|January|February|March|April|May|June|July|August|September|October|November|December|today|tomorrow|yesterday\b",
+    re.I,
+)
+POLICY_RE = re.compile(
+    r"\b(must|should|required|cancellation|refund|policy|request|submit|contact)\b", re.I
+)
+NON_VERIFIABLE_RE = re.compile(
+    r"\b(excellent|great|best|wonderful|amazing|I think|opinion)\b", re.I
+)
 
 
 def classify_claim_type(text: str) -> ClaimType:
@@ -49,20 +56,12 @@ class RuleBasedClaimExtractor(BaseClaimExtractor):
     async def extract(self, answer: str) -> list[Claim]:
         if not answer or not answer.strip():
             return []
-        # Split into sentences, keep spans
-        sentences = []
-        # Use regex finditer to preserve spans
-        last_end = 0
-        for m in SENT_SPLIT.finditer(answer.strip() + " "):
-            # Actually split manually to get spans
-            pass
-
         # Simple split preserving spans via search
         parts = SENT_SPLIT.split(answer.strip())
         claims: list[Claim] = []
         search_pos = 0
-        for part in parts:
-            text = part.strip()
+        for _part in parts:
+            text = _part.strip()
             if not text or len(text) < 5:
                 continue
             # Filter non-verifiable very short or generic?
@@ -76,7 +75,7 @@ class RuleBasedClaimExtractor(BaseClaimExtractor):
                 continue
             claims.append(
                 Claim(
-                    claim_id=f"claim_{len(claims)+1:03d}_{uuid.uuid4().hex[:4]}",
+                    claim_id=f"claim_{len(claims) + 1:03d}_{uuid.uuid4().hex[:4]}",
                     text=text,
                     claim_type=ctype,
                     answer_start=start if start != -1 else None,

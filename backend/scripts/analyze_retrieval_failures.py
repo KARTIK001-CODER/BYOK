@@ -5,13 +5,16 @@ Taxonomy:
   SEMANTIC_MISMATCH, KEYWORD_MISMATCH, MULTI_HOP, AMBIGUOUS_QUERY,
   LONG_QUERY, SHORT_QUERY, ENTITY_AMBIGUITY, NUMERICAL_QUERY, TEMPORAL_QUERY, NO_RELEVANT_CONTEXT
 """
+
 import json
 import re
 import sys
 from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from collections import Counter
+
 
 # Heuristic taxonomy classifier
 def classify_failure(query: str, expected: list[str], retrieved: list[str], category: str) -> str:
@@ -30,13 +33,18 @@ def classify_failure(query: str, expected: list[str], retrieved: list[str], cate
     if re.search(r"\b\d+\b", query):
         return "NUMERICAL_QUERY"
     # Temporal
-    if re.search(r"\b(19|20)\d{2}|january|february|march|april|may|june|july|august|september|october|november|december|today|trial.*period|day 15\b", q):
+    if re.search(
+        r"\b(19|20)\d{2}|january|february|march|april|may|june|july|august|september|october|november|december|today|trial.*period|day 15\b",
+        q,
+    ):
         return "TEMPORAL_QUERY"
     # Entity ambiguity
     if any(term in q for term in ["policy", "limits", "it", "that"]) and word_count <= 5:
         return "ENTITY_AMBIGUITY"
     # Ambiguous
-    if category == "ambiguous" or any(p in q for p in ["how does it work", "tell me about", "what about"]):
+    if category == "ambiguous" or any(
+        p in q for p in ["how does it work", "tell me about", "what about"]
+    ):
         return "AMBIGUOUS_QUERY"
     # Multi-hop
     if category == "multi_hop" or (" and " in q and word_count >= 8):
@@ -49,8 +57,10 @@ def classify_failure(query: str, expected: list[str], retrieved: list[str], cate
         return "SEMANTIC_MISMATCH"
     return "SEMANTIC_MISMATCH"
 
+
 def analyze_dataset(dataset_path: str = "backend/evaluation/datasets/retrieval_baseline.json"):
     import json
+
     p = Path(dataset_path)
     if not p.exists():
         p = Path(__file__).resolve().parents[1] / dataset_path
@@ -67,21 +77,29 @@ def analyze_dataset(dataset_path: str = "backend/evaluation/datasets/retrieval_b
         counter[failure_type] += 1
     print("Failure Taxonomy (heuristic, no retrieval yet):")
     for k, v in counter.most_common():
-        print(f"  {k:20s} {v:2d} {v/len(data['cases']):.1%}")
+        print(f"  {k:20s} {v:2d} {v / len(data['cases']):.1%}")
     return counter
+
 
 if __name__ == "__main__":
     import argparse
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset", default="backend/evaluation/datasets/retrieval_baseline.json")
-    parser.add_argument("--reports", nargs="*", help="JSON reports from evaluate_retrieval.py to analyze real failures")
+    parser.add_argument(
+        "--reports",
+        nargs="*",
+        help="JSON reports from evaluate_retrieval.py to analyze real failures",
+    )
     args = parser.parse_args()
     if args.reports:
         # Real failure analysis from reports
         for report_path in args.reports:
             p = Path(report_path)
             data = json.loads(p.read_text())
-            print(f"\nReport {p} retriever {data.get('retriever')} Hit@5 {data.get('overall', {}).get('hit_at_5')}")
+            print(
+                f"\nReport {p} retriever {data.get('retriever')} Hit@5 {data.get('overall', {}).get('hit_at_5')}"
+            )
             failures = data.get("failures", [])
             counter = Counter()
             for f in failures:

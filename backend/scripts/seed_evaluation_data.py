@@ -6,6 +6,7 @@ Usage:
   python scripts/seed_evaluation_data.py --reset
   python scripts/seed_evaluation_data.py --reset --embedding-model BAAI/bge-small-en-v1.5
 """
+
 import argparse
 import asyncio
 import sys
@@ -52,26 +53,54 @@ async def get_or_create_eval_user(session: AsyncSession, org: Organization):
     user = r.scalar_one_or_none()
     if user:
         # ensure membership
-        m = await session.execute(select(OrganizationMembership).where(OrganizationMembership.organization_id == org.id, OrganizationMembership.user_id == user.id))
+        m = await session.execute(
+            select(OrganizationMembership).where(
+                OrganizationMembership.organization_id == org.id,
+                OrganizationMembership.user_id == user.id,
+            )
+        )
         if not m.scalar_one_or_none():
-            session.add(OrganizationMembership(organization_id=org.id, user_id=user.id, role=OrganizationRole.OWNER))
+            session.add(
+                OrganizationMembership(
+                    organization_id=org.id, user_id=user.id, role=OrganizationRole.OWNER
+                )
+            )
             await session.flush()
         return user
     ph = PasswordService.hash("EvalPassword123!")
-    user = User(email=EVAL_USER_EMAIL, password_hash=ph, full_name="Eval User", is_active=True, is_verified=True)
+    user = User(
+        email=EVAL_USER_EMAIL,
+        password_hash=ph,
+        full_name="Eval User",
+        is_active=True,
+        is_verified=True,
+    )
     session.add(user)
     await session.flush()
-    session.add(OrganizationMembership(organization_id=org.id, user_id=user.id, role=OrganizationRole.OWNER))
+    session.add(
+        OrganizationMembership(organization_id=org.id, user_id=user.id, role=OrganizationRole.OWNER)
+    )
     await session.flush()
     return user
 
 
 async def get_or_create_eval_kb(session: AsyncSession, org: Organization, user: User):
-    r = await session.execute(select(KnowledgeBase).where(KnowledgeBase.slug == EVAL_KB_SLUG, KnowledgeBase.organization_id == org.id))
+    r = await session.execute(
+        select(KnowledgeBase).where(
+            KnowledgeBase.slug == EVAL_KB_SLUG, KnowledgeBase.organization_id == org.id
+        )
+    )
     kb = r.scalar_one_or_none()
     if kb:
         return kb
-    kb = KnowledgeBase(organization_id=org.id, name=EVAL_KB_NAME, slug=EVAL_KB_SLUG, description="Evaluation fixtures for retrieval quality", created_by=user.id, is_active=True)
+    kb = KnowledgeBase(
+        organization_id=org.id,
+        name=EVAL_KB_NAME,
+        slug=EVAL_KB_SLUG,
+        description="Evaluation fixtures for retrieval quality",
+        created_by=user.id,
+        is_active=True,
+    )
     session.add(kb)
     await session.flush()
     return kb
@@ -94,7 +123,9 @@ async def reset_eval_data(session: AsyncSession):
     # delete KBs then org and memberships
     for kb in kbs:
         await session.delete(kb)
-    await session.execute(delete(OrganizationMembership).where(OrganizationMembership.organization_id == org.id))
+    await session.execute(
+        delete(OrganizationMembership).where(OrganizationMembership.organization_id == org.id)
+    )
     # Keep org and user for reuse? Delete org as well to fully reset
     await session.delete(org)
     # Don't delete user globally — eval user is isolated
@@ -108,7 +139,6 @@ async def reset_eval_data(session: AsyncSession):
 
 async def ingest_fixture(session: AsyncSession, kb: KnowledgeBase, org: Organization, user: User):
     """Use real ingestion: create Documents via service, then ingest and embed."""
-    from app.services.ingestion.service import IngestionService
     from app.services.embeddings.service import EmbeddingService
 
     fixtures = sorted(FIXTURE_DIR.glob("*.md"))
@@ -131,7 +161,11 @@ async def ingest_fixture(session: AsyncSession, kb: KnowledgeBase, org: Organiza
         display_name = name_map.get(title, title)
 
         # Check if doc already exists by name
-        r = await session.execute(select(Document).where(Document.knowledge_base_id == kb.id, Document.name == display_name))
+        r = await session.execute(
+            select(Document).where(
+                Document.knowledge_base_id == kb.id, Document.name == display_name
+            )
+        )
         existing = r.scalar_one_or_none()
         if existing:
             print(f"  Skipping existing document: {display_name}")
@@ -158,8 +192,8 @@ async def ingest_fixture(session: AsyncSession, kb: KnowledgeBase, org: Organiza
         session.add(doc)
         await session.flush()
         # Use ingestion service to chunk the content
+
         from app.models.document_version import DocumentVersion
-        import uuid
 
         version = DocumentVersion(
             document_id=doc.id,
@@ -180,7 +214,9 @@ async def ingest_fixture(session: AsyncSession, kb: KnowledgeBase, org: Organiza
         from app.services.ingestion.extractors.base import ExtractedSection
 
         settings = get_settings()
-        chunker = RecursiveTextChunker(chunk_size=settings.CHUNK_SIZE, chunk_overlap=settings.CHUNK_OVERLAP)
+        chunker = RecursiveTextChunker(
+            chunk_size=settings.CHUNK_SIZE, chunk_overlap=settings.CHUNK_OVERLAP
+        )
         sections = [ExtractedSection(text=content, section_title=display_name, page_number=None)]
         raw_chunks = chunker.chunk(sections)
 
@@ -222,7 +258,9 @@ async def ingest_fixture(session: AsyncSession, kb: KnowledgeBase, org: Organiza
     # Verify
     from app.models.document_chunk import DocumentChunk
 
-    r2 = await session.execute(select(DocumentChunk).where(DocumentChunk.knowledge_base_id == kb.id))
+    r2 = await session.execute(
+        select(DocumentChunk).where(DocumentChunk.knowledge_base_id == kb.id)
+    )
     chunks = r2.scalars().all()
     embedded = sum(1 for c in chunks if c.embedding is not None)
     print(f"Verification: total chunks {len(chunks)}, embedded {embedded}")
@@ -231,7 +269,9 @@ async def ingest_fixture(session: AsyncSession, kb: KnowledgeBase, org: Organiza
 
 async def main():
     parser = argparse.ArgumentParser(description="Seed evaluation fixtures (isolated org/KB)")
-    parser.add_argument("--reset", action="store_true", help="Delete existing eval org/KB before seeding")
+    parser.add_argument(
+        "--reset", action="store_true", help="Delete existing eval org/KB before seeding"
+    )
     parser.add_argument("--reset-only", action="store_true", help="Only reset, do not seed")
     args = parser.parse_args()
 
@@ -259,9 +299,13 @@ async def main():
             # still verify chunks
             from app.models.document_chunk import DocumentChunk
 
-            r2 = await session.execute(select(DocumentChunk).where(DocumentChunk.knowledge_base_id == kb.id))
+            r2 = await session.execute(
+                select(DocumentChunk).where(DocumentChunk.knowledge_base_id == kb.id)
+            )
             chunks = r2.scalars().all()
-            print(f"Existing chunks: {len(chunks)}, embedded: {sum(1 for c in chunks if c.embedding)}")
+            print(
+                f"Existing chunks: {len(chunks)}, embedded: {sum(1 for c in chunks if c.embedding)}"
+            )
             return
 
         await ingest_fixture(session, kb, org, user)

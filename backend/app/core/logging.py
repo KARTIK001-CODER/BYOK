@@ -75,7 +75,9 @@ class StructuredTextFormatter(logging.Formatter):
         name = record.name
         message = record.getMessage()
 
-        base = f"{iso_time} {levelname:<5} request_id={req_id} trace_id={trace_id} [{name}] {message}"
+        base = (
+            f"{iso_time} {levelname:<5} request_id={req_id} trace_id={trace_id} [{name}] {message}"
+        )
         if record.exc_info:
             base += "\n" + self.formatException(record.exc_info)
         return base

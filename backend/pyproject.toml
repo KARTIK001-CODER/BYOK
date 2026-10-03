@@ -67,6 +67,15 @@ ignore = [
 [tool.ruff.lint.isort]
 known-first-party = ["app"]
 
+[tool.ruff.lint.per-file-ignores]
+# Tests use idiomatic patterns: mock adapters keep full signatures (ARG),
+# failure-mode tests assert blind Exception (B017), some modules need
+# sys.modules["pytest"] shims before imports (E402).
+"tests/**" = ["ARG001", "ARG002", "B017", "E402"]
+# Dev/benchmark scripts use sys.path shims (E402) and carry throwaway
+# experiment scaffolding (F841, B007, unused adapter args).
+"scripts/**" = ["E402", "F841", "ARG001", "ARG002", "B007"]
+
 [tool.pytest.ini_options]
 minversion = "8.0"
 addopts = "-ra -q --strict-markers"

@@ -65,7 +65,11 @@ class VectorRetriever:
             prep_t0 = time.perf_counter()
             cosine_dist = DocumentChunk.embedding.cosine_distance(query_embedding)
             stmt = (
-                select(DocumentChunk, Document.name.label("document_name"), cosine_dist.label("distance"))
+                select(
+                    DocumentChunk,
+                    Document.name.label("document_name"),
+                    cosine_dist.label("distance"),
+                )
                 .join(Document, DocumentChunk.document_id == Document.id)
                 .where(and_(*where_clauses))
                 .order_by(cosine_dist.asc())

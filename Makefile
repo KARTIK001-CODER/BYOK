@@ -1,4 +1,4 @@
-.PHONY: help up down dev test lint format migrate evaluate-retrieval clean
+.PHONY: help up down dev test lint format migrate evaluate-retrieval frontend frontend-build ci clean
 
 help:
 	@echo "RAGForge Management Commands:"
@@ -10,6 +10,9 @@ help:
 	@echo "  make format             - Run Ruff formatter"
 	@echo "  make migrate            - Apply Alembic migrations"
 	@echo "  make evaluate-retrieval - Run IR benchmark evaluation across search modes"
+	@echo "  make frontend           - Install frontend deps (npm ci)"
+	@echo "  make frontend-build     - Typecheck + production build frontend"
+	@echo "  make ci                 - Backend tests + lint + frontend build"
 	@echo "  make clean              - Remove Python cache files"
 
 up:
@@ -35,6 +38,18 @@ migrate:
 
 evaluate-retrieval:
 	cd backend && python -m app.evaluation.retrieval
+
+frontend:
+	cd frontend && npm ci
+
+frontend-build:
+	cd frontend && npm run build
+
+ci:
+	cd backend && pytest -q
+	cd backend && ruff check app
+	cd backend && ruff format --check app
+	cd frontend && npm run build
 
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +

@@ -5,10 +5,11 @@ Measures feature extraction, classification, ambiguity, strategy, total.
 
 Target: P50 <5ms, preferred <2ms.
 """
-import time
+
 import statistics
 import sys
 from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.services.query_intelligence.analyzer import QueryAnalyzer
@@ -25,6 +26,7 @@ SAMPLE_QUERIES = [
     "How do I get my money back after buying a plan?",
     "pool_size=10",
 ]
+
 
 def benchmark(iterations: int = 1000):
     # Warmup
@@ -48,19 +50,23 @@ def benchmark(iterations: int = 1000):
     def stats(arr):
         arr_sorted = sorted(arr)
         return {
-            "p50": arr_sorted[len(arr_sorted)//2],
-            "p95": arr_sorted[int(len(arr_sorted)*0.95)],
-            "p99": arr_sorted[int(len(arr_sorted)*0.99)],
+            "p50": arr_sorted[len(arr_sorted) // 2],
+            "p95": arr_sorted[int(len(arr_sorted) * 0.95)],
+            "p99": arr_sorted[int(len(arr_sorted) * 0.99)],
             "avg": statistics.mean(arr),
             "min": min(arr),
             "max": max(arr),
         }
 
-    print(f"Iterations: {iterations} * {len(SAMPLE_QUERIES)} queries = {iterations*len(SAMPLE_QUERIES)} analyses")
+    print(
+        f"Iterations: {iterations} * {len(SAMPLE_QUERIES)} queries = {iterations * len(SAMPLE_QUERIES)} analyses"
+    )
     print("Per-stage timings (ms):")
     for stage, arr in timings.items():
         s = stats(arr)
-        print(f"  {stage:25s} P50 {s['p50']:.3f} P95 {s['p95']:.3f} P99 {s['p99']:.3f} avg {s['avg']:.3f} max {s['max']:.3f}")
+        print(
+            f"  {stage:25s} P50 {s['p50']:.3f} P95 {s['p95']:.3f} P99 {s['p99']:.3f} avg {s['avg']:.3f} max {s['max']:.3f}"
+        )
 
     # Overall assessment
     p50_total = stats(timings["query_analysis_ms"])["p50"]
@@ -71,9 +77,16 @@ def benchmark(iterations: int = 1000):
     else:
         print(f"\n✗ P50 total {p50_total:.3f}ms exceeds 5ms budget")
 
+
 if __name__ == "__main__":
     import argparse
+
     parser = argparse.ArgumentParser()
-    parser.add_argument("--iterations", type=int, default=1000, help="Iterations per query (total = iterations * 10)")
+    parser.add_argument(
+        "--iterations",
+        type=int,
+        default=1000,
+        help="Iterations per query (total = iterations * 10)",
+    )
     args = parser.parse_args()
     benchmark(args.iterations)

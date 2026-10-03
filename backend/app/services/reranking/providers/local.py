@@ -51,12 +51,14 @@ class LocalReranker(BaseReranker):
     def _get_or_load_model(self) -> Any:
         global _GLOBAL_RERANKER_MODEL, _GLOBAL_RERANKER_MODEL_NAME, _GLOBAL_LOAD_MS
         # Return cached if same model
-        if _GLOBAL_RERANKER_MODEL is not None and _GLOBAL_RERANKER_MODEL_NAME == self._model_name:
+        if _GLOBAL_RERANKER_MODEL is not None and self._model_name == _GLOBAL_RERANKER_MODEL_NAME:
             return _GLOBAL_RERANKER_MODEL
 
         # If cached but different model, reload
-        if _GLOBAL_RERANKER_MODEL is not None and _GLOBAL_RERANKER_MODEL_NAME != self._model_name:
-            logger.info("Switching reranker model %s -> %s", _GLOBAL_RERANKER_MODEL_NAME, self._model_name)
+        if _GLOBAL_RERANKER_MODEL is not None and self._model_name != _GLOBAL_RERANKER_MODEL_NAME:
+            logger.info(
+                "Switching reranker model %s -> %s", _GLOBAL_RERANKER_MODEL_NAME, self._model_name
+            )
             _GLOBAL_RERANKER_MODEL = None
 
         if _GLOBAL_RERANKER_MODEL is None:
@@ -66,13 +68,26 @@ class LocalReranker(BaseReranker):
                 from sentence_transformers import CrossEncoder  # type: ignore
 
                 # Use CPU, trust_remote_code False, max_length via tokenizer kwargs
-                model = CrossEncoder(self._model_name, max_length=self._max_length, device="cpu", trust_remote_code=False)
+                model = CrossEncoder(
+                    self._model_name,
+                    max_length=self._max_length,
+                    device="cpu",
+                    trust_remote_code=False,
+                )
                 _GLOBAL_RERANKER_MODEL = model
                 _GLOBAL_RERANKER_MODEL_NAME = self._model_name
                 _GLOBAL_LOAD_MS = (time.perf_counter() - t0) * 1000.0
-                logger.info("LocalReranker model %s loaded in %.2f ms (warm next)", self._model_name, _GLOBAL_LOAD_MS)
+                logger.info(
+                    "LocalReranker model %s loaded in %.2f ms (warm next)",
+                    self._model_name,
+                    _GLOBAL_LOAD_MS,
+                )
             except Exception as e:
-                logger.warning("Failed to load CrossEncoder %s: %s — fallback to mock lexical", self._model_name, e)
+                logger.warning(
+                    "Failed to load CrossEncoder %s: %s — fallback to mock lexical",
+                    self._model_name,
+                    e,
+                )
                 # Store None to trigger fallback per-request; but keep name for tracing
                 _GLOBAL_RERANKER_MODEL = None
                 _GLOBAL_RERANKER_MODEL_NAME = self._model_name
@@ -109,7 +124,9 @@ class LocalReranker(BaseReranker):
         # Run inference via to_thread to avoid blocking event loop (CPU-bound)
         t0 = time.perf_counter()
         try:
-            scores: list[float] = await asyncio.to_thread(self._model.predict, pairs, batch_size=16, show_progress_bar=False)
+            scores: list[float] = await asyncio.to_thread(
+                self._model.predict, pairs, batch_size=16, show_progress_bar=False
+            )
             # Ensure list
             if hasattr(scores, "tolist"):
                 scores = scores.tolist()
@@ -124,7 +141,7 @@ class LocalReranker(BaseReranker):
 
         # Merge scores
         scored: list[dict[str, Any]] = []
-        for idx, (cand, score) in enumerate(zip(candidates, scores)):
+        for idx, (cand, score) in enumerate(zip(candidates, scores, strict=True)):
             scored.append(
                 {
                     **cand,

@@ -25,7 +25,11 @@ def aggregate_groundedness(
     non_verifiable = sum(1 for r in results if r.status == VerificationStatus.NON_VERIFIABLE)
 
     # Groundedness score: supported=1, partial=0.5, others 0, exclude uncertain/non_verifiable
-    verifiable = [r for r in results if r.status not in (VerificationStatus.UNCERTAIN, VerificationStatus.NON_VERIFIABLE)]
+    verifiable = [
+        r
+        for r in results
+        if r.status not in (VerificationStatus.UNCERTAIN, VerificationStatus.NON_VERIFIABLE)
+    ]
     denom = len(verifiable) if verifiable else 1
     score = (supported * 1.0 + partial * 0.5) / denom if verifiable else 1.0
     # If all are non_verifiable, score 1.0 (no hallucination)
@@ -38,7 +42,11 @@ def aggregate_groundedness(
 
     # Answer status thresholds
     if contradicted > 0:
-        status = AnswerStatus.CONTRADICTED if contradicted >= 2 or contradiction_rate >= 0.2 else AnswerStatus.LOW_GROUNDEDNESS
+        status = (
+            AnswerStatus.CONTRADICTED
+            if contradicted >= 2 or contradiction_rate >= 0.2
+            else AnswerStatus.LOW_GROUNDEDNESS
+        )
     elif score >= high_threshold:
         status = AnswerStatus.HIGHLY_GROUNDED
     elif score >= medium_threshold:

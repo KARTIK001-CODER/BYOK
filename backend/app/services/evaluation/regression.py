@@ -2,7 +2,12 @@
 
 from __future__ import annotations
 
-from app.services.evaluation.schemas import BaselineRecord, EvaluationReport, RegressionResult, RegressionThresholds
+from app.services.evaluation.schemas import (
+    BaselineRecord,
+    EvaluationReport,
+    RegressionResult,
+    RegressionThresholds,
+)
 
 
 class RegressionChecker:
@@ -20,8 +25,20 @@ class RegressionChecker:
         # Map metric name -> (baseline value, current value, threshold, higher_is_better)
         checks = [
             ("MRR", baseline.overall.mrr, current.overall.mrr, thresholds.mrr_max_regression, True),
-            ("Hit@5", baseline.overall.hit_at_5, current.overall.hit_at_5, thresholds.hit_at_5_max_regression, True),
-            ("Hit@1", baseline.overall.hit_at_1, current.overall.hit_at_1, thresholds.hit_at_1_max_regression, True),
+            (
+                "Hit@5",
+                baseline.overall.hit_at_5,
+                current.overall.hit_at_5,
+                thresholds.hit_at_5_max_regression,
+                True,
+            ),
+            (
+                "Hit@1",
+                baseline.overall.hit_at_1,
+                current.overall.hit_at_1,
+                thresholds.hit_at_1_max_regression,
+                True,
+            ),
         ]
 
         for metric, base_val, cur_val, thresh, higher_better in checks:
@@ -60,5 +77,7 @@ class RegressionChecker:
         if fails:
             return f"REGRESSION FAIL: {', '.join(r.metric + f' {r.delta_pct:.1%}' for r in fails)}"
         if warns:
-            return f"REGRESSION WARNING: {', '.join(r.metric + f' {r.delta_pct:.1%}' for r in warns)}"
+            return (
+                f"REGRESSION WARNING: {', '.join(r.metric + f' {r.delta_pct:.1%}' for r in warns)}"
+            )
         return "PASS: No meaningful regression"

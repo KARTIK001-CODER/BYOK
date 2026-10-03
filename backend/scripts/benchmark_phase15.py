@@ -4,6 +4,7 @@ Writes JSON report + prints human summary.
 
 Requires backend running on BENCHMARK_BASE_URL and a seeded DB.
 """
+
 import argparse
 import asyncio
 import json
@@ -26,13 +27,17 @@ QUERIES = [
 EMAIL = "testuser_1@example.com"
 PASSWORD = "Password123!"
 
+
 async def authenticate(client: httpx.AsyncClient, base_url: str) -> str:
-    res = await client.post(f"{base_url}/api/v1/auth/login", json={"email": EMAIL, "password": PASSWORD})
+    res = await client.post(
+        f"{base_url}/api/v1/auth/login", json={"email": EMAIL, "password": PASSWORD}
+    )
     if res.status_code != 200:
         raise RuntimeError(f"Login failed: {res.text}")
     token = res.json()["access_token"]
     client.headers.update({"Authorization": f"Bearer {token}"})
     return token
+
 
 async def get_kb_id(client: httpx.AsyncClient, base_url: str) -> str | None:
     res = await client.get(f"{base_url}/api/v1/knowledge-bases")
@@ -44,18 +49,35 @@ async def get_kb_id(client: httpx.AsyncClient, base_url: str) -> str | None:
         return None
     return items[0]["id"]
 
+
 async def fetch_diagnostics(client: httpx.AsyncClient, base_url: str) -> dict[str, Any]:
     out: dict[str, Any] = {}
-    for path in ["/api/v1/diagnostics/pool", "/api/v1/diagnostics/embedding?query=test", "/api/v1/diagnostics/provider?provider_name=mock", "/api/v1/diagnostics/query-plan"]:
+    for path in [
+        "/api/v1/diagnostics/pool",
+        "/api/v1/diagnostics/embedding?query=test",
+        "/api/v1/diagnostics/provider?provider_name=mock",
+        "/api/v1/diagnostics/query-plan",
+    ]:
         try:
             r = await client.get(f"{base_url}{path}", timeout=30)
-            out[path] = r.json() if r.status_code == 200 else {"error": r.text[:500], "status": r.status_code}
+            out[path] = (
+                r.json()
+                if r.status_code == 200
+                else {"error": r.text[:500], "status": r.status_code}
+            )
         except Exception as e:
             out[path] = {"error": str(e)}
     return out
 
 
-async def single_request(client: httpx.AsyncClient, base_url: str, kb_id: str, query: str, conversation_id: str | None, use_stream: bool = True) -> dict[str, Any]:
+async def single_request(
+    client: httpx.AsyncClient,
+    base_url: str,
+    kb_id: str,
+    query: str,
+    conversation_id: str | None,
+    use_stream: bool = True,
+) -> dict[str, Any]:
     payload = {
         "message": query,
         "knowledge_base_ids": [kb_id],
@@ -76,7 +98,9 @@ async def single_request(client: httpx.AsyncClient, base_url: str, kb_id: str, q
     events: list[dict] = []
     try:
         if use_stream:
-            async with client.stream("POST", f"{base_url}/api/v1/chat/stream", json=payload) as resp:
+            async with client.stream(
+                "POST", f"{base_url}/api/v1/chat/stream", json=payload
+            ) as resp:
                 trace_id = resp.headers.get("X-Trace-ID")
                 request_id = resp.headers.get("X-Request-ID")
                 if resp.status_code != 200:
@@ -87,7 +111,7 @@ async def single_request(client: httpx.AsyncClient, base_url: str, kb_id: str, q
                         continue
                     if line.startswith("data: "):
                         try:
-                            data = json.loads(line[len("data: "):])
+                            data = json.loads(line[len("data: ") :])
                         except Exception:
                             continue
                         # crude event type inference from line prefix is lost here; use keys
@@ -109,7 +133,11 @@ async def single_request(client: httpx.AsyncClient, base_url: str, kb_id: str, q
             if resp.status_code != 200:
                 return {"error": resp.text[:500], "status": resp.status_code}
             data = resp.json()
-            retrieval_lat = data.get("retrieval", {}).get("latency_ms") if isinstance(data.get("retrieval"), dict) else None
+            retrieval_lat = (
+                data.get("retrieval", {}).get("latency_ms")
+                if isinstance(data.get("retrieval"), dict)
+                else None
+            )
             total = (time.perf_counter() - start) * 1000.0
             # for non-stream TTFT == total - retrieval approx
             ttft = total
@@ -148,7 +176,9 @@ async def run_benchmark(base_url: str, warm_runs: int = 12, cold_runs: int = 1) 
             q = QUERIES[i % len(QUERIES)]
             r = await single_request(client, base_url, kb_id, q, None, use_stream=True)
             cold_results.append(r)
-            print(f"  Cold {i+1}: total={r.get('total_ms')} ttft={r.get('ttft_ms')} ret={r.get('retrieval_ms')}")
+            print(
+                f"  Cold {i + 1}: total={r.get('total_ms')} ttft={r.get('ttft_ms')} ret={r.get('retrieval_ms')}"
+            )
             await asyncio.sleep(0.5)
 
         # Warm: many runs
@@ -159,13 +189,17 @@ async def run_benchmark(base_url: str, warm_runs: int = 12, cold_runs: int = 1) 
             # CPU snapshot
             cpu_before = psutil.cpu_percent(interval=None)
             mem_before = psutil.virtual_memory().percent
-            r = await single_request(client, base_url, kb_id, q, conv_id if i == warm_runs -1 else None, use_stream=True)
+            r = await single_request(
+                client, base_url, kb_id, q, conv_id if i == warm_runs - 1 else None, use_stream=True
+            )
             cpu_after = psutil.cpu_percent(interval=None)
             r["cpu_before"] = cpu_before
             r["cpu_after"] = cpu_after
             r["mem"] = mem_before
             warm_results.append(r)
-            print(f"  Warm {i+1}: total={r.get('total_ms')} ttft={r.get('ttft_ms')} ret={r.get('retrieval_ms')} cpu={cpu_before}->{cpu_after}")
+            print(
+                f"  Warm {i + 1}: total={r.get('total_ms')} ttft={r.get('ttft_ms')} ret={r.get('retrieval_ms')} cpu={cpu_before}->{cpu_after}"
+            )
             # small sleep to avoid overwhelming pool
             await asyncio.sleep(0.2)
 
@@ -177,9 +211,11 @@ async def run_benchmark(base_url: str, warm_runs: int = 12, cold_runs: int = 1) 
             if not totals:
                 return {}
             totals_sorted = sorted(totals)
+
             def pct(p):
-                idx = min(int(len(totals_sorted) * p), len(totals_sorted)-1)
+                idx = min(int(len(totals_sorted) * p), len(totals_sorted) - 1)
                 return totals_sorted[idx]
+
             return {
                 "count": len(totals),
                 "p50": round(pct(0.5), 2),
@@ -188,9 +224,9 @@ async def run_benchmark(base_url: str, warm_runs: int = 12, cold_runs: int = 1) 
                 "avg": round(statistics.mean(totals), 2),
                 "min": round(min(totals), 2),
                 "max": round(max(totals), 2),
-                "avg_ttft": round(statistics.mean(ttfts),2) if ttfts else None,
-                "avg_retrieval": round(statistics.mean(rets),2) if rets else None,
-                "ttft_p50": round(sorted(ttfts)[len(ttfts)//2],2) if ttfts else None,
+                "avg_ttft": round(statistics.mean(ttfts), 2) if ttfts else None,
+                "avg_retrieval": round(statistics.mean(rets), 2) if rets else None,
+                "ttft_p50": round(sorted(ttfts)[len(ttfts) // 2], 2) if ttfts else None,
             }
 
         report = {
@@ -204,13 +240,16 @@ async def run_benchmark(base_url: str, warm_runs: int = 12, cold_runs: int = 1) 
                 "cpu_count": psutil.cpu_count(),
                 "cpu_percent": psutil.cpu_percent(interval=1),
                 "mem_percent": psutil.virtual_memory().percent,
-            }
+            },
         }
         return report
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--base-url", default=os.getenv("BENCHMARK_BASE_URL", "http://localhost:8000"))
+    parser.add_argument(
+        "--base-url", default=os.getenv("BENCHMARK_BASE_URL", "http://localhost:8000")
+    )
     parser.add_argument("--warm-runs", type=int, default=12)
     parser.add_argument("--cold-runs", type=int, default=1)
     parser.add_argument("--out", default="phase15_report.json")
@@ -219,4 +258,6 @@ if __name__ == "__main__":
     with open(args.out, "w") as f:
         json.dump(report, f, indent=2)
     print(f"\nReport written to {args.out}")
-    print(json.dumps({k: v for k, v in report.items() if k in ("cold","warm","system")}, indent=2))
+    print(
+        json.dumps({k: v for k, v in report.items() if k in ("cold", "warm", "system")}, indent=2)
+    )

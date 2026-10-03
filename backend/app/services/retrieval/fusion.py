@@ -56,6 +56,14 @@ class ReciprocalRankFusion:
         Returns:
             list[RetrievalResult]: Top-K deduplicated, fused results sorted by RRF score descending.
         """
+        import time
+
+        from app.core.tracing import get_current_trace
+
+        t0 = time.perf_counter()
+        trace = get_current_trace()
+        input_count = len(vector_candidates) + len(keyword_candidates)
+
         # Map: chunk_id -> dict with accumulated RRF score, chunk,
         # vector_score, keyword_score, sources
         fused_map: dict[str, dict[str, Any]] = {}
@@ -100,11 +108,15 @@ class ReciprocalRankFusion:
                 fused_map[chunk_id]["keyword_score"] = candidate.score
                 fused_map[chunk_id]["sources"].add("keyword")
 
+        rrf_ms = (time.perf_counter() - t0) * 1000.0
+
         # 3. Sort candidates by RRF score descending (stable tie-breaking by chunk_id)
+        dedup_t0 = time.perf_counter()
         sorted_items = sorted(
             fused_map.values(),
             key=lambda item: (-item["rrf_score"], item["chunk"].id),
         )
+        dedup_ms = (time.perf_counter() - dedup_t0) * 1000.0
 
         # 4. Truncate to top_k and build RetrievalResult with full provenance
         results: list[RetrievalResult] = []
@@ -149,5 +161,13 @@ class ReciprocalRankFusion:
                 provenance=provenance,
             )
             results.append(result)
+
+        total_ms = (time.perf_counter() - t0) * 1000.0
+        if trace:
+            trace.record("fusion_total_ms", total_ms)
+            trace.record("rrf_ms", rrf_ms)
+            trace.record("deduplication_ms", dedup_ms)
+            trace.set_counter("fusion_input_count", input_count)
+            trace.set_counter("fusion_output_count", len(results))
 
         return results

@@ -7,10 +7,11 @@ Usage:
   python scripts/evaluate_retrieval.py --retriever all --dataset evaluation/datasets/retrieval_baseline.json --output evaluation/reports
   python scripts/evaluate_retrieval.py --retriever hybrid --save-baseline --compare-baseline
 """
+
 import argparse
 import asyncio
-import sys
 import logging
+import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -19,14 +20,17 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from sqlalchemy import select
 
-from app.core.config import get_settings
 from app.db.session import get_session_factory
 from app.models.knowledge_base import KnowledgeBase
 from app.models.organization import Organization
 from app.services.evaluation.baseline import BaselineManager
 from app.services.evaluation.dataset import EvaluationDatasetLoader
 from app.services.evaluation.regression import RegressionChecker
-from app.services.evaluation.reporting import console_report, write_json_report, write_markdown_report
+from app.services.evaluation.reporting import (
+    console_report,
+    write_json_report,
+    write_markdown_report,
+)
 from app.services.evaluation.runner import EvaluationRunner
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
@@ -44,7 +48,11 @@ async def find_eval_org_kb():
         r = await session.execute(select(Organization).where(Organization.slug == "eval-org"))
         org = r.scalar_one_or_none()
         if org:
-            r2 = await session.execute(select(KnowledgeBase).where(KnowledgeBase.organization_id == org.id, KnowledgeBase.slug == "eval-kb"))
+            r2 = await session.execute(
+                select(KnowledgeBase).where(
+                    KnowledgeBase.organization_id == org.id, KnowledgeBase.slug == "eval-kb"
+                )
+            )
             kb = r2.scalar_one_or_none()
             if kb:
                 return org.id, kb.id
@@ -52,15 +60,30 @@ async def find_eval_org_kb():
         r3 = await session.execute(select(Organization).limit(1))
         any_org = r3.scalar_one_or_none()
         if any_org:
-            r4 = await session.execute(select(KnowledgeBase).where(KnowledgeBase.organization_id == any_org.id).limit(1))
+            r4 = await session.execute(
+                select(KnowledgeBase).where(KnowledgeBase.organization_id == any_org.id).limit(1)
+            )
             any_kb = r4.scalar_one_or_none()
             if any_kb:
-                logger.warning("Using fallback org/kb %s / %s (run seed_evaluation_data.py for isolated fixtures)", any_org.slug, any_kb.slug)
+                logger.warning(
+                    "Using fallback org/kb %s / %s (run seed_evaluation_data.py for isolated fixtures)",
+                    any_org.slug,
+                    any_kb.slug,
+                )
                 return any_org.id, any_kb.id
-    raise RuntimeError("No evaluation organization/kb found. Run: python scripts/seed_evaluation_data.py  (and ensure DB is reachable)")
+    raise RuntimeError(
+        "No evaluation organization/kb found. Run: python scripts/seed_evaluation_data.py  (and ensure DB is reachable)"
+    )
 
 
-async def evaluate_single(retriever: str, dataset_path: Path, top_k: int, output_dir: Path, save_baseline: bool, compare_baseline: bool):
+async def evaluate_single(
+    retriever: str,
+    dataset_path: Path,
+    top_k: int,
+    output_dir: Path,
+    save_baseline: bool,
+    compare_baseline: bool,
+):
     # Validate dataset
     ds = EvaluationDatasetLoader.load(dataset_path)
     print(f"Dataset {dataset_path} version={ds.version} cases={len(ds.cases)}")
@@ -82,10 +105,17 @@ async def evaluate_single(retriever: str, dataset_path: Path, top_k: int, output
 
     # Phase 2.1 extra: routing distribution + strategy quality for adaptive
     if retriever == "adaptive":
-        from app.services.query_intelligence.analyzer import QueryAnalyzer
         from collections import Counter
+
+        from app.services.query_intelligence.analyzer import QueryAnalyzer
+
         dist = Counter()
-        strat_quality: dict[str, list[float]] = {"VECTOR": [], "KEYWORD": [], "HYBRID": [], "HYBRID_WIDE": []}
+        strat_quality: dict[str, list[float]] = {
+            "VECTOR": [],
+            "KEYWORD": [],
+            "HYBRID": [],
+            "HYBRID_WIDE": [],
+        }
         for case in ds.cases:
             analysis = QueryAnalyzer.analyze(case.query)
             strat = analysis.strategy.strategy.value
@@ -99,11 +129,11 @@ async def evaluate_single(retriever: str, dataset_path: Path, top_k: int, output
         total = len(ds.cases)
         for strat in ["VECTOR", "KEYWORD", "HYBRID", "HYBRID_WIDE"]:
             cnt = dist.get(strat, 0)
-            print(f"  {strat:12s} {cnt:2d}/{total} {cnt/total:5.1%}")
+            print(f"  {strat:12s} {cnt:2d}/{total} {cnt / total:5.1%}")
         print("\nStrategy Quality (Hit@5 per routed group):")
         for strat, hits in strat_quality.items():
             if hits:
-                avg = sum(hits)/len(hits)
+                avg = sum(hits) / len(hits)
                 print(f"  {strat:12s} queries {len(hits):2d} Hit@5 {avg:.3f}")
 
     # Reports
@@ -123,7 +153,9 @@ async def evaluate_single(retriever: str, dataset_path: Path, top_k: int, output
             results = RegressionChecker.compare(baseline, report)
             print("\nRegression check vs baseline:")
             for r in results:
-                print(f"  {r.metric}: baseline {r.baseline_value:.3f} -> current {r.current_value:.3f} delta {r.delta_pct:+.1%} status {r.status} (threshold {r.threshold:.0%})")
+                print(
+                    f"  {r.metric}: baseline {r.baseline_value:.3f} -> current {r.current_value:.3f} delta {r.delta_pct:+.1%} status {r.status} (threshold {r.threshold:.0%})"
+                )
             print(RegressionChecker.summarize(results))
         else:
             print(f"No baseline found for retriever {retriever} — run with --save-baseline first")
@@ -132,14 +164,35 @@ async def evaluate_single(retriever: str, dataset_path: Path, top_k: int, output
 
 
 async def main():
-    parser = argparse.ArgumentParser(description="BYOK Retrieval Evaluation (Phase 2.0 + 2.1 adaptive + 2.2 reranking)")
-    parser.add_argument("--retriever", default="all", choices=["vector", "keyword", "hybrid", "adaptive", "hybrid_reranked", "adaptive_reranked", "all"], help="Retriever to evaluate (adaptive = Phase 2.1, reranked = Phase 2.2)")
+    parser = argparse.ArgumentParser(
+        description="BYOK Retrieval Evaluation (Phase 2.0 + 2.1 adaptive + 2.2 reranking)"
+    )
+    parser.add_argument(
+        "--retriever",
+        default="all",
+        choices=[
+            "vector",
+            "keyword",
+            "hybrid",
+            "adaptive",
+            "hybrid_reranked",
+            "adaptive_reranked",
+            "all",
+        ],
+        help="Retriever to evaluate (adaptive = Phase 2.1, reranked = Phase 2.2)",
+    )
     parser.add_argument("--dataset", default=str(DEFAULT_DATASET), help="Dataset path")
     parser.add_argument("--top-k", type=int, default=5, help="Top K for evaluation")
-    parser.add_argument("--candidate-k", type=int, default=None, help="Candidate K (default top_k*4)")
-    parser.add_argument("--output", default=str(DEFAULT_OUTPUT), help="Output directory for reports")
+    parser.add_argument(
+        "--candidate-k", type=int, default=None, help="Candidate K (default top_k*4)"
+    )
+    parser.add_argument(
+        "--output", default=str(DEFAULT_OUTPUT), help="Output directory for reports"
+    )
     parser.add_argument("--save-baseline", action="store_true", help="Save baseline after run")
-    parser.add_argument("--compare-baseline", action="store_true", help="Compare against saved baseline")
+    parser.add_argument(
+        "--compare-baseline", action="store_true", help="Compare against saved baseline"
+    )
     parser.add_argument("--verbose", action="store_true", help="Debug logging")
     args = parser.parse_args()
 
@@ -149,7 +202,11 @@ async def main():
     dataset_path = Path(args.dataset)
     if not dataset_path.is_absolute():
         # try resolve relative to repo root and backend
-        candidates = [Path.cwd() / dataset_path, Path(__file__).resolve().parents[1] / dataset_path, dataset_path]
+        candidates = [
+            Path.cwd() / dataset_path,
+            Path(__file__).resolve().parents[1] / dataset_path,
+            dataset_path,
+        ]
         for c in candidates:
             if c.exists():
                 dataset_path = c
@@ -161,15 +218,22 @@ async def main():
 
     # Expand "all" to include adaptive and reranked if present
     if args.retriever == "all":
-        retrievers = ["vector", "keyword", "hybrid", "adaptive", "hybrid_reranked", "adaptive_reranked"]
+        retrievers = [
+            "vector",
+            "keyword",
+            "hybrid",
+            "adaptive",
+            "hybrid_reranked",
+            "adaptive_reranked",
+        ]
     else:
         retrievers = [args.retriever]
 
     reports = []
     for ret in retrievers:
-        print(f"\n{'='*70}")
+        print(f"\n{'=' * 70}")
         print(f"Evaluating retriever: {ret} (top_k={args.top_k})")
-        print(f"{'='*70}")
+        print(f"{'=' * 70}")
         report = await evaluate_single(
             retriever=ret,
             dataset_path=dataset_path,
@@ -182,15 +246,17 @@ async def main():
 
     # Per-retriever comparison table if all
     if len(reports) > 1:
-        print("\n" + "="*70)
+        print("\n" + "=" * 70)
         print("RETRIEVER COMPARISON")
-        print("="*70)
+        print("=" * 70)
         hdr = f"{'Retriever':<15} | {'Hit@1':<6} | {'Hit@3':<6} | {'Hit@5':<6} | {'MRR':<6} | {'Prec@5':<7} | {'Recall@5'}"
         print(hdr)
-        print("-"*70)
+        print("-" * 70)
         for r in reports:
-            print(f"{r.retriever:<15} | {r.overall.hit_at_1:<6.3f} | {r.overall.hit_at_3:<6.3f} | {r.overall.hit_at_5:<6.3f} | {r.overall.mrr:<6.3f} | {r.overall.precision_at_k:<7.3f} | {r.overall.recall_at_k:.3f}")
-        print("="*70)
+            print(
+                f"{r.retriever:<15} | {r.overall.hit_at_1:<6.3f} | {r.overall.hit_at_3:<6.3f} | {r.overall.hit_at_5:<6.3f} | {r.overall.mrr:<6.3f} | {r.overall.precision_at_k:<7.3f} | {r.overall.recall_at_k:.3f}"
+            )
+        print("=" * 70)
         # Oracle upper bound (best per query across vector/keyword/hybrid)
         if len(reports) >= 3 and any(r.retriever == "hybrid" for r in reports):
             # Find best per case across non-adaptive retrievers
@@ -207,14 +273,20 @@ async def main():
                     best = max(mrrs.values()) if mrrs else 0.0
                     oracle_mrrs.append(best)
                     oracle_hits.append(1.0 if best > 0 else 0.0)
-                oracle_mrr = sum(oracle_mrrs)/len(oracle_mrrs) if oracle_mrrs else 0
-                oracle_hit5 = sum(oracle_hits)/len(oracle_hits) if oracle_hits else 0
-                hybrid = next((r for r in reports if r.retriever=="hybrid"), None)
-                adaptive = next((r for r in reports if r.retriever=="adaptive"), None)
+                oracle_mrr = sum(oracle_mrrs) / len(oracle_mrrs) if oracle_mrrs else 0
+                oracle_hit5 = sum(oracle_hits) / len(oracle_hits) if oracle_hits else 0
+                hybrid = next((r for r in reports if r.retriever == "hybrid"), None)
+                adaptive = next((r for r in reports if r.retriever == "adaptive"), None)
                 print("\nORACLE UPPER BOUND (best of vector/keyword/hybrid per query):")
-                print(f"  Hybrid:   Hit@5 {hybrid.overall.hit_at_5:.3f} MRR {hybrid.overall.mrr:.3f}" if hybrid else "")
+                print(
+                    f"  Hybrid:   Hit@5 {hybrid.overall.hit_at_5:.3f} MRR {hybrid.overall.mrr:.3f}"
+                    if hybrid
+                    else ""
+                )
                 if adaptive:
-                    print(f"  Adaptive: Hit@5 {adaptive.overall.hit_at_5:.3f} MRR {adaptive.overall.mrr:.3f}")
+                    print(
+                        f"  Adaptive: Hit@5 {adaptive.overall.hit_at_5:.3f} MRR {adaptive.overall.mrr:.3f}"
+                    )
                 print(f"  Oracle:   Hit@5 {oracle_hit5:.3f} MRR {oracle_mrr:.3f} (max possible)")
             except Exception as e:
                 print(f"Oracle calculation failed: {e}")

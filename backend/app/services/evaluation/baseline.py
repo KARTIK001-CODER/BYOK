@@ -4,9 +4,7 @@ from __future__ import annotations
 
 import json
 import subprocess
-from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
 
 from app.services.evaluation.schemas import BaselineRecord, EvaluationReport
 
@@ -69,7 +67,9 @@ class BaselineManager:
         return BaselineRecord.model_validate(raw)
 
     @staticmethod
-    def load_latest(retriever: str = "hybrid", baseline_dir: Path | str | None = None) -> BaselineRecord | None:
+    def load_latest(
+        retriever: str = "hybrid", baseline_dir: Path | str | None = None
+    ) -> BaselineRecord | None:
         bdir = Path(baseline_dir) if baseline_dir else BaselineManager.DEFAULT_DIR
         if not bdir.is_absolute():
             repo_root = Path(__file__).resolve().parents[4] / bdir

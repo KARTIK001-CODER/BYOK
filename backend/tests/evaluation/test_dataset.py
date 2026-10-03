@@ -1,9 +1,16 @@
 import json
 import tempfile
 from pathlib import Path
+
 import pytest
+
 from app.services.evaluation.dataset import EvaluationDatasetLoader
-from app.services.evaluation.schemas import EvaluationCategory, EvaluationCase, EvaluationDataset, ExpectedResult
+from app.services.evaluation.schemas import (
+    EvaluationCase,
+    EvaluationCategory,
+    EvaluationDataset,
+    ExpectedResult,
+)
 
 
 def test_dataset_validation_duplicate_ids():
@@ -11,8 +18,18 @@ def test_dataset_validation_duplicate_ids():
         EvaluationDataset(
             version="1.0",
             cases=[
-                EvaluationCase(id="eval_001", query="What is refund?", category=EvaluationCategory.factual, expected=[ExpectedResult(document_name="Refund Policy")]),
-                EvaluationCase(id="eval_001", query="Duplicate?", category=EvaluationCategory.factual, expected=[ExpectedResult(document_name="Pricing")]),
+                EvaluationCase(
+                    id="eval_001",
+                    query="What is refund?",
+                    category=EvaluationCategory.factual,
+                    expected=[ExpectedResult(document_name="Refund Policy")],
+                ),
+                EvaluationCase(
+                    id="eval_001",
+                    query="Duplicate?",
+                    category=EvaluationCategory.factual,
+                    expected=[ExpectedResult(document_name="Pricing")],
+                ),
             ],
         )
 
@@ -20,19 +37,34 @@ def test_dataset_validation_duplicate_ids():
 def test_dataset_validation_missing_expected():
     # Expected must be >=1 via pydantic
     with pytest.raises(Exception):
-        EvaluationCase(id="eval_002", query="Missing expected?", category=EvaluationCategory.keyword, expected=[])
+        EvaluationCase(
+            id="eval_002",
+            query="Missing expected?",
+            category=EvaluationCategory.keyword,
+            expected=[],
+        )
 
 
 def test_dataset_validation_invalid_category():
     with pytest.raises(Exception):
-        EvaluationCase(id="eval_003", query="Invalid cat?", category="not_a_category", expected=[ExpectedResult(document_name="x")])
+        EvaluationCase(
+            id="eval_003",
+            query="Invalid cat?",
+            category="not_a_category",
+            expected=[ExpectedResult(document_name="x")],
+        )
 
 
 def test_loader_valid():
     ds = EvaluationDataset(
         version="1.0",
         cases=[
-            EvaluationCase(id="eval_001", query="Valid query about refund policy?", category=EvaluationCategory.semantic, expected=[ExpectedResult(document_name="Refund Policy")]),
+            EvaluationCase(
+                id="eval_001",
+                query="Valid query about refund policy?",
+                category=EvaluationCategory.semantic,
+                expected=[ExpectedResult(document_name="Refund Policy")],
+            ),
         ],
     )
     with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False, encoding="utf-8") as f:
@@ -43,7 +75,17 @@ def test_loader_valid():
 
 
 def test_loader_missing_query():
-    raw = {"version": "1.0", "cases": [{"id": "eval_001", "query": "  ", "category": "factual", "expected": [{"document_name": "Refund Policy"}]}]}
+    raw = {
+        "version": "1.0",
+        "cases": [
+            {
+                "id": "eval_001",
+                "query": "  ",
+                "category": "factual",
+                "expected": [{"document_name": "Refund Policy"}],
+            }
+        ],
+    }
     with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False, encoding="utf-8") as f:
         json.dump(raw, f)
         path = f.name

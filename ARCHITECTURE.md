@@ -9,7 +9,7 @@ BYOK is a Retrieval-Augmented Generation (RAG) platform. It allows users to uplo
 The project is structured as a full-stack application with a clear separation of concerns:
 - **Frontend (Client)**: A modern web interface for users to upload knowledge, manage settings, and chat with their knowledge base.
 - **Backend (API Layer & Business Logic)**: A robust REST API that handles data processing, authentication, integration with vector and relational databases, and orchestration of RAG operations.
-- **Data Persistence**: A mix of relational databases (for structured relational data) and vector databases (for semantic search).
+- **Data Persistence**: A single PostgreSQL 16 + pgvector database (structured tables + `Vector(384)` HNSW + `TSVECTOR` GIN FTS on `document_chunks`) plus local filesystem object storage. No separate vector DB.
 
 ---
 
@@ -22,12 +22,13 @@ The frontend is built for performance and a modern development experience:
 - **Language**: [TypeScript](https://www.typescriptlang.org/) - For static typing and better developer tooling.
 - **Routing**: [React Router](https://reactrouter.com/) (v7) - For client-side navigation.
 - **Icons**: [Lucide React](https://lucide.dev/) - A beautiful and consistent icon toolkit.
-- **Markdown Rendering**: [React Markdown](https://github.com/remarkjs/react-markdown) (with GFM & syntax highlighting via rehype/remark plugins) for displaying rich chat responses.
+- **Markdown Rendering**: [React Markdown](https://github.com/remarkjs/react-markdown) (with GFM via `remark-gfm`; code blocks styled with app CSS) for displaying rich chat responses.
 
 ### Backend (Server-Side)
 The backend follows a clean architecture pattern, prioritizing type safety, validation, and modularity:
 - **Framework**: [FastAPI](https://fastapi.tiangolo.com/) - A modern, fast web framework for building APIs with Python 3.8+ based on standard Python type hints.
-- **Language**: [Python 3.11/3.13](https://www.python.org/)
+- **Language**: [Python 3.12](https://www.python.org/) (`requires-python >=3.12` in `backend/pyproject.toml`)
+- **RAG & AI Stack**: Hybrid retrieval (pgvector HNSW + Postgres FTS + RRF k=60), FastEmbed `BAAI/bge-small-en-v1.5` 384d, provider-agnostic LLM factory (Groq/OpenAI/Gemini/Mock), plus opt-in intelligence layers: `query_intelligence`, `retrieval_intelligence` (adaptive/multi-query/decomposition), `reranking`, `verification`.
 - **Data Validation**: [Pydantic](https://docs.pydantic.dev/latest/) - Data parsing and validation using Python type annotations.
 - **ORM (Object-Relational Mapping)**: [SQLAlchemy](https://www.sqlalchemy.org/) - The Python SQL toolkit and Object Relational Mapper.
 - **Database Migrations**: [Alembic](https://alembic.sqlalchemy.org/en/latest/) - A lightweight database migration tool for usage with SQLAlchemy.
@@ -48,13 +49,15 @@ The backend (`/backend/app`) is designed in a modular way, where different domai
 4. **`app/db/`**: Handles the connection to the underlying relational database (via SQLAlchemy).
 5. **`app/models/`**: SQLAlchemy models that define the structure of the database tables (e.g., `User`, `Document`, `Conversation`, `Message`).
 6. **`app/schemas/`**: Pydantic models (Data Transfer Objects) that define the shape of the data entering (requests) and leaving (responses) the API.
-7. **`app/services/`**: The business logic layer. 
+7. **`app/services/`**: The business logic layer.
    - `auth/`: User authentication, JWT token generation, and password validation.
    - `ingestion/`: Handles document uploads, extracts text (PDF, Word, Markdown, Text), normalizes it, and splits it into smaller chunks suitable for embedding.
-   - `embeddings/`: Takes text chunks and converts them into dense vector embeddings.
-   - `retrieval/`: Handles searching the vector store (Keyword search, Vector similarity, Hybrid fusion) to find context relevant to a user's prompt.
-   - `llm/`: The interface to communicate with Large Language Models to generate answers.
-   - `rag/`: The orchestrator that ties Retrieval and LLMs together (managing context, citations, and prompts).
+   - `embeddings/`: Takes text chunks and converts them into dense vector embeddings (local FastEmbed; batch `to_thread` off event loop).
+   - `retrieval/`: Hybrid search (vector + keyword in parallel via isolated sessions, RRF fusion). Query embedding overlaps KB authz.
+   - `query_intelligence/` + `retrieval_intelligence/`: Opt-in (`ENABLE_*=False`) deterministic strategy/budget/retry/confidence/fallback; adaptive router in `RAGService` falls back to Hybrid.
+   - `reranking/` + `verification/`: Opt-in rerank (2s bounded) and groundedness checks.
+   - `llm/`: Provider factory (`groq/openai/gemini/mock`); server-key fallback (BYOK vault schema-only).
+   - `rag/`: The orchestrator that ties Retrieval and LLMs together (context budget, prompt, citations, SSE `start/retrieval/token/citation/groundedness/done/error`, pre-LLM commit).
    - `documents/`, `users/`, `organizations/`: Standard CRUD services for application entities.
 
 ---

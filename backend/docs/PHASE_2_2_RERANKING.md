@@ -185,7 +185,8 @@ Every reranked result stores `original_score` and `rerank_score` in `metadata` a
 try:
     reranked = await asyncio.wait_for(reranker.rerank(...), timeout=2.0)
 except (TimeoutError, Exception) as e:
-    fallback = True; return original_top_k
+    fallback = True
+    return original_top_k
 ```
 
 User request never fails due to reranker; logs warning, sets `fallback=True`, `fallback_reason`, `timeout`.

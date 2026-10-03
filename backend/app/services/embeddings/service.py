@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import time
 import uuid
@@ -143,8 +144,10 @@ class EmbeddingService:
                 batch = unembedded_chunks[i : i + batch_size]
                 texts = [c.content for c in batch]
 
-                # Generate embeddings for batch
-                vectors = embedding_provider.embed_documents(texts)
+                # Generate embeddings for batch off the event loop
+                # (fastembed ONNX is CPU-bound sync; blocking here stalls
+                # all concurrent chat requests).
+                vectors = await asyncio.to_thread(embedding_provider.embed_documents, texts)
 
                 # Persist vectors to chunks
                 for chunk, vector in zip(batch, vectors, strict=True):

@@ -74,6 +74,10 @@ class RetrievalRequest(BaseModel):
         default=False,
         description="Whether to include internal diagnostic trace and per-branch scores.",
     )
+    parallel_execution: bool | None = Field(
+        default=None,
+        description="Whether to run hybrid vector and keyword searches concurrently. If None, respects ENABLE_PARALLEL_HYBRID_SEARCH setting.",
+    )
 
     @field_validator("query")
     @classmethod
@@ -159,6 +163,9 @@ class RetrievalTrace(BaseModel):
     total_duration_ms: float = 0.0
     partial_failure: bool = False
     partial_failure_reason: str | None = None
+    embedding_cache_hit: bool = False
+    embedding_cache_latency_ms: float = 0.0
+    db_sessions_created: int = 0
     # Phase 2.1 query intelligence (optional diagnostics)
     query_analysis: dict[str, Any] | None = None
 
