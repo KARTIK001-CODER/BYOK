@@ -4,13 +4,10 @@ from __future__ import annotations
 
 import json
 import time
-import uuid
 from collections import Counter, defaultdict
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from app.services.verification.claim_extraction import RuleBasedClaimExtractor
 from app.services.verification.evidence_selection import EvidenceSelector
 from app.services.verification.factory import VerifierFactory
 from app.services.verification.schemas import (
@@ -57,7 +54,7 @@ class GroundednessEvaluator:
         cls,
         dataset_path: Path | str,
         verifier_provider: str = "heuristic",
-        claim_extractor_provider: str = "rule_based",
+        claim_extractor_provider: str = "rule_based",  # noqa: ARG003 - stable public signature, extractor selection pending
     ) -> dict[str, Any]:
         data = cls.load_dataset(dataset_path)
         cls.validate_dataset(data)
@@ -98,8 +95,8 @@ class GroundednessEvaluator:
             # Evidence objects
             evidence_objs = [
                 Evidence(
-                    evidence_id=f"ev_{i+1}",
-                    chunk_id=f"chunk_{i+1}",
+                    evidence_id=f"ev_{i + 1}",
+                    chunk_id=f"chunk_{i + 1}",
                     document_id="doc_1",
                     document_name="evidence",
                     content=txt,
@@ -124,6 +121,7 @@ class GroundednessEvaluator:
                 latency = (time.perf_counter() - t0) * 1000
                 latencies.append(latency)
                 result = None  # type: ignore
+                verify_error = str(e)
 
             is_correct = pred == expected
             if is_correct:
@@ -141,7 +139,7 @@ class GroundednessEvaluator:
                         "predicted": pred,
                         "category": category,
                         "evidence": evidence_texts,
-                        "reason": result.reason if result else str(e) if "e" in locals() else "unknown",
+                        "reason": result.reason if result else verify_error,
                     }
                 )
                 # Still count for per-class if expected is unsupported/contradicted but predicted wrong, not correct
@@ -153,6 +151,7 @@ class GroundednessEvaluator:
             confusion[expected][pred] += 1
 
         accuracy = correct / total if total else 0
+
         # Precision/Recall per class: for hallucination detection we care UNSUPPORTED and CONTRADICTED
         def precision(cls: str) -> float:
             tp = confusion[cls][cls]
@@ -168,9 +167,15 @@ class GroundednessEvaluator:
 
         # Overall precision/recall (micro)
         # For overall, consider correct vs total
-        overall_precision = accuracy  # for single-label accuracy, precision==recall==accuracy for overall
+        overall_precision = (
+            accuracy  # for single-label accuracy, precision==recall==accuracy for overall
+        )
         overall_recall = accuracy
-        f1 = 2 * overall_precision * overall_recall / (overall_precision + overall_recall) if (overall_precision + overall_recall) else 0
+        f1 = (
+            2 * overall_precision * overall_recall / (overall_precision + overall_recall)
+            if (overall_precision + overall_recall)
+            else 0
+        )
 
         # Hallucination-specific
         unsupported_recall = unsupported_correct / unsupported_total if unsupported_total else 0
@@ -180,6 +185,7 @@ class GroundednessEvaluator:
 
         # Latency percentiles
         lat_sorted = sorted(latencies)
+
         def pct(p):
             if not lat_sorted:
                 return 0
@@ -191,9 +197,15 @@ class GroundednessEvaluator:
         for f in failures:
             exp = f["expected"]
             pred = f["predicted"]
-            if exp in ("SUPPORTED", "PARTIALLY_SUPPORTED") and pred in ("UNSUPPORTED", "CONTRADICTED"):
+            if exp in ("SUPPORTED", "PARTIALLY_SUPPORTED") and pred in (
+                "UNSUPPORTED",
+                "CONTRADICTED",
+            ):
                 failure_types["False Hallucination"] += 1
-            elif exp in ("UNSUPPORTED", "CONTRADICTED") and pred in ("SUPPORTED", "PARTIALLY_SUPPORTED"):
+            elif exp in ("UNSUPPORTED", "CONTRADICTED") and pred in (
+                "SUPPORTED",
+                "PARTIALLY_SUPPORTED",
+            ):
                 failure_types["False Support"] += 1
             elif exp == "CONTRADICTED" and pred != "CONTRADICTED":
                 failure_types["Contradiction Miss"] += 1

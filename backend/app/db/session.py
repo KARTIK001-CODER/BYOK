@@ -40,7 +40,7 @@ def get_engine() -> AsyncEngine:
                     "pool_size": settings.DB_POOL_SIZE,
                     "max_overflow": settings.DB_MAX_OVERFLOW,
                     "pool_timeout": settings.DB_POOL_TIMEOUT,
-                    "pool_recycle": 300,
+                    "pool_recycle": settings.DB_POOL_RECYCLE,
                     "pool_pre_ping": True,
                     "connect_args": {
                         "statement_cache_size": 0,
@@ -52,6 +52,7 @@ def get_engine() -> AsyncEngine:
             )
 
         _engine = create_async_engine(settings.DATABASE_URL, **engine_kwargs)
+        _register_engine_listeners(_engine.sync_engine)
         logger.info(
             "Initialized AsyncEngine dialect=%s pool_size=%s max_overflow=%s pool_timeout=%s pool_recycle=%s pre_ping=%s",
             _engine.dialect.name,
@@ -62,6 +63,47 @@ def get_engine() -> AsyncEngine:
             engine_kwargs.get("pool_pre_ping"),
         )
     return _engine
+
+
+def _categorize_statement(stmt: str) -> str:
+    """Categorize SQL statement safely without exposing parameters or user data."""
+    s = stmt.lower()
+    if "cosine_distance" in s or "<=>" in s or ("embedding" in s and "document_chunks" in s):
+        return "vector_search"
+    if "plainto_tsquery" in s or "search_vector" in s or "ts_rank" in s:
+        return "keyword_search"
+    if "users" in s and ("select" in s or "where" in s):
+        return "user_lookup"
+    if "organization_memberships" in s or "organizations" in s:
+        return "organization_resolution"
+    if "knowledge_bases" in s:
+        return "knowledge_base_resolution"
+    if "conversations" in s:
+        return "conversation_lookup"
+    if "messages" in s and ("insert" in s or "update" in s or "select" in s):
+        return "message_persistence"
+    if "documents" in s:
+        return "document_metadata"
+    return "other"
+
+
+def _register_engine_listeners(sync_engine) -> None:
+    from sqlalchemy import event
+
+    from app.core.tracing import get_current_trace
+
+    @event.listens_for(sync_engine, "before_cursor_execute")
+    def before_cursor_execute(_conn, _cursor, _statement, _parameters, context, _executemany):
+        context._byok_query_t0 = time.perf_counter()
+
+    @event.listens_for(sync_engine, "after_cursor_execute")
+    def after_cursor_execute(_conn, _cursor, statement, _parameters, context, _executemany):
+        if hasattr(context, "_byok_query_t0"):
+            duration_ms = (time.perf_counter() - context._byok_query_t0) * 1000.0
+            trace = get_current_trace()
+            if trace is not None:
+                category = _categorize_statement(statement)
+                trace.record_db_query(category, duration_ms)
 
 
 def get_session_factory() -> async_sessionmaker[AsyncSession]:
@@ -100,10 +142,13 @@ def get_pool_status() -> dict:
             "pool_size": getattr(pool, "size", lambda: None)(),
             "checked_out": getattr(pool, "checkedout", lambda: None)(),
             "overflow": getattr(pool, "overflow", lambda: None)(),
-            "invalid": getattr(pool, "invalidated", lambda: None)() if hasattr(pool, "invalidated") else None,
+            "invalid": getattr(pool, "invalidated", lambda: None)()
+            if hasattr(pool, "invalidated")
+            else None,
         }
     except Exception:
         return {"status": "unknown"}
+
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """
@@ -119,6 +164,7 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
     session_factory = get_session_factory()
     sess_create_ms = (time.perf_counter() - sess_t0) * 1000.0
     if trace:
+        trace.record_session_created(1)
         trace.record("db_session_factory_ms", sess_create_ms)
         # pool status snapshot at acquisition
         ps = get_pool_status()
@@ -126,7 +172,6 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             trace.set_counter(f"pool_{k}", v)
 
     async with session_factory() as session:
-        checkout_ms = 0.0
         if trace:
             # estimate checkout overhead (session creation is lazy; actual checkout on first query)
             trace.record("db_session_acquisition_ms", sess_create_ms)

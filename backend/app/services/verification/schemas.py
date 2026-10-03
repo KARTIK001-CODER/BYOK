@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
 
 
-class ClaimType(str, Enum):
+class ClaimType(StrEnum):
     FACTUAL = "FACTUAL"
     NUMERICAL = "NUMERICAL"
     TEMPORAL = "TEMPORAL"
@@ -18,7 +17,7 @@ class ClaimType(str, Enum):
     NON_VERIFIABLE = "NON_VERIFIABLE"
 
 
-class VerificationStatus(str, Enum):
+class VerificationStatus(StrEnum):
     SUPPORTED = "SUPPORTED"
     PARTIALLY_SUPPORTED = "PARTIALLY_SUPPORTED"
     UNSUPPORTED = "UNSUPPORTED"
@@ -27,14 +26,14 @@ class VerificationStatus(str, Enum):
     NON_VERIFIABLE = "NON_VERIFIABLE"
 
 
-class CitationStatus(str, Enum):
+class CitationStatus(StrEnum):
     VALID = "VALID"
     WEAK = "WEAK"
     INVALID = "INVALID"
     MISSING = "MISSING"
 
 
-class AnswerStatus(str, Enum):
+class AnswerStatus(StrEnum):
     HIGHLY_GROUNDED = "HIGHLY_GROUNDED"
     MOSTLY_GROUNDED = "MOSTLY_GROUNDED"
     PARTIALLY_GROUNDED = "PARTIALLY_GROUNDED"
@@ -43,7 +42,7 @@ class AnswerStatus(str, Enum):
     UNCERTAIN = "UNCERTAIN"
 
 
-class HallucinationRisk(str, Enum):
+class HallucinationRisk(StrEnum):
     LOW = "LOW"
     MEDIUM = "MEDIUM"
     HIGH = "HIGH"

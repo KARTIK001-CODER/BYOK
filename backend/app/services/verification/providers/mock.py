@@ -5,7 +5,12 @@ from __future__ import annotations
 import time
 
 from app.services.verification.base import BaseVerifier
-from app.services.verification.schemas import Claim, ClaimVerificationResult, Evidence, VerificationStatus
+from app.services.verification.schemas import (
+    Claim,
+    ClaimVerificationResult,
+    Evidence,
+    VerificationStatus,
+)
 
 
 class MockVerifier(BaseVerifier):
@@ -32,14 +37,22 @@ class MockVerifier(BaseVerifier):
             elif "90" in lower and any("30" in e.content for e in evidence):
                 status = VerificationStatus.CONTRADICTED
             elif "not" in lower:
-                status = VerificationStatus.CONTRADICTED if any("not" in e.content.lower() for e in evidence) else VerificationStatus.SUPPORTED
+                status = (
+                    VerificationStatus.CONTRADICTED
+                    if any("not" in e.content.lower() for e in evidence)
+                    else VerificationStatus.SUPPORTED
+                )
             elif not evidence:
                 status = VerificationStatus.UNSUPPORTED
             elif claim.claim_type.value == "NON_VERIFIABLE":
                 status = VerificationStatus.NON_VERIFIABLE
             else:
                 # Default: if evidence contains any word from claim -> supported else unsupported
-                status = VerificationStatus.SUPPORTED if any(w in e.content.lower() for e in evidence for w in lower.split()[:3]) else VerificationStatus.UNSUPPORTED
+                status = (
+                    VerificationStatus.SUPPORTED
+                    if any(w in e.content.lower() for e in evidence for w in lower.split()[:3])
+                    else VerificationStatus.UNSUPPORTED
+                )
             conf = 0.85
             reason = "Mock deterministic"
         return ClaimVerificationResult(
@@ -49,5 +62,5 @@ class MockVerifier(BaseVerifier):
             reason=reason,
             evidence=evidence,
             provider=self.name,
-            verification_latency_ms=round((time.perf_counter() - t0)*1000, 2),
+            verification_latency_ms=round((time.perf_counter() - t0) * 1000, 2),
         )

@@ -117,13 +117,15 @@ EXPLAIN ANALYZE SELECT ... WHERE embedding <=> $1 ORDER BY distance LIMIT 30;
 **Index definition (verified):** `app/models/document_chunk.py:51` —
 
 ```python
-Index(
-    "ix_document_chunks_embedding",
-    "embedding",
-    postgresql_using="hnsw",
-    postgresql_with={"m": 16, "ef_construction": 64},
-    postgresql_ops={"embedding": "vector_cosine_ops"},
-),
+(
+    Index(
+        "ix_document_chunks_embedding",
+        "embedding",
+        postgresql_using="hnsw",
+        postgresql_with={"m": 16, "ef_construction": 64},
+        postgresql_ops={"embedding": "vector_cosine_ops"},
+    ),
+)
 ```
 
 This index **exists in Alembic** but must be verified on Neon via `GET /api/v1/diagnostics/query-plan` (returns `vector_hnsw_index`, `total_chunks`, `vector_explain`). In local SQLite it is not created (dialect != postgresql). **Action required:** Run `EXPLAIN ANALYZE` on production and confirm `Planning Time`, `Execution Time`, `Index Used`, `Rows Scanned`.
@@ -151,11 +153,13 @@ ORDER BY rank_score DESC LIMIT $candidate_k
 **Index:** `app/models/document_chunk.py:58` —
 
 ```python
-Index(
-    "ix_document_chunks_search_vector",
-    "search_vector",
-    postgresql_using="gin",
-),
+(
+    Index(
+        "ix_document_chunks_search_vector",
+        "search_vector",
+        postgresql_using="gin",
+    ),
+)
 ```
 
 with `search_vector` as `Generated` `to_tsvector('english', coalesce(section_title,'') || ' ' || coalesce(content,''))` (`document_chunk.py:144`). Expected plan: `Bitmap Index Scan on ix_document_chunks_search_vector`. If GIN not used → `Seq Scan` + `Filter: (search_vector @@ plainto_tsquery(...))` → seconds at scale.
@@ -425,7 +429,13 @@ Distinguishes **LLM slow vs backend slow vs client slow** — backend overhead i
 
 4. **Benchmark script** (`scripts/benchmark_chat.py:69`):
    ```python
-   payload = {"message": query, "knowledge_base_ids": [kb_id], "search_mode": "hybrid", "top_k": 5, "provider": "mock"}
+   payload = {
+       "message": query,
+       "knowledge_base_ids": [kb_id],
+       "search_mode": "hybrid",
+       "top_k": 5,
+       "provider": "mock",
+   }
    ```
    Uses mock correctly, but earlier report’s “mocked provider” may have been **client-side mock** (still calling server’s default groq) or server’s `DEFAULT_LLM_PROVIDER` not overridden.
 

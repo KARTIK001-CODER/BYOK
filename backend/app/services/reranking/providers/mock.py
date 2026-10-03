@@ -47,7 +47,13 @@ class MockReranker(BaseReranker):
             # Slight position decay to simulate original rank influence but deterministic
             position_bonus = 0.01 * (len(candidates) - idx) / len(candidates) if candidates else 0
             score = base + position_bonus
-            scored.append({**cand, "rerank_score": round(score, 4), "original_rank": cand.get("retrieval_rank") or idx + 1})
+            scored.append(
+                {
+                    **cand,
+                    "rerank_score": round(score, 4),
+                    "original_rank": cand.get("retrieval_rank") or idx + 1,
+                }
+            )
 
         # Sort descending by rerank_score, tie-break by original rank
         scored.sort(key=lambda x: (-x["rerank_score"], x["original_rank"]))

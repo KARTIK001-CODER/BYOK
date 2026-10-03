@@ -6,11 +6,27 @@ import re
 import time
 
 from app.services.verification.base import BaseVerifier
-from app.services.verification.schemas import Claim, ClaimVerificationResult, Evidence, VerificationStatus
-
+from app.services.verification.schemas import (
+    Claim,
+    ClaimVerificationResult,
+    Evidence,
+    VerificationStatus,
+)
 
 NUM_RE = re.compile(r"\b\d+(?:\.\d+)?\b")
-NEGATION_WORDS = {"not", "no", "never", "cannot", "can't", "won't", "without", "against", "prohibited", "cannot", "unable", "failed"}
+NEGATION_WORDS = {
+    "not",
+    "no",
+    "never",
+    "cannot",
+    "can't",
+    "won't",
+    "without",
+    "against",
+    "prohibited",
+    "unable",
+    "failed",
+}
 CONTRAST_WORDS = {"but", "however", "although", "though"}
 
 
@@ -48,7 +64,7 @@ class HeuristicVerifier(BaseVerifier):
                 reason="Non-verifiable opinion/subjective",
                 evidence=evidence,
                 provider=self.name,
-                verification_latency_ms=round((time.perf_counter() - t0)*1000, 2),
+                verification_latency_ms=round((time.perf_counter() - t0) * 1000, 2),
             )
 
         if not evidence:
@@ -59,12 +75,11 @@ class HeuristicVerifier(BaseVerifier):
                 reason="No evidence selected",
                 evidence=[],
                 provider=self.name,
-                verification_latency_ms=round((time.perf_counter() - t0)*1000, 2),
+                verification_latency_ms=round((time.perf_counter() - t0) * 1000, 2),
             )
 
         # For each evidence, compute signals
         # Aggregate: if any evidence clearly supports -> SUPPORTED, if any contradicts -> CONTRADICTED, else UNSUPPORTED/UNCERTAIN
-        claim_lower = claim.text.lower()
         claim_numbers = _extract_numbers(claim.text)
         claim_neg = _has_negation(claim.text)
 
@@ -76,21 +91,23 @@ class HeuristicVerifier(BaseVerifier):
         # print(f"DEBUG claim_numbers={claim_numbers} ev_numbers={ev_numbers if evidence else None} overlap for first ev={( _lexical_overlap(claim.text, evidence[0].content) if evidence else 'no_ev')}")
 
         for ev in evidence:
-            ev_lower = ev.content.lower()
             ev_numbers = _extract_numbers(ev.content)
             ev_neg = _has_negation(ev.content)
             overlap = _lexical_overlap(claim.text, ev.content)
 
             # Numerical contradiction: claim has number not in evidence, and evidence has different number
-            if claim_numbers:
-                # If claim numbers and evidence numbers exist but don't intersect -> potential contradiction
-                if claim_numbers and ev_numbers and not claim_numbers.intersection(ev_numbers):
-                    # Check if both mention same context (refund, days, etc.) — very low threshold for numerical
-                    if overlap >= 0.1:  # sufficient lexical overlap to be same topic (lower for numerical, stem variant)
-                        best_status = VerificationStatus.CONTRADICTED
-                        best_conf = 0.85
-                        best_reason = f"Numerical mismatch: claim {claim_numbers} vs evidence {ev_numbers}"
-                        break
+            # If claim numbers and evidence numbers exist but don't intersect -> potential contradiction
+            if (
+                claim_numbers
+                and ev_numbers
+                and not claim_numbers.intersection(ev_numbers)
+                and overlap
+                >= 0.1  # sufficient lexical overlap to be same topic (lower for numerical, stem variant)
+            ):
+                best_status = VerificationStatus.CONTRADICTED
+                best_conf = 0.85
+                best_reason = f"Numerical mismatch: claim {claim_numbers} vs evidence {ev_numbers}"
+                break
 
             # Negation contradiction: one has negation other doesn't, with high overlap
             if claim_neg != ev_neg and overlap >= 0.5:
@@ -108,7 +125,10 @@ class HeuristicVerifier(BaseVerifier):
                     best_reason = f"High lexical overlap {overlap:.2f}"
                 else:
                     # Partial
-                    if best_status not in (VerificationStatus.SUPPORTED, VerificationStatus.CONTRADICTED):
+                    if best_status not in (
+                        VerificationStatus.SUPPORTED,
+                        VerificationStatus.CONTRADICTED,
+                    ):
                         best_status = VerificationStatus.PARTIALLY_SUPPORTED
                         best_conf = max(best_conf, 0.65)
                         best_reason = f"Partial overlap {overlap:.2f}"
@@ -129,7 +149,7 @@ class HeuristicVerifier(BaseVerifier):
             best_reason = "Insufficient evidence to confidently classify"
 
         # Confidence based on overlap, negation, numerical
-        latency = round((time.perf_counter() - t0)*1000, 2)
+        latency = round((time.perf_counter() - t0) * 1000, 2)
         return ClaimVerificationResult(
             claim=claim,
             status=best_status,

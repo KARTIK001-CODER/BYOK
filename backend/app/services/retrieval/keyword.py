@@ -83,7 +83,11 @@ class KeywordRetriever:
             rank_expr = func.ts_rank_cd(DocumentChunk.search_vector, query_ts)
 
             stmt = (
-                select(DocumentChunk, Document.name.label("document_name"), rank_expr.label("rank_score"))
+                select(
+                    DocumentChunk,
+                    Document.name.label("document_name"),
+                    rank_expr.label("rank_score"),
+                )
                 .join(Document, DocumentChunk.document_id == Document.id)
                 .where(and_(*where_clauses, DocumentChunk.search_vector.op("@@")(query_ts)))
                 .order_by(rank_expr.desc())

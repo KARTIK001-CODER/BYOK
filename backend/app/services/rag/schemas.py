@@ -70,6 +70,10 @@ class RAGChatRequest(BaseModel):
         le=2.0,
         description="Sampling temperature for answer generation.",
     )
+    parallel_execution: bool | None = Field(
+        default=None,
+        description="Optional override for parallel vs sequential hybrid retrieval.",
+    )
 
     @field_validator("message")
     @classmethod
@@ -93,7 +97,9 @@ class RAGChatResponse(BaseModel):
     provider: str
     usage: dict[str, int | None] | None = None
     latency_ms: float = 0.0
-    groundedness: dict[str, Any] | None = Field(default=None, description="Optional groundedness result when ENABLE_GROUNDEDNESS_CHECK=true")
+    groundedness: dict[str, Any] | None = Field(
+        default=None, description="Optional groundedness result when ENABLE_GROUNDEDNESS_CHECK=true"
+    )
 
 
 class MessageRead(BaseModel):

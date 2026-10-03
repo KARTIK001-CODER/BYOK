@@ -169,7 +169,7 @@ EvaluationConfigSnapshot(
     candidate_k=30,  # max(top_k*4, 30)
     fusion_method="rrf",
     rrf_k=60,
-    extra={"top_k_values": [1,3,5,10]}
+    extra={"top_k_values": [1, 3, 5, 10]},
 )
 ```
 
@@ -303,7 +303,9 @@ Contains: `metrics`, `dataset_version`, `config`, `timestamp`, `git_commit` (via
 Thresholds (`app/services/evaluation/schemas.py:110` + `regression.py:12`):
 
 ```python
-RegressionThresholds(mrr_max_regression=0.02, hit_at_5_max_regression=0.02, hit_at_1_max_regression=0.05)
+RegressionThresholds(
+    mrr_max_regression=0.02, hit_at_5_max_regression=0.02, hit_at_1_max_regression=0.05
+)
 ```
 
 **Statuses:**

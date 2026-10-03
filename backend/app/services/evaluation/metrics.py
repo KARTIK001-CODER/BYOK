@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections import defaultdict
 from collections.abc import Sequence
 
-from app.services.evaluation.schemas import CaseResult, EvaluationCategory, MetricResult
+from app.services.evaluation.schemas import CaseResult, MetricResult
 
 
 class EvaluationMetrics:
@@ -97,7 +97,7 @@ class EvaluationMetrics:
         cls,
         retrieved_ids: Sequence[str],
         relevant_ids: Sequence[str],
-        k: int,
+        k: int,  # noqa: ARG003 - stable public signature, per-k resolution via top_k_values
         top_k_values: Sequence[int] | None = None,
     ) -> dict[str, float | bool]:
         top_k_values = top_k_values or [1, 3, 5, 10]
@@ -124,14 +124,34 @@ class EvaluationMetrics:
         hits_1 = sum(1 for c in case_results if c.hit_at_k.get("1", False)) / n
         hits_3 = sum(1 for c in case_results if c.hit_at_k.get("3", False)) / n
         hits_5 = sum(1 for c in case_results if c.hit_at_k.get("5", False)) / n
-        hits_10 = sum(1 for c in case_results if c.hit_at_k.get("10", False)) / n if 10 in top_k_values else None
+        hits_10 = (
+            sum(1 for c in case_results if c.hit_at_k.get("10", False)) / n
+            if 10 in top_k_values
+            else None
+        )
         avg_mrr = sum(c.mrr for c in case_results) / n
         avg_prec = sum(c.precision_at_k for c in case_results) / n
         avg_rec = sum(c.recall_at_k for c in case_results) / n
         # NDCG (if present)
-        avg_ndcg3 = sum(c.ndcg_at_k.get("3", c.ndcg) for c in case_results) / n if any(c.ndcg_at_k for c in case_results) else sum(c.ndcg for c in case_results) / n if any(c.ndcg for c in case_results) else 0.0
-        avg_ndcg5 = sum(c.ndcg_at_k.get("5", c.ndcg) for c in case_results) / n if any(c.ndcg_at_k for c in case_results) else sum(c.ndcg for c in case_results) / n if any(c.ndcg for c in case_results) else 0.0
-        avg_ndcg10 = sum(c.ndcg_at_k.get("10", 0.0) for c in case_results) / n if 10 in top_k_values and any(c.ndcg_at_k for c in case_results) else None
+        avg_ndcg3 = (
+            sum(c.ndcg_at_k.get("3", c.ndcg) for c in case_results) / n
+            if any(c.ndcg_at_k for c in case_results)
+            else sum(c.ndcg for c in case_results) / n
+            if any(c.ndcg for c in case_results)
+            else 0.0
+        )
+        avg_ndcg5 = (
+            sum(c.ndcg_at_k.get("5", c.ndcg) for c in case_results) / n
+            if any(c.ndcg_at_k for c in case_results)
+            else sum(c.ndcg for c in case_results) / n
+            if any(c.ndcg for c in case_results)
+            else 0.0
+        )
+        avg_ndcg10 = (
+            sum(c.ndcg_at_k.get("10", 0.0) for c in case_results) / n
+            if 10 in top_k_values and any(c.ndcg_at_k for c in case_results)
+            else None
+        )
         return MetricResult(
             hit_at_1=round(hits_1, 4),
             hit_at_3=round(hits_3, 4),

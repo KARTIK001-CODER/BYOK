@@ -1,5 +1,6 @@
-import pytest
 from unittest.mock import AsyncMock
+
+import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.evaluation.runner import EvaluationRunner, get_adapter
@@ -18,8 +19,6 @@ def test_get_adapter():
 async def test_runner_with_mock_adapter(tmp_path):
     # Create tiny dataset
     import json
-    from pathlib import Path
-    from app.services.evaluation.schemas import EvaluationCategory
 
     dataset = {
         "version": "1.0",
@@ -48,8 +47,20 @@ async def test_runner_with_mock_adapter(tmp_path):
 
         async def retrieve(self, session, organization_id, query, top_k, candidate_k=50):
             if "refund" in query.lower() or "money" in query.lower():
-                return [RetrievedResult(rank=1, chunk_id="c1", document_id="d1", document_name="Refund Policy", score=0.9)]
-            return [RetrievedResult(rank=1, chunk_id="c2", document_id="d2", document_name="Pricing", score=0.9)]
+                return [
+                    RetrievedResult(
+                        rank=1,
+                        chunk_id="c1",
+                        document_id="d1",
+                        document_name="Refund Policy",
+                        score=0.9,
+                    )
+                ]
+            return [
+                RetrievedResult(
+                    rank=1, chunk_id="c2", document_id="d2", document_name="Pricing", score=0.9
+                )
+            ]
 
     # Need a dummy session — use None but runner uses it only via adapter; our mock ignores it
     # Use real evaluation runner but with mock session
@@ -64,13 +75,28 @@ async def test_runner_with_mock_adapter(tmp_path):
 
 
 def test_top_k_config():
-    from pathlib import Path
-    import json, tempfile
+    import json
+    import tempfile
 
     # Validate top_k_values propagation via config snapshot
     with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-        json.dump({"version": "1.0", "cases": [{"id": "eval_001", "query": "refund?", "category": "semantic", "expected": [{"document_name": "Refund Policy"}]}]}, f)
+        json.dump(
+            {
+                "version": "1.0",
+                "cases": [
+                    {
+                        "id": "eval_001",
+                        "query": "refund?",
+                        "category": "semantic",
+                        "expected": [{"document_name": "Refund Policy"}],
+                    }
+                ],
+            },
+            f,
+        )
         path = f.name
-    runner = EvaluationRunner(dataset_path=path, retriever="vector", top_k=3, top_k_values=[1, 3, 5])
+    runner = EvaluationRunner(
+        dataset_path=path, retriever="vector", top_k=3, top_k_values=[1, 3, 5]
+    )
     assert runner.top_k == 3
     assert runner.top_k_values == [1, 3, 5]

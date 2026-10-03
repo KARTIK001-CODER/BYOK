@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from enum import Enum
+from datetime import UTC, datetime
+from enum import Enum, StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
 
-class EvaluationCategory(str, Enum):
+class EvaluationCategory(StrEnum):
     semantic = "semantic"
     keyword = "keyword"
     factual = "factual"
@@ -24,7 +24,7 @@ class EvaluationCategory(str, Enum):
     no_answer = "no_answer"
 
 
-class EvaluationDifficulty(str, Enum):
+class EvaluationDifficulty(StrEnum):
     easy = "easy"
     medium = "medium"
     hard = "hard"
@@ -44,8 +44,12 @@ class ExpectedResult(BaseModel):
 
     document_name: str | None = Field(default=None, description="Stable document name/slug")
     document_slug: str | None = Field(default=None)
-    chunk_content_snippet: str | None = Field(default=None, description="Unique content snippet for chunk-level match")
-    relevance_grade: int = Field(default=1, ge=0, le=3, description="Graded relevance, default 1 = relevant")
+    chunk_content_snippet: str | None = Field(
+        default=None, description="Unique content snippet for chunk-level match"
+    )
+    relevance_grade: int = Field(
+        default=1, ge=0, le=3, description="Graded relevance, default 1 = relevant"
+    )
 
     model_config = {"extra": "forbid"}
 
@@ -57,7 +61,9 @@ class EvaluationCase(BaseModel):
     query: str = Field(..., min_length=3)
     category: EvaluationCategory = Field(...)
     difficulty: EvaluationDifficulty = Field(default=EvaluationDifficulty.medium)
-    expected: list[ExpectedResult] = Field(..., min_length=1, description="At least one relevant expectation")
+    expected: list[ExpectedResult] = Field(
+        ..., min_length=1, description="At least one relevant expectation"
+    )
     notes: str | None = Field(default=None)
     tags: list[str] | None = None
 
@@ -86,7 +92,7 @@ class EvaluationDataset(BaseModel):
 
     version: str = Field(default="1.0")
     description: str | None = None
-    created_at: str | None = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    created_at: str | None = Field(default_factory=lambda: datetime.now(UTC).isoformat())
     cases: list[EvaluationCase] = Field(..., min_length=1)
     metadata: dict[str, Any] | None = None
 
@@ -103,6 +109,7 @@ class EvaluationDataset(BaseModel):
 
 
 # --- Runtime results ---
+
 
 class RetrievedResult(BaseModel):
     rank: int

@@ -46,10 +46,15 @@ class ConversationService:
         title: str | None = None,
         knowledge_base_ids: list[str] | None = None,
         metadata: dict | None = None,
+        conversation_id: str | None = None,
+        flush: bool = True,
     ) -> Conversation:
         """Explicitly create a new conversation thread."""
+        import uuid
+
         conv_title = title.strip() if title and title.strip() else "New Conversation"
         conv = Conversation(
+            id=conversation_id or str(uuid.uuid4()),
             organization_id=organization_id,
             user_id=user_id,
             title=conv_title,
@@ -57,8 +62,9 @@ class ConversationService:
             conversation_metadata=metadata,
         )
         session.add(conv)
-        await session.flush()
-        await session.refresh(conv)
+        if flush:
+            await session.flush()
+        # No refresh(): client-side uuid4 id and timestamps are populated immediately.
         return conv
 
     @classmethod
@@ -70,15 +76,13 @@ class ConversationService:
         conversation_id: str | None,
         initial_query: str,
         knowledge_base_ids: list[str] | None = None,
+        flush: bool = True,
     ) -> Conversation:
         """Fetch an existing conversation or create a new one with an auto-derived title."""
         if conversation_id:
-            stmt = (
-                select(Conversation)
-                .where(
-                    Conversation.id == conversation_id,
-                    Conversation.organization_id == organization_id,
-                )
+            stmt = select(Conversation).where(
+                Conversation.id == conversation_id,
+                Conversation.organization_id == organization_id,
             )
             result = await session.execute(stmt)
             conv = result.scalar_one_or_none()
@@ -88,7 +92,8 @@ class ConversationService:
                 )
             if knowledge_base_ids and not conv.knowledge_base_ids:
                 conv.knowledge_base_ids = knowledge_base_ids
-                await session.flush()
+                if flush:
+                    await session.flush()
             return conv
 
         # Derive title and create
@@ -99,6 +104,7 @@ class ConversationService:
             user_id=user_id,
             title=title,
             knowledge_base_ids=knowledge_base_ids,
+            flush=flush,
         )
 
     @classmethod
@@ -182,24 +188,28 @@ class ConversationService:
         content: str,
         metadata: dict | None = None,
         message_id: str | None = None,
+        flush: bool = True,
     ) -> Message:
-        """Append a message to a conversation thread and touch the conversation's updated_at timestamp."""
+        """Append a message to a conversation thread."""
+        import uuid
+
         role_enum = MessageRole(role) if isinstance(role, str) else role
-        
+
         msg_kwargs = {
+            "id": message_id or str(uuid.uuid4()),
             "conversation_id": conversation_id,
             "role": role_enum,
             "content": content,
             "message_metadata": metadata,
             "created_at": datetime.now(UTC),
         }
-        if message_id is not None:
-            msg_kwargs["id"] = message_id
-            
+
         msg = Message(**msg_kwargs)
         session.add(msg)
-        await session.flush()
-        await session.refresh(msg)
+        if flush:
+            await session.flush()
+        # No refresh(): id (client-side uuid4 default) and created_at are already
+        # populated immediately; a refresh would cost a full DB round trip.
         return msg
 
     @classmethod
@@ -210,11 +220,15 @@ class ConversationService:
         limit: int = 10,
     ) -> list[Message]:
         """Fetch the most recent messages for a conversation in chronological order."""
+        # Fetch newest N first (uses ix_messages_conv_created), then reverse
+        # so callers get chronological order. Previous asc+limit returned oldest N.
         stmt = (
             select(Message)
             .where(Message.conversation_id == conversation_id)
-            .order_by(Message.created_at.asc())
+            .order_by(Message.created_at.desc(), Message.id.desc())
             .limit(limit)
         )
         result = await session.execute(stmt)
-        return list(result.scalars().all())
+        msgs = list(result.scalars().all())
+        msgs.reverse()
+        return msgs

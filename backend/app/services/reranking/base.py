@@ -11,13 +11,11 @@ class BaseReranker(ABC):
 
     @property
     @abstractmethod
-    def name(self) -> str:
-        ...
+    def name(self) -> str: ...
 
     @property
     @abstractmethod
-    def model_name(self) -> str:
-        ...
+    def model_name(self) -> str: ...
 
     @abstractmethod
     async def rerank(

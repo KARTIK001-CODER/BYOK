@@ -6,9 +6,9 @@ import logging
 import time
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Protocol
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,11 +17,9 @@ from app.services.evaluation.dataset import EvaluationDatasetLoader
 from app.services.evaluation.metrics import EvaluationMetrics
 from app.services.evaluation.schemas import (
     CaseResult,
-    EvaluationCategory,
     EvaluationConfigSnapshot,
     EvaluationDataset,
     EvaluationReport,
-    MetricResult,
     RetrievedResult,
 )
 from app.services.retrieval.schemas import RetrievalRequest, SearchMode
@@ -42,17 +40,27 @@ class RetrieverAdapter(Protocol):
         query: str,
         top_k: int,
         candidate_k: int = 50,
-    ) -> list[RetrievedResult]:
-        ...
+    ) -> list[RetrievedResult]: ...
 
 
 @dataclass
 class VectorAdapter:
     name: str = "vector"
 
-    async def retrieve(self, session: AsyncSession, organization_id: str, query: str, top_k: int, candidate_k: int = 50) -> list[RetrievedResult]:
-        req = RetrievalRequest(query=query, top_k=top_k, candidate_k=candidate_k, search_mode=SearchMode.VECTOR)
-        resp = await RetrievalService.search(session=session, organization_id=organization_id, request=req)
+    async def retrieve(
+        self,
+        session: AsyncSession,
+        organization_id: str,
+        query: str,
+        top_k: int,
+        candidate_k: int = 50,
+    ) -> list[RetrievedResult]:
+        req = RetrievalRequest(
+            query=query, top_k=top_k, candidate_k=candidate_k, search_mode=SearchMode.VECTOR
+        )
+        resp = await RetrievalService.search(
+            session=session, organization_id=organization_id, request=req
+        )
         return [
             RetrievedResult(
                 rank=r.rank,
@@ -70,9 +78,20 @@ class VectorAdapter:
 class KeywordAdapter:
     name: str = "keyword"
 
-    async def retrieve(self, session: AsyncSession, organization_id: str, query: str, top_k: int, candidate_k: int = 50) -> list[RetrievedResult]:
-        req = RetrievalRequest(query=query, top_k=top_k, candidate_k=candidate_k, search_mode=SearchMode.KEYWORD)
-        resp = await RetrievalService.search(session=session, organization_id=organization_id, request=req)
+    async def retrieve(
+        self,
+        session: AsyncSession,
+        organization_id: str,
+        query: str,
+        top_k: int,
+        candidate_k: int = 50,
+    ) -> list[RetrievedResult]:
+        req = RetrievalRequest(
+            query=query, top_k=top_k, candidate_k=candidate_k, search_mode=SearchMode.KEYWORD
+        )
+        resp = await RetrievalService.search(
+            session=session, organization_id=organization_id, request=req
+        )
         return [
             RetrievedResult(
                 rank=r.rank,
@@ -90,9 +109,20 @@ class KeywordAdapter:
 class HybridAdapter:
     name: str = "hybrid"
 
-    async def retrieve(self, session: AsyncSession, organization_id: str, query: str, top_k: int, candidate_k: int = 50) -> list[RetrievedResult]:
-        req = RetrievalRequest(query=query, top_k=top_k, candidate_k=candidate_k, search_mode=SearchMode.HYBRID)
-        resp = await RetrievalService.search(session=session, organization_id=organization_id, request=req)
+    async def retrieve(
+        self,
+        session: AsyncSession,
+        organization_id: str,
+        query: str,
+        top_k: int,
+        candidate_k: int = 50,
+    ) -> list[RetrievedResult]:
+        req = RetrievalRequest(
+            query=query, top_k=top_k, candidate_k=candidate_k, search_mode=SearchMode.HYBRID
+        )
+        resp = await RetrievalService.search(
+            session=session, organization_id=organization_id, request=req
+        )
         # Preserve fusion debug info if available (rrf)
         return [
             RetrievedResult(
@@ -115,11 +145,16 @@ class AdaptiveAdapter:
     name: str = "adaptive"
 
     async def retrieve(
-        self, session: AsyncSession, organization_id: str, query: str, top_k: int, candidate_k: int = 50
+        self,
+        session: AsyncSession,
+        organization_id: str,
+        query: str,
+        top_k: int,
+        candidate_k: int = 50,
     ) -> list[RetrievedResult]:
         # Force adaptive path even if global flag false — directly analyze and dispatch
-        from app.services.query_intelligence.analyzer import QueryAnalyzer
         from app.core.config import get_settings
+        from app.services.query_intelligence.analyzer import QueryAnalyzer
 
         settings = get_settings()
         analysis = QueryAnalyzer.analyze(query)
@@ -127,14 +162,22 @@ class AdaptiveAdapter:
 
         # Map to search mode + candidate_k
         if strat == "KEYWORD":
-            req = RetrievalRequest(query=query, top_k=top_k, candidate_k=candidate_k, search_mode=SearchMode.KEYWORD)
+            req = RetrievalRequest(
+                query=query, top_k=top_k, candidate_k=candidate_k, search_mode=SearchMode.KEYWORD
+            )
         elif strat == "VECTOR":
-            req = RetrievalRequest(query=query, top_k=top_k, candidate_k=candidate_k, search_mode=SearchMode.VECTOR)
+            req = RetrievalRequest(
+                query=query, top_k=top_k, candidate_k=candidate_k, search_mode=SearchMode.VECTOR
+            )
         elif strat == "HYBRID_WIDE":
             ck = getattr(settings, "HYBRID_WIDE_CANDIDATE_K", 50)
-            req = RetrievalRequest(query=query, top_k=top_k, candidate_k=ck, search_mode=SearchMode.HYBRID)
+            req = RetrievalRequest(
+                query=query, top_k=top_k, candidate_k=ck, search_mode=SearchMode.HYBRID
+            )
         else:
-            req = RetrievalRequest(query=query, top_k=top_k, candidate_k=candidate_k, search_mode=SearchMode.HYBRID)
+            req = RetrievalRequest(
+                query=query, top_k=top_k, candidate_k=candidate_k, search_mode=SearchMode.HYBRID
+            )
 
         # Temporarily enable flag so RetrievalService also records qi timings if needed, but we already analyzed
         # To avoid double analysis, pass provider None; RetrievalService will re-analyze if flag true.
@@ -143,7 +186,9 @@ class AdaptiveAdapter:
         try:
             # Disable inner adaptive to prevent double routing
             settings.ENABLE_QUERY_INTELLIGENCE = False
-            resp = await RetrievalService.search(session=session, organization_id=organization_id, request=req)
+            resp = await RetrievalService.search(
+                session=session, organization_id=organization_id, request=req
+            )
         finally:
             settings.ENABLE_QUERY_INTELLIGENCE = original_flag
 
@@ -171,7 +216,14 @@ class AdaptiveAdapter:
 class HybridRerankedAdapter:
     name: str = "hybrid_reranked"
 
-    async def retrieve(self, session: AsyncSession, organization_id: str, query: str, top_k: int, candidate_k: int = 50) -> list[RetrievedResult]:
+    async def retrieve(
+        self,
+        session: AsyncSession,
+        organization_id: str,
+        query: str,
+        top_k: int,
+        candidate_k: int = 50,
+    ) -> list[RetrievedResult]:
         from app.core.config import get_settings
 
         settings = get_settings()
@@ -179,8 +231,12 @@ class HybridRerankedAdapter:
         try:
             settings.ENABLE_RERANKING = True
             # Ensure candidate_k for reranking is respected
-            req = RetrievalRequest(query=query, top_k=top_k, candidate_k=candidate_k, search_mode=SearchMode.HYBRID)
-            resp = await RetrievalService.search(session=session, organization_id=organization_id, request=req)
+            req = RetrievalRequest(
+                query=query, top_k=top_k, candidate_k=candidate_k, search_mode=SearchMode.HYBRID
+            )
+            resp = await RetrievalService.search(
+                session=session, organization_id=organization_id, request=req
+            )
             return [
                 RetrievedResult(
                     rank=r.rank,
@@ -201,7 +257,14 @@ class HybridRerankedAdapter:
 class AdaptiveRerankedAdapter:
     name: str = "adaptive_reranked"
 
-    async def retrieve(self, session: AsyncSession, organization_id: str, query: str, top_k: int, candidate_k: int = 50) -> list[RetrievedResult]:
+    async def retrieve(
+        self,
+        session: AsyncSession,
+        organization_id: str,
+        query: str,
+        top_k: int,
+        candidate_k: int = 50,
+    ) -> list[RetrievedResult]:
         from app.core.config import get_settings
         from app.services.query_intelligence.analyzer import QueryAnalyzer
 
@@ -223,8 +286,12 @@ class AdaptiveRerankedAdapter:
         try:
             settings.ENABLE_QUERY_INTELLIGENCE = False  # prevent double analysis
             settings.ENABLE_RERANKING = True
-            req = RetrievalRequest(query=query, top_k=top_k, candidate_k=candidate_k, search_mode=base_mode)
-            resp = await RetrievalService.search(session=session, organization_id=organization_id, request=req)
+            req = RetrievalRequest(
+                query=query, top_k=top_k, candidate_k=candidate_k, search_mode=base_mode
+            )
+            resp = await RetrievalService.search(
+                session=session, organization_id=organization_id, request=req
+            )
             return [
                 RetrievedResult(
                     rank=r.rank,
@@ -255,7 +322,9 @@ ADAPTER_REGISTRY: dict[str, RetrieverAdapter] = {
 def get_adapter(name: str) -> RetrieverAdapter:
     key = name.strip().lower()
     if key not in ADAPTER_REGISTRY:
-        raise ValueError(f"Unknown retriever adapter '{name}'. Available: {list(ADAPTER_REGISTRY.keys())}")
+        raise ValueError(
+            f"Unknown retriever adapter '{name}'. Available: {list(ADAPTER_REGISTRY.keys())}"
+        )
     return ADAPTER_REGISTRY[key]  # type: ignore[return-value]
 
 
@@ -294,7 +363,6 @@ class EvaluationRunner:
         # We match expected.document_name against retrieved.document_name or chunk content snippet
         case_results: list[CaseResult] = []
         failures: list[CaseResult] = []
-        start_all = time.perf_counter()
 
         for case in ds.cases:
             t0 = time.perf_counter()
@@ -314,14 +382,16 @@ class EvaluationRunner:
             # Determine relevant IDs based on stable document_name matching
             expected_names = {exp.document_name for exp in case.expected if exp.document_name}
             expected_slugs = {exp.document_slug for exp in case.expected if exp.document_slug}
-            expected_snippets = {exp.chunk_content_snippet for exp in case.expected if exp.chunk_content_snippet}
 
             relevant_chunk_ids: list[str] = []
             for r in retrieved:
                 is_rel = False
-                if r.document_name and r.document_name in expected_names:
-                    is_rel = True
-                elif r.document_name and r.document_name in expected_slugs:
+                if (
+                    r.document_name
+                    and r.document_name in expected_names
+                    or r.document_name
+                    and r.document_name in expected_slugs
+                ):
                     is_rel = True
                 # snippet matching (if we had chunk content, we could match)
                 r.is_relevant = is_rel
@@ -334,18 +404,40 @@ class EvaluationRunner:
             # We use expected_names as relevant identifiers and map retrieved to same space
             # For simplicity, use document_name as identifier
             retrieved_doc_names = [r.document_name or r.chunk_id for r in retrieved]
-            relevant_doc_names = list(expected_names) if expected_names else list(expected_slugs) if expected_slugs else []
+            relevant_doc_names = (
+                list(expected_names)
+                if expected_names
+                else list(expected_slugs)
+                if expected_slugs
+                else []
+            )
 
             # If expected uses chunk snippet, we treat as document-level for now (future: chunk hash)
             # Hit calculation uses document_name level
             hit_values: dict[str, bool] = {}
             for tk in top_k_values:
-                hit_values[str(tk)] = EvaluationMetrics.hit_at_k(retrieved_doc_names, relevant_doc_names, tk) if relevant_doc_names else False
+                hit_values[str(tk)] = (
+                    EvaluationMetrics.hit_at_k(retrieved_doc_names, relevant_doc_names, tk)
+                    if relevant_doc_names
+                    else False
+                )
 
             # MRR etc. at primary top_k
-            mrr = EvaluationMetrics.reciprocal_rank(retrieved_doc_names, relevant_doc_names) if relevant_doc_names else 0.0
-            prec = EvaluationMetrics.precision_at_k(retrieved_doc_names, relevant_doc_names, top_k) if relevant_doc_names else 0.0
-            rec = EvaluationMetrics.recall_at_k(retrieved_doc_names, relevant_doc_names, top_k) if relevant_doc_names else 0.0
+            mrr = (
+                EvaluationMetrics.reciprocal_rank(retrieved_doc_names, relevant_doc_names)
+                if relevant_doc_names
+                else 0.0
+            )
+            prec = (
+                EvaluationMetrics.precision_at_k(retrieved_doc_names, relevant_doc_names, top_k)
+                if relevant_doc_names
+                else 0.0
+            )
+            rec = (
+                EvaluationMetrics.recall_at_k(retrieved_doc_names, relevant_doc_names, top_k)
+                if relevant_doc_names
+                else 0.0
+            )
             # NDCG with graded relevance (binary grade 1 for current dataset, future 0-3)
             relevant_grades: dict[str, int] = {}
             for exp in case.expected:
@@ -353,10 +445,18 @@ class EvaluationRunner:
                 if key:
                     relevant_grades[key] = max(relevant_grades.get(key, 0), exp.relevance_grade)
             # Map retrieved_doc_names to grades dict for NDCG (use doc_name as key)
-            ndcg = EvaluationMetrics.ndcg_at_k(retrieved_doc_names, relevant_grades, top_k) if relevant_grades else 0.0
+            ndcg = (
+                EvaluationMetrics.ndcg_at_k(retrieved_doc_names, relevant_grades, top_k)
+                if relevant_grades
+                else 0.0
+            )
             ndcg_at_k: dict[str, float] = {}
             for tk in top_k_values:
-                ndcg_at_k[str(tk)] = round(EvaluationMetrics.ndcg_at_k(retrieved_doc_names, relevant_grades, tk), 4) if relevant_grades else 0.0
+                ndcg_at_k[str(tk)] = (
+                    round(EvaluationMetrics.ndcg_at_k(retrieved_doc_names, relevant_grades, tk), 4)
+                    if relevant_grades
+                    else 0.0
+                )
 
             # First relevant rank
             first_rank: int | None = None
@@ -393,7 +493,14 @@ class EvaluationRunner:
             if status == "miss":
                 failures.append(cr)
 
-            logger.debug("Case %s [%s] %s rank=%s mrr=%.3f", case.id, case.category.value, status, first_rank, mrr)
+            logger.debug(
+                "Case %s [%s] %s rank=%s mrr=%.3f",
+                case.id,
+                case.category.value,
+                status,
+                first_rank,
+                mrr,
+            )
 
         # Aggregate
         overall = EvaluationMetrics.aggregate(case_results, top_k=top_k, top_k_values=top_k_values)
@@ -422,13 +529,15 @@ class EvaluationRunner:
         try:
             import subprocess
 
-            git_commit = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], text=True).strip()
+            git_commit = subprocess.check_output(
+                ["git", "rev-parse", "--short", "HEAD"], text=True
+            ).strip()
         except Exception:
             pass
 
         report = EvaluationReport(
             evaluation_id=str(uuid.uuid4()),
-            timestamp=datetime.now(timezone.utc).isoformat(),
+            timestamp=datetime.now(UTC).isoformat(),
             dataset_version=ds.version,
             dataset_path=str(self.dataset_path),
             retriever=self.retriever_name,

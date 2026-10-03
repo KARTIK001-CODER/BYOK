@@ -29,7 +29,11 @@ class RerankerFactory:
         if prov == "mock":
             return cls._mock_instance or MockReranker(model_name=model or "mock-cross-encoder")
         if prov == "local":
-            return LocalReranker(model_name=model or getattr(settings, "RERANKER_MODEL", LocalReranker.DEFAULT_MODEL))
+            return LocalReranker(
+                model_name=model or getattr(settings, "RERANKER_MODEL", LocalReranker.DEFAULT_MODEL)
+            )
         # Future: Cohere, API etc. — for now fallback to local
         logger.warning("Unknown reranker provider %s, fallback to local", prov)
-        return LocalReranker(model_name=model or getattr(settings, "RERANKER_MODEL", LocalReranker.DEFAULT_MODEL))
+        return LocalReranker(
+            model_name=model or getattr(settings, "RERANKER_MODEL", LocalReranker.DEFAULT_MODEL)
+        )

@@ -25,7 +25,7 @@ class RerankingService:
         top_k: int | None = None,
         candidate_k: int | None = None,
         provider: str | None = None,
-        model: str | None = None,
+        model: str | None = None,  # noqa: ARG004 - stable public signature, provider factory resolves model
         timeout_seconds: float | None = None,
     ) -> tuple[list[dict[str, Any]], RerankerTrace]:
         """
@@ -39,8 +39,16 @@ class RerankingService:
         enabled = getattr(settings, "ENABLE_RERANKING", False)
         # If not enabled, fallback quickly — but service can still be called explicitly
         top_k = top_k if top_k is not None else getattr(settings, "RERANKER_TOP_K", 5)
-        candidate_k = candidate_k if candidate_k is not None else getattr(settings, "RERANKER_CANDIDATE_K", 30)
-        timeout = timeout_seconds if timeout_seconds is not None else getattr(settings, "RERANKER_TIMEOUT_SECONDS", 2.0)
+        candidate_k = (
+            candidate_k
+            if candidate_k is not None
+            else getattr(settings, "RERANKER_CANDIDATE_K", 30)
+        )
+        timeout = (
+            timeout_seconds
+            if timeout_seconds is not None
+            else getattr(settings, "RERANKER_TIMEOUT_SECONDS", 2.0)
+        )
 
         trace = get_current_trace()
         t0_total = time.perf_counter()
@@ -144,7 +152,7 @@ class RerankingService:
                 reranker.rerank(query, to_rerank, top_k=top_k),
                 timeout=float(timeout),
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.warning("Reranking timeout after %.2fs for query %.40s", timeout, query)
             fallback = True
             fallback_reason = f"timeout_{timeout}s"

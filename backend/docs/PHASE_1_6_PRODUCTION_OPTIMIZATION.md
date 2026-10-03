@@ -223,7 +223,7 @@ async with httpx.AsyncClient(follow_redirects=True) as client:
 ```python
 # app/core/config.py:118
 ENABLE_ARXIV_FALLBACK: bool = False  # disabled by default (Option A)
-ARXIV_TIMEOUT_SECONDS: int = 2        # bounded 1-2s (Option C)
+ARXIV_TIMEOUT_SECONDS: int = 2  # bounded 1-2s (Option C)
 
 # app/services/rag/service.py:110
 if not retrieval_resp.results and not is_test_env and settings.ENABLE_ARXIV_FALLBACK:
@@ -232,7 +232,9 @@ if not retrieval_resp.results and not is_test_env and settings.ENABLE_ARXIV_FALL
             ArxivClient.search(...), timeout=float(settings.ARXIV_TIMEOUT_SECONDS)
         )
     except (asyncio.TimeoutError, Exception) as e:
-        logger.warning(f"Arxiv fallback timeout/failure (bounded {settings.ARXIV_TIMEOUT_SECONDS}s): {e}")
+        logger.warning(
+            f"Arxiv fallback timeout/failure (bounded {settings.ARXIV_TIMEOUT_SECONDS}s): {e}"
+        )
         arxiv_results = []
     # only set if results exist, else grounded no-answer
 

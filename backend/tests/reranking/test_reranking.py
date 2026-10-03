@@ -1,6 +1,7 @@
 import pytest
-from app.services.reranking.providers.mock import MockReranker
+
 from app.services.reranking.factory import RerankerFactory
+from app.services.reranking.providers.mock import MockReranker
 from app.services.reranking.service import RerankingService
 
 
@@ -25,7 +26,9 @@ async def test_mock_reranker_deterministic():
 @pytest.mark.asyncio
 async def test_reranking_top_k():
     mock = MockReranker()
-    cands = [{"chunk_id": f"c{i}", "content": f"content {i}", "retrieval_rank": i} for i in range(1, 11)]
+    cands = [
+        {"chunk_id": f"c{i}", "content": f"content {i}", "retrieval_rank": i} for i in range(1, 11)
+    ]
     res = await mock.rerank("test", cands, top_k=3)
     assert len(res) == 3
     assert res[0]["rerank_rank"] == 1
@@ -48,6 +51,7 @@ async def test_reranking_service_dedup():
     ]
     # Enable reranking for test
     from app.core.config import get_settings
+
     orig = get_settings().ENABLE_RERANKING
     get_settings().ENABLE_RERANKING = True
     try:
@@ -63,6 +67,7 @@ async def test_reranking_service_dedup():
 async def test_reranking_fallback_disabled():
     cands = [{"chunk_id": "c1", "content": "hello", "retrieval_rank": 1}]
     from app.core.config import get_settings
+
     orig = get_settings().ENABLE_RERANKING
     get_settings().ENABLE_RERANKING = False
     try:
@@ -77,6 +82,7 @@ async def test_reranking_fallback_disabled():
 @pytest.mark.asyncio
 async def test_reranking_empty():
     from app.core.config import get_settings
+
     orig = get_settings().ENABLE_RERANKING
     get_settings().ENABLE_RERANKING = True
     try:
@@ -91,20 +97,26 @@ async def test_reranking_empty():
 async def test_reranking_timeout():
     # Use very small timeout to trigger fallback
     cands = [{"chunk_id": f"c{i}", "content": "content", "retrieval_rank": i} for i in range(10)]
+
     # Mock reranker that sleeps
     class SlowMock(MockReranker):
         async def rerank(self, query, candidates, top_k=5):
             import asyncio
+
             await asyncio.sleep(1)
             return await super().rerank(query, candidates, top_k)
 
     from app.services.reranking.factory import RerankerFactory
+
     RerankerFactory.set_mock_provider(SlowMock())
     from app.core.config import get_settings
+
     orig = get_settings().ENABLE_RERANKING
     get_settings().ENABLE_RERANKING = True
     try:
-        result, trace = await RerankingService.rerank("hello", cands, top_k=5, timeout_seconds=0.01, provider="mock")
+        result, trace = await RerankingService.rerank(
+            "hello", cands, top_k=5, timeout_seconds=0.01, provider="mock"
+        )
         assert trace.timeout is True or trace.fallback is True
         # Should fallback to original order
         assert len(result) == 5

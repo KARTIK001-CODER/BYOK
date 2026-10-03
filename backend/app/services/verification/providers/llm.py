@@ -6,12 +6,18 @@ import json
 import logging
 import time
 
+from pydantic import BaseModel, Field
+
 from app.core.config import get_settings
 from app.services.llm.base import LLMMessage, LLMRequest
 from app.services.llm.factory import LLMProviderFactory
 from app.services.verification.base import BaseVerifier
-from app.services.verification.schemas import Claim, ClaimVerificationResult, Evidence, VerificationStatus
-from pydantic import BaseModel, Field
+from app.services.verification.schemas import (
+    Claim,
+    ClaimVerificationResult,
+    Evidence,
+    VerificationStatus,
+)
 
 logger = logging.getLogger("app.services.verification.providers.llm")
 
@@ -44,11 +50,13 @@ class LLMVerifier(BaseVerifier):
                 reason="No evidence",
                 evidence=[],
                 provider=self.name,
-                verification_latency_ms=round((time.perf_counter() - t0)*1000, 2),
+                verification_latency_ms=round((time.perf_counter() - t0) * 1000, 2),
             )
 
         # Build evidence block
-        evidence_block = "\n\n".join(f"[Evidence {i+1}] {e.content[:800]}" for i, e in enumerate(evidence))
+        evidence_block = "\n\n".join(
+            f"[Evidence {i + 1}] {e.content[:800]}" for i, e in enumerate(evidence)
+        )
         system_prompt = (
             "You are a strict evidence verifier. ONLY use the provided evidence to classify the claim. "
             "Do NOT use external knowledge. Respond with JSON containing status (SUPPORTED, PARTIALLY_SUPPORTED, UNSUPPORTED, CONTRADICTED, UNCERTAIN), confidence 0.0-1.0, and reason."
@@ -59,7 +67,10 @@ class LLMVerifier(BaseVerifier):
         req = LLMRequest(
             provider=provider.name,
             model=model,
-            messages=[LLMMessage(role="system", content=system_prompt), LLMMessage(role="user", content=user_prompt)],
+            messages=[
+                LLMMessage(role="system", content=system_prompt),
+                LLMMessage(role="user", content=user_prompt),
+            ],
             temperature=0.0,
             max_tokens=256,
             stream=False,
@@ -83,7 +94,7 @@ class LLMVerifier(BaseVerifier):
             conf = 0.4
             reason = f"LLM verifier fallback: {e}"
 
-        latency = round((time.perf_counter() - t0)*1000, 2)
+        latency = round((time.perf_counter() - t0) * 1000, 2)
         return ClaimVerificationResult(
             claim=claim,
             status=status,

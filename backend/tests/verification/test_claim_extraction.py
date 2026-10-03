@@ -1,5 +1,7 @@
 import pytest
+
 from app.services.verification.claim_extraction import RuleBasedClaimExtractor
+
 
 @pytest.mark.asyncio
 async def test_claim_extraction_basic():
@@ -12,6 +14,7 @@ async def test_claim_extraction_basic():
     assert claims[1].answer_start is not None
     assert claims[0].claim_type.value in ["FACTUAL", "POLICY", "NUMERICAL"]
 
+
 @pytest.mark.asyncio
 async def test_claim_spans():
     extractor = RuleBasedClaimExtractor()
@@ -20,7 +23,8 @@ async def test_claim_spans():
     for c in claims:
         assert c.text in answer
         assert c.answer_start is not None
-        assert answer[c.answer_start:c.answer_end] == c.text
+        assert answer[c.answer_start : c.answer_end] == c.text
+
 
 @pytest.mark.asyncio
 async def test_claim_types():
@@ -34,6 +38,7 @@ async def test_claim_types():
     # POLICY
     claims3 = await extractor.extract("Users must submit a request before cancellation.")
     assert len(claims3) >= 1
+
 
 @pytest.mark.asyncio
 async def test_claim_extraction_empty():

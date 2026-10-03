@@ -11,6 +11,7 @@ from app.core.tracing import get_current_trace
 from app.models.document_chunk import DocumentChunk
 from app.models.knowledge_base import KnowledgeBase
 from app.services.embeddings.base import BaseEmbeddingProvider
+from app.services.embeddings.cache import get_query_embedding_cache
 from app.services.embeddings.providers import get_embedding_provider
 from app.services.retrieval.errors import RetrievalErrorCode, RetrievalException
 from app.services.retrieval.hybrid import HybridRetriever
@@ -84,6 +85,8 @@ class RetrievalService:
         settings = get_settings()
         total_start = time.perf_counter()
         trace = get_current_trace()
+        if trace:
+            trace.mark("retrieval_started")
         query_hash = cls._hash_query(request.query)
 
         # ── 1. Query Normalization & Validation ──
@@ -105,7 +108,38 @@ class RetrievalService:
             trace.set_counter("query_length", len(normalized_query))
             trace.set_counter("query_hash", query_hash)
 
-        # 2. Scoping & Authorization Validation
+        # Fast path: when Query Intelligence is disabled (production default),
+        # effective mode is known upfront — start embedding inference early so
+        # it overlaps with the KB-access DB round trip below.
+        _early_embed_task: asyncio.Task | None = None
+        _early_embed_provider: BaseEmbeddingProvider | None = None
+        _early_embed_init_ms = 0.0
+        _early_embed_infer_t0 = 0.0
+        if not settings.ENABLE_QUERY_INTELLIGENCE and request.search_mode in (
+            SearchMode.VECTOR,
+            SearchMode.HYBRID,
+        ):
+            _init_t0 = time.perf_counter()
+            _early_embed_provider = provider or get_embedding_provider()
+            _early_embed_init_ms = (time.perf_counter() - _init_t0) * 1000.0
+            _early_embed_infer_t0 = time.perf_counter()
+            if settings.ENABLE_QUERY_EMBEDDING_CACHE:
+                _cache = get_query_embedding_cache()
+                _early_embed_task = asyncio.create_task(
+                    _cache.get_or_compute(
+                        query=normalized_query,
+                        provider=_early_embed_provider,
+                        compute_fn=lambda: asyncio.to_thread(
+                            _early_embed_provider.embed_query, normalized_query
+                        ),
+                    )
+                )
+            else:
+                _early_embed_task = asyncio.create_task(
+                    asyncio.to_thread(_early_embed_provider.embed_query, normalized_query)
+                )
+
+        # 2. Scoping & Authorization Validation (overlaps with early embedding)
         authz_t0 = time.perf_counter()
         all_kb_ids: list[str] | None = None
         if request.knowledge_base_ids or (request.filters and request.filters.knowledge_base_ids):
@@ -116,7 +150,13 @@ class RetrievalService:
                 kb_set.update(request.filters.knowledge_base_ids)
             all_kb_ids = list(kb_set)
 
-        await cls.validate_knowledge_bases_access(session, organization_id, all_kb_ids)
+        try:
+            await cls.validate_knowledge_bases_access(session, organization_id, all_kb_ids)
+        except Exception:
+            # Don't leak the overlapped embedding task on authz failure
+            if _early_embed_task is not None and not _early_embed_task.done():
+                _early_embed_task.cancel()
+            raise
         authz_ms = (time.perf_counter() - authz_t0) * 1000.0
         if trace:
             trace.record("retrieval_authz_ms", authz_ms)
@@ -188,29 +228,76 @@ class RetrievalService:
 
         # Phase 2.2 — Reranking: determine initial retrieval size
         reranking_enabled = getattr(settings, "ENABLE_RERANKING", False)
-        initial_top_k = getattr(settings, "RERANKER_CANDIDATE_K", 30) if reranking_enabled else request.top_k
-        final_top_k = request.top_k
+        initial_top_k = (
+            getattr(settings, "RERANKER_CANDIDATE_K", 30) if reranking_enabled else request.top_k
+        )
 
         if effective_search_mode in (SearchMode.VECTOR, SearchMode.HYBRID):
-            # Measure provider instantiation (model init) separately from inference
-            init_t0 = time.perf_counter()
-            embedding_provider = provider or get_embedding_provider()
-            embed_init_ms = (time.perf_counter() - init_t0) * 1000.0
+            is_cache_hit = False
+            if _early_embed_task is not None and _early_embed_provider is not None:
+                # Reuse overlapped inference started before authz
+                embedding_provider = _early_embed_provider
+                embed_init_ms = _early_embed_init_ms
+                if settings.ENABLE_QUERY_EMBEDDING_CACHE:
+                    try:
+                        query_embedding, is_cache_hit, calc_ms = await _early_embed_task
+                    except ValueError as ve:
+                        raise RetrievalException(
+                            message=str(ve),
+                            code=RetrievalErrorCode.EMBEDDING_DIMENSION_MISMATCH,
+                        )
+                    embed_infer_ms = 0.0 if is_cache_hit else calc_ms
+                    embed_duration_ms = calc_ms if is_cache_hit else (embed_init_ms + calc_ms)
+                else:
+                    query_embedding = await _early_embed_task
+                    embed_infer_ms = (time.perf_counter() - _early_embed_infer_t0) * 1000.0
+                    embed_duration_ms = embed_init_ms + embed_infer_ms
+            else:
+                # Measure provider instantiation (model init) separately from inference
+                init_t0 = time.perf_counter()
+                embedding_provider = provider or get_embedding_provider()
+                embed_init_ms = (time.perf_counter() - init_t0) * 1000.0
 
-            infer_t0 = time.perf_counter()
-            query_embedding = await asyncio.to_thread(
-                embedding_provider.embed_query, normalized_query
-            )
-            embed_infer_ms = (time.perf_counter() - infer_t0) * 1000.0
-            embed_duration_ms = embed_init_ms + embed_infer_ms
+                if settings.ENABLE_QUERY_EMBEDDING_CACHE:
+                    _cache = get_query_embedding_cache()
+                    try:
+                        query_embedding, is_cache_hit, calc_ms = await _cache.get_or_compute(
+                            query=normalized_query,
+                            provider=embedding_provider,
+                            compute_fn=lambda: asyncio.to_thread(
+                                embedding_provider.embed_query, normalized_query
+                            ),
+                        )
+                    except ValueError as ve:
+                        raise RetrievalException(
+                            message=str(ve),
+                            code=RetrievalErrorCode.EMBEDDING_DIMENSION_MISMATCH,
+                        )
+                    embed_infer_ms = 0.0 if is_cache_hit else calc_ms
+                    embed_duration_ms = calc_ms if is_cache_hit else (embed_init_ms + calc_ms)
+                else:
+                    infer_t0 = time.perf_counter()
+                    query_embedding = await asyncio.to_thread(
+                        embedding_provider.embed_query, normalized_query
+                    )
+                    embed_infer_ms = (time.perf_counter() - infer_t0) * 1000.0
+                    embed_duration_ms = embed_init_ms + embed_infer_ms
 
             if trace:
                 trace.record("embedding_model_initialization_ms", embed_init_ms)
                 trace.record("embedding_inference_ms", embed_infer_ms)
                 trace.record("embedding_total_ms", embed_duration_ms)
+                trace.record("query_embedding_ms", embed_duration_ms)
+                if is_cache_hit:
+                    trace.record("embedding_cache_latency_ms", embed_duration_ms)
+                else:
+                    trace.record("embedding_cache_latency_ms", 0.0)
+                trace.mark("embedding_completed")
+                trace.set_counter("embedding_cache_hit", is_cache_hit)
                 # Heuristic: if init > 100ms it's cold; else warm
-                trace.set_counter("embedding_cold", embed_init_ms > 100)
+                trace.set_counter("embedding_cold", embed_init_ms > 100 and not is_cache_hit)
                 trace.set_counter("embedding_dimension", embedding_provider.dimension)
+                trace.set_counter("embedding_provider_calls", 0 if is_cache_hit else 1)
 
             # Validate embedding dimension
             if len(query_embedding) != embedding_provider.dimension:
@@ -232,6 +319,8 @@ class RetrievalService:
         partial_reason: str | None = None
         results: list[RetrievalResult] = []
         serialization_ms = 0.0
+        v_candidates: list = []
+        k_candidates: list = []
 
         if effective_search_mode == SearchMode.VECTOR:
             assert query_embedding is not None
@@ -253,7 +342,7 @@ class RetrievalService:
 
             # Format results — when reranking, keep candidate_k sized for reranker; else top_k
             ser_t0 = time.perf_counter()
-            for rank, c in enumerate(vector_candidates[: initial_top_k], start=1):
+            for rank, c in enumerate(vector_candidates[:initial_top_k], start=1):
                 chunk: DocumentChunk = c.chunk
                 provenance = ChunkProvenance(
                     organization_id=chunk.organization_id,
@@ -308,7 +397,7 @@ class RetrievalService:
             keyword_candidates_count = len(keyword_candidates)
 
             ser_t0 = time.perf_counter()
-            for rank, c in enumerate(keyword_candidates[: initial_top_k], start=1):
+            for rank, c in enumerate(keyword_candidates[:initial_top_k], start=1):
                 chunk: DocumentChunk = c.chunk
                 provenance = ChunkProvenance(
                     organization_id=chunk.organization_id,
@@ -348,7 +437,8 @@ class RetrievalService:
 
         elif effective_search_mode == SearchMode.HYBRID:
             assert query_embedding is not None
-            hybrid_retriever = HybridRetriever()
+            req_parallel = getattr(request, "parallel_execution", None)
+            hybrid_retriever = HybridRetriever(parallel=req_parallel)
             # When reranking, fuse more candidates (RERANKER_CANDIDATE_K) for reranker to reorder
             hybrid_top_k = initial_top_k
             (
@@ -366,6 +456,7 @@ class RetrievalService:
                 knowledge_base_ids=request.knowledge_base_ids,
                 document_ids=request.document_ids,
                 filters=request.filters,
+                parallel=req_parallel,
             )
             vector_candidates_count = len(v_candidates)
             keyword_candidates_count = len(k_candidates)
@@ -377,14 +468,23 @@ class RetrievalService:
             if trace:
                 # Record hybrid breakdown + concurrency timestamps
                 trace.record("vector_search_ms", vector_duration_ms)
+                trace.record("vector_total_ms", vector_duration_ms)
                 trace.record("keyword_search_ms", keyword_duration_ms)
+                trace.record("keyword_total_ms", keyword_duration_ms)
                 trace.record("fusion_ms", fusion_duration_ms)
+                trace.record("fusion_total_ms", fusion_duration_ms)
                 trace.record("fusion_latency_ms", fusion_duration_ms)
+                trace.mark("fusion_completed")
                 serialization_ms = timing_data.get("serialization_ms", 0.0)
                 if serialization_ms:
                     trace.record("result_serialization_ms", serialization_ms)
                 # Concurrency verification timestamps if provided
-                for k in ("vector_start_offset_ms", "keyword_start_offset_ms", "vector_end_offset_ms", "keyword_end_offset_ms"):
+                for k in (
+                    "vector_start_offset_ms",
+                    "keyword_start_offset_ms",
+                    "vector_end_offset_ms",
+                    "keyword_end_offset_ms",
+                ):
                     if k in timing_data:
                         trace.set_counter(k, timing_data[k])
                         trace.timestamps[k] = timing_data[k]  # reuse timestamps dict
@@ -460,20 +560,29 @@ class RetrievalService:
                     results = reranked_results
                 if trace and reranker_trace:
                     trace.record("reranker_total_ms", reranker_trace.total_ms)
+                    trace.record("reranking_total_ms", reranker_trace.total_ms)
                     trace.set_counter("reranking_enabled", True)
+                    trace.set_counter("reranking_executed", True)
                     trace.set_counter("reranking_fallback", reranker_trace.fallback)
             except Exception as e:
                 logger.warning("Reranking integration failed, fallback to original: %s", e)
                 if trace:
                     trace.add_error(f"rerank_failed: {e}")
+        else:
+            if trace:
+                trace.set_counter("reranking_executed", False)
 
         total_duration_ms = (time.perf_counter() - total_start) * 1000.0
         if trace:
             trace.record("retrieval_overall_ms", total_duration_ms)
+            trace.record("retrieval_total_ms", total_duration_ms)
 
         # Include effective mode in trace if adaptive
         effective_mode_str = effective_search_mode.value
-        if query_analysis_dict and query_analysis_dict.get("strategy", {}).get("strategy") == "HYBRID_WIDE":
+        if (
+            query_analysis_dict
+            and query_analysis_dict.get("strategy", {}).get("strategy") == "HYBRID_WIDE"
+        ):
             effective_mode_str = "hybrid_wide"
             if trace:
                 trace.set_counter("effective_candidate_k", effective_candidate_k)
@@ -491,7 +600,11 @@ class RetrievalService:
             search_mode=effective_mode_str,
             vector_candidate_count=vector_candidates_count,
             keyword_candidate_count=keyword_candidates_count,
-            fused_candidate_count=vector_candidates_count + keyword_candidates_count,
+            fused_candidate_count=len(
+                {c.chunk.id for c in v_candidates} | {c.chunk.id for c in k_candidates}
+            )
+            if effective_search_mode == SearchMode.HYBRID
+            else (vector_candidates_count + keyword_candidates_count),
             final_result_count=len(results),
             query_embedding_duration_ms=round(embed_duration_ms, 2),
             vector_search_duration_ms=round(vector_duration_ms, 2),
@@ -500,6 +613,9 @@ class RetrievalService:
             total_duration_ms=round(total_duration_ms, 2),
             partial_failure=partial_failure,
             partial_failure_reason=partial_reason,
+            embedding_cache_hit=is_cache_hit if effective_search_mode in (SearchMode.VECTOR, SearchMode.HYBRID) else False,
+            embedding_cache_latency_ms=round(embed_duration_ms if (effective_search_mode in (SearchMode.VECTOR, SearchMode.HYBRID) and is_cache_hit) else 0.0, 2),
+            db_sessions_created=timing_data.get("db_sessions_created", 0) if effective_search_mode == SearchMode.HYBRID else 0,
             query_analysis=query_analysis_dict,
         )
 
@@ -517,7 +633,9 @@ class RetrievalService:
             keyword_duration_ms,
             fusion_duration_ms,
             serialization_ms,
-            query_analysis_dict.get("strategy", {}).get("strategy") if query_analysis_dict else "none",
+            query_analysis_dict.get("strategy", {}).get("strategy")
+            if query_analysis_dict
+            else "none",
         )
 
         return RetrievalResponse(
