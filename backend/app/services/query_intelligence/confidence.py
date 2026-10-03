@@ -2,9 +2,16 @@
 
 from typing import Any
 
-def retrieval_confidence(results: list[Any], top_k: int = 5) -> dict[str, Any]:
+
+def retrieval_confidence(results: list[Any], top_k: int = 5) -> dict[str, Any]:  # noqa: ARG001 - stable public signature, top_k reserved for scoring windows
     if not results:
-        return {"confidence": 0.0, "top_score": None, "score_gap": None, "result_count": 0, "reason": "no_results"}
+        return {
+            "confidence": 0.0,
+            "top_score": None,
+            "score_gap": None,
+            "result_count": 0,
+            "reason": "no_results",
+        }
     top_score = max((r.score for r in results), default=0.0)
     sorted_scores = sorted([r.score for r in results], reverse=True)
     gap = sorted_scores[0] - sorted_scores[1] if len(sorted_scores) >= 2 else 0.0
@@ -17,4 +24,10 @@ def retrieval_confidence(results: list[Any], top_k: int = 5) -> dict[str, Any]:
         conf, reason = 0.2, "low_top_score"
     else:
         conf, reason = 0.5, "medium"
-    return {"confidence": conf, "top_score": top_score, "score_gap": gap, "result_count": count, "reason": reason}
+    return {
+        "confidence": conf,
+        "top_score": top_score,
+        "score_gap": gap,
+        "result_count": count,
+        "reason": reason,
+    }

@@ -8,8 +8,32 @@ from app.services.query_intelligence.schemas import AmbiguityAnalysis, QueryFeat
 
 # Generic vague signals
 PRONOUNS = {"it", "this", "that", "they", "them", "he", "she", "you", "we", "these", "those"}
-GENERIC_VERBS = {"do", "does", "is", "are", "work", "happen", "get", "make", "take", "tell", "show", "give"}
-GENERIC_NOUNS = {"thing", "things", "stuff", "something", "anything", "policy", "limits", "help", "work", "it"}
+GENERIC_VERBS = {
+    "do",
+    "does",
+    "is",
+    "are",
+    "work",
+    "happen",
+    "get",
+    "make",
+    "take",
+    "tell",
+    "show",
+    "give",
+}
+GENERIC_NOUNS = {
+    "thing",
+    "things",
+    "stuff",
+    "something",
+    "anything",
+    "policy",
+    "limits",
+    "help",
+    "work",
+    "it",
+}
 CONTEXT_REFERENCES = {"that", "this", "it", "there", "then", "more", "again", "other"}
 VERY_SHORT_THRESHOLD = 4  # words
 
@@ -47,7 +71,11 @@ def analyze_ambiguity(features: QueryFeatures) -> AmbiguityAnalysis:
     pronoun_count = sum(1 for w in words if w in PRONOUNS)
     if pronoun_count > 0:
         # If no capitalized terms and no identifiers, pronoun is ambiguous
-        if not features.capitalized_terms and not features.contains_identifier and not features.identifier_candidates:
+        if (
+            not features.capitalized_terms
+            and not features.contains_identifier
+            and not features.identifier_candidates
+        ):
             signals.append("pronoun_without_noun")
             reasons.append(f"pronoun_count={pronoun_count} without entities")
             score += WEIGHTS["pronoun_without_noun"]

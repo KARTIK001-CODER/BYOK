@@ -32,7 +32,11 @@ def test_exact_term():
 def test_question_type():
     assert extract_features("What is the refund policy?").question_type.value == "policy"
     assert extract_features("How do I reset my password?").question_type.value == "procedure"
-    assert extract_features("What is the maximum file size?").question_type.value in ["policy", "factual", "definition"]
+    assert extract_features("What is the maximum file size?").question_type.value in [
+        "policy",
+        "factual",
+        "definition",
+    ]
     assert extract_features("How does it work?").question_type.value == "procedure"
 
 
@@ -40,4 +44,7 @@ def test_rare_terms():
     f = extract_features("What are the HNSW index parameters m and ef_construction?")
     assert len(f.rare_term_candidates) > 0
     # contains HNSW
-    assert any("HNSW" in t or "ef_construction" in t for t in f.rare_term_candidates + f.identifier_candidates)
+    assert any(
+        "HNSW" in t or "ef_construction" in t
+        for t in f.rare_term_candidates + f.identifier_candidates
+    )

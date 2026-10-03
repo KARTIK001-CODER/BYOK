@@ -21,11 +21,26 @@ def test_ambiguous_wide():
 
 def test_safe_fallback_on_error():
     # Even empty after stripping should not crash, but our analyzer handles normal query; test exception path via RetrievalService
+    from app.services.query_intelligence.schemas import (
+        AmbiguityAnalysis,
+        QueryCategory,
+        QueryClassification,
+        QueryFeatures,
+        RetrievalStrategy,
+    )
     from app.services.query_intelligence.strategy import select_strategy
-    from app.services.query_intelligence.schemas import QueryFeatures, QuestionType, QueryClassification, QueryCategory, AmbiguityAnalysis, RetrievalStrategy
+
     # Simulate low confidence hybrid fallback
-    features = QueryFeatures(original_query="test", normalized_query="test", character_count=4, token_count=1, word_count=1)
-    classification = QueryClassification(primary_class=QueryCategory.unknown, confidence=0.2, signals=[])
+    features = QueryFeatures(
+        original_query="test",
+        normalized_query="test",
+        character_count=4,
+        token_count=1,
+        word_count=1,
+    )
+    classification = QueryClassification(
+        primary_class=QueryCategory.unknown, confidence=0.2, signals=[]
+    )
     ambiguity = AmbiguityAnalysis(is_ambiguous=False, ambiguity_score=0.1, signals=[])
     decision = select_strategy(features, classification, ambiguity)
     assert decision.strategy == RetrievalStrategy.HYBRID
@@ -33,7 +48,9 @@ def test_safe_fallback_on_error():
 
 def test_vector_strategy():
     # High semantic confidence, low ambiguity -> VECTOR
-    a = QueryAnalyzer.analyze("Explain how hybrid search combines semantic vectors and lexical search for refund policies")
+    a = QueryAnalyzer.analyze(
+        "Explain how hybrid search combines semantic vectors and lexical search for refund policies"
+    )
     # This is long semantic, may be classified as semantic with high confidence
     # At least ensure not keyword
     assert a.strategy.strategy.value in ["VECTOR", "HYBRID", "HYBRID_WIDE"]

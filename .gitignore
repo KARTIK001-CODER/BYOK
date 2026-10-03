@@ -67,3 +67,28 @@ docker-compose.override.yml
 *.sqlite3
 *.db
 pgdata/
+backend/data/
+
+# Logs & runtime artifacts
+*.log
+logs/
+runtime/
+tmp/
+temp/
+
+# Evaluation — generated runtime artifacts (do NOT version)
+backend/evaluation/reports/*.json
+backend/evaluation/reports/*.md
+!backend/evaluation/reports/.gitkeep
+backend/evaluation/.tmp/
+backend/scripts/__pycache__/
+
+# Keep versioned evaluation artifacts (do version these):
+# backend/evaluation/datasets/*.json  (retrieval_baseline.json, retrieval_intelligence_baseline.json)
+# backend/evaluation/baselines/*.json
+# backend/evaluation/fixtures/*.md
+# Intentional benchmark reports: backend/docs/PHASE_*.md
+
+# Phase 2.5 generated artifacts (if any)
+backend/docs/generated/
+backend/.benchmark_cache/

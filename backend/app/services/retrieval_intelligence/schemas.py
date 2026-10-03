@@ -2,20 +2,19 @@
 
 from __future__ import annotations
 
-from enum import Enum
-from typing import Any
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
 
-class QueryComplexity(str, Enum):
+class QueryComplexity(StrEnum):
     SIMPLE = "SIMPLE"
     MODERATE = "MODERATE"
     COMPLEX = "COMPLEX"
     MULTI_HOP = "MULTI_HOP"
 
 
-class RetrievalStrategyType(str, Enum):
+class RetrievalStrategyType(StrEnum):
     DIRECT = "DIRECT"
     HYBRID = "HYBRID"
     EXPANDED = "EXPANDED"

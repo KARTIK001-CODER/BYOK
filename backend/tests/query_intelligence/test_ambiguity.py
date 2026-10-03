@@ -5,7 +5,10 @@ def test_high_ambiguity():
     a = QueryAnalyzer.analyze("How does it work?")
     assert a.ambiguity.is_ambiguous is True
     assert a.ambiguity.ambiguity_score >= 0.5
-    assert a.classification.primary_class.value == "ambiguous" or a.strategy.strategy.value == "HYBRID_WIDE"
+    assert (
+        a.classification.primary_class.value == "ambiguous"
+        or a.strategy.strategy.value == "HYBRID_WIDE"
+    )
     assert a.strategy.strategy.value == "HYBRID_WIDE"
 
 
@@ -28,6 +31,12 @@ def test_pronoun_reference():
 
 
 def test_ambiguity_score_range():
-    for q in ["How does it work?", "Tell me more", "What about pricing?", "Can I do that?", "What happens then?"]:
+    for q in [
+        "How does it work?",
+        "Tell me more",
+        "What about pricing?",
+        "Can I do that?",
+        "What happens then?",
+    ]:
         a = QueryAnalyzer.analyze(q)
         assert 0.0 <= a.ambiguity.ambiguity_score <= 1.0

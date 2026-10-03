@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
-import time
 import logging
-from typing import Any
+import time
 
 from app.services.query_intelligence.ambiguity import analyze_ambiguity
 from app.services.query_intelligence.classifier import classify_query
+from app.services.query_intelligence.complexity import estimate_complexity
 from app.services.query_intelligence.features import extract_features
-from app.services.query_intelligence.schemas import QueryAnalysis, QueryClassification, QueryFeatures
+from app.services.query_intelligence.schemas import (
+    QueryAnalysis,
+)
 from app.services.query_intelligence.strategy import select_strategy
 
 logger = logging.getLogger("app.services.query_intelligence.analyzer")
@@ -57,7 +59,10 @@ class QueryAnalyzer:
         if conversation_context:
             # Future: if last assistant message contains entities, reduce ambiguity
             # For now, just record
-            logger.debug("QueryAnalyzer received context with %d messages (not yet used for retrieval)", len(conversation_context))
+            logger.debug(
+                "QueryAnalyzer received context with %d messages (not yet used for retrieval)",
+                len(conversation_context),
+            )
 
         amb_t0 = time.perf_counter()
         ambiguity = analyze_ambiguity(features)
@@ -68,23 +73,33 @@ class QueryAnalyzer:
         cls_ms = (time.perf_counter() - cls_t0) * 1000.0
 
         strat_t0 = time.perf_counter()
-        strategy = select_strategy(features=features, classification=classification, ambiguity=ambiguity)
+        strategy = select_strategy(
+            features=features, classification=classification, ambiguity=ambiguity
+        )
         strat_ms = (time.perf_counter() - strat_t0) * 1000.0
+
+        comp_t0 = time.perf_counter()
+        complexity = estimate_complexity(
+            features=features, classification=classification, ambiguity=ambiguity
+        )
+        comp_ms = (time.perf_counter() - comp_t0) * 1000.0
 
         total_ms = (time.perf_counter() - t0) * 1000.0
 
         # Debug logging for trace integration
         logger.debug(
-            "QueryAnalysis query=%.40s class=%s conf=%.2f amb=%.2f strategy=%s (feat=%.2f cls=%.2f amb=%.2f strat=%.2f total=%.2f)",
+            "QueryAnalysis query=%.40s class=%s conf=%.2f amb=%.2f strategy=%s complexity=%s (feat=%.2f cls=%.2f amb=%.2f strat=%.2f comp=%.2f total=%.2f)",
             original,
             classification.primary_class.value,
             classification.confidence,
             ambiguity.ambiguity_score,
             strategy.strategy.value,
+            complexity.level.value,
             feat_ms,
             cls_ms,
             amb_ms,
             strat_ms,
+            comp_ms,
             total_ms,
         )
 
@@ -93,16 +108,23 @@ class QueryAnalyzer:
             classification=classification,
             ambiguity=ambiguity,
             strategy=strategy,
+            complexity=complexity,
+            requires_multiple_sources=complexity.requires_multiple_sources,
+            contains_keywords=features.contains_identifier or features.contains_special_terms,
             duration_ms=round(total_ms, 3),
             version=cls.VERSION,
         )
 
     @classmethod
-    def analyze_with_timings(cls, query: str, normalized_query: str | None = None) -> tuple[QueryAnalysis, dict[str, float]]:
+    def analyze_with_timings(
+        cls, query: str, normalized_query: str | None = None
+    ) -> tuple[QueryAnalysis, dict[str, float]]:
         """Helper for tracing — returns analysis + per-stage timings."""
         t0 = time.perf_counter()
         original = query
-        normalized = normalized_query if normalized_query is not None else " ".join(original.strip().split())
+        normalized = (
+            normalized_query if normalized_query is not None else " ".join(original.strip().split())
+        )
         feat_t0 = time.perf_counter()
         features = extract_features(original, normalized)
         feat_ms = (time.perf_counter() - feat_t0) * 1000.0
@@ -115,14 +137,24 @@ class QueryAnalyzer:
         classification = classify_query(features=features, ambiguity=ambiguity)
         cls_ms = (time.perf_counter() - cls_t0) * 1000.0
         strat_t0 = time.perf_counter()
-        strategy = select_strategy(features=features, classification=classification, ambiguity=ambiguity)
+        strategy = select_strategy(
+            features=features, classification=classification, ambiguity=ambiguity
+        )
         strat_ms = (time.perf_counter() - strat_t0) * 1000.0
+        comp_t0 = time.perf_counter()
+        from app.services.query_intelligence.complexity import estimate_complexity as _est
+
+        complexity = _est(features=features, classification=classification, ambiguity=ambiguity)
+        comp_ms = (time.perf_counter() - comp_t0) * 1000.0
         total_ms = (time.perf_counter() - t0) * 1000.0
         analysis = QueryAnalysis(
             features=features,
             classification=classification,
             ambiguity=ambiguity,
             strategy=strategy,
+            complexity=complexity,
+            requires_multiple_sources=complexity.requires_multiple_sources,
+            contains_keywords=features.contains_identifier or features.contains_special_terms,
             duration_ms=round(total_ms, 3),
             version=cls.VERSION,
         )
@@ -131,6 +163,7 @@ class QueryAnalyzer:
             "ambiguity_analysis_ms": round(amb_ms, 3),
             "classification_ms": round(cls_ms, 3),
             "strategy_selection_ms": round(strat_ms, 3),
+            "complexity_estimation_ms": round(comp_ms, 3),
             "query_analysis_ms": round(total_ms, 3),
         }
         return analysis, timings
