@@ -4,6 +4,7 @@ from app.api.v1.conversations import router as conversations_router
 from app.api.v1.documents import router as documents_router
 from app.api.v1.embeddings import router as embeddings_router
 from app.api.v1.health import router as health_router
+from app.api.v1.incidents import router as incidents_router
 from app.api.v1.ingestion import router as ingestion_router
 from app.api.v1.knowledge_bases import router as knowledge_bases_router
 from app.api.v1.organizations import router as organizations_router
@@ -13,6 +14,7 @@ __all__ = [
     "health_router",
     "auth_router",
     "organizations_router",
+    "incidents_router",
     "knowledge_bases_router",
     "documents_router",
     "ingestion_router",

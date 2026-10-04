@@ -4,6 +4,8 @@ from app.models.document import Document, DocumentStatus, EmbeddingStatus
 from app.models.document_chunk import DocumentChunk
 from app.models.document_version import DocumentVersion
 from app.models.embedding_job import EmbeddingJob, EmbeddingJobStatus
+from app.models.evidence import EvidenceEvent, EvidenceSourceType
+from app.models.incident import Incident, IncidentSeverity, IncidentStatus
 from app.models.ingestion_job import IngestionJob, IngestionJobStatus
 from app.models.knowledge_base import KnowledgeBase
 from app.models.membership import OrganizationMembership, OrganizationRole
@@ -23,6 +25,11 @@ __all__ = [
     "EmbeddingJob",
     "EmbeddingJobStatus",
     "EmbeddingStatus",
+    "EvidenceEvent",
+    "EvidenceSourceType",
+    "Incident",
+    "IncidentSeverity",
+    "IncidentStatus",
     "IngestionJob",
     "IngestionJobStatus",
     "KnowledgeBase",

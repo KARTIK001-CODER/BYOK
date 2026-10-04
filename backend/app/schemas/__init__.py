@@ -19,6 +19,16 @@ from app.schemas.embeddings import (
     EmbeddingTriggerResponse,
 )
 from app.schemas.health import HealthResponse, ReadinessResponse, SystemInfoResponse
+from app.schemas.incidents import (
+    EvidenceEventCreate,
+    EvidenceEventResponse,
+    EvidenceListResponse,
+    IncidentCreate,
+    IncidentResponse,
+    IncidentUpdate,
+    TimelineEventResponse,
+    TimelineResponse,
+)
 from app.schemas.ingestion import (
     IngestionJobResponse,
     IngestionTriggerResponse,
@@ -44,7 +54,13 @@ __all__ = [
     "DocumentVersionResponse",
     "EmbeddingJobResponse",
     "EmbeddingTriggerResponse",
+    "EvidenceEventCreate",
+    "EvidenceEventResponse",
+    "EvidenceListResponse",
     "HealthResponse",
+    "IncidentCreate",
+    "IncidentResponse",
+    "IncidentUpdate",
     "IngestionJobResponse",
     "IngestionTriggerResponse",
     "KnowledgeBaseCreate",
@@ -60,6 +76,8 @@ __all__ = [
     "RefreshRequest",
     "RegisterRequest",
     "SystemInfoResponse",
+    "TimelineEventResponse",
+    "TimelineResponse",
     "TokenResponse",
     "UserResponse",
     "UserSummary",

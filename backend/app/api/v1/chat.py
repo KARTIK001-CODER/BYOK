@@ -140,12 +140,14 @@ async def chat_stream(
         kb_ids=payload.knowledge_base_ids,
     )
 
+    trace = get_current_trace()
     rag_service = RAGService()
     event_generator = rag_service.stream_chat(
         session=session,
         organization_id=org_id,
         user_id=current_user.id,
         request=payload,
+        trace=trace,
     )
 
     return StreamingResponse(

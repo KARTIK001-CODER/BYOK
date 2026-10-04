@@ -11,11 +11,12 @@ Provides thread-safe, async-safe caching for dense query vectors with:
 from __future__ import annotations
 
 import asyncio
-from collections import OrderedDict
 import hashlib
 import logging
 import time
-from typing import Any, Callable, Coroutine
+from collections import OrderedDict
+from collections.abc import Callable, Coroutine
+from typing import Any
 
 from app.core.config import get_settings
 from app.services.embeddings.base import BaseEmbeddingProvider
@@ -92,9 +93,6 @@ class QueryEmbeddingCache:
             # 2. Check for in-flight identical request (stampede protection)
             if key in self._in_flight:
                 future = self._in_flight[key]
-                # Await in-flight future outside the lock
-                t_in_flight = time.perf_counter()
-                pass
             else:
                 # Create future for this request
                 loop = asyncio.get_running_loop()

@@ -1,15 +1,20 @@
 import asyncio
-import contextlib
 import json
 import logging
 import sys
 import time
 from collections.abc import AsyncGenerator
+from contextlib import nullcontext
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config import get_settings
-from app.core.tracing import get_current_trace
+from app.core.tracing import (
+    RequestTrace,
+    get_current_trace,
+    isolate_stream_trace,
+    trace_context,
+)
 from app.models.message import MessageRole
 from app.services.llm.base import LLMRequest
 from app.services.llm.errors import LLMException
@@ -44,6 +49,23 @@ class RAGService:
         self.context_builder = context_builder or ContextBuilder()
         self.prompt_builder = prompt_builder or PromptBuilder()
         self.citation_builder = citation_builder or CitationBuilder()
+
+    @staticmethod
+    async def _safe_commit(session: AsyncSession) -> None:
+        """Commit session transaction.
+
+        On failure, roll back the transaction while preserving the original commit
+        exception (even if rollback also fails).
+        """
+        try:
+            await session.commit()
+        except Exception as commit_exc:
+            try:
+                await session.rollback()
+            except Exception as rb_exc:
+                logger.warning("Session rollback failed after commit failure: %s", rb_exc)
+                raise commit_exc from rb_exc
+            raise commit_exc
 
     async def generate(
         self,
@@ -82,7 +104,8 @@ class RAGService:
         except Exception as exc:
             if trace:
                 trace.add_error(str(exc))
-                trace.emit_performance_summary(outcome="FAILED", error_category="INTERNAL_ERROR")
+                cat = trace.error_category or "INTERNAL_ERROR"
+                trace.emit_performance_summary(outcome="FAILED", error_category=cat)
             raise
         finally:
             if trace and not trace._summary_emitted:
@@ -378,12 +401,21 @@ class RAGService:
             trace.set_counter("model", model_name)
             trace.mark("provider_done")
 
-        # Release DB connection before network-bound LLM call
+        # Release DB connection before network-bound LLM call and ensure user message is durable
         commit_t0 = time.perf_counter()
-        with contextlib.suppress(Exception):
-            await session.commit()
+        try:
+            await self._safe_commit(session)
+        except Exception as exc:
+            commit_ms = (time.perf_counter() - commit_t0) * 1000.0
+            if trace:
+                trace.record_db_commit(commit_ms)
+                trace.record("pre_llm_commit_ms", commit_ms)
+                trace.add_error(f"pre_llm_commit_failed: {exc}")
+                trace.emit_performance_summary(outcome="FAILED", error_category="DATABASE_COMMIT_ERROR")
+            raise
         commit_ms = (time.perf_counter() - commit_t0) * 1000.0
         if trace:
+            trace.record_db_commit(commit_ms)
             trace.record("pre_llm_commit_ms", commit_ms)
 
         # 9. Invoke LLM generation
@@ -536,8 +568,20 @@ class RAGService:
         create_ms = (time.perf_counter() - create_t0) * 1000.0
         flush_ms = 0.0  # flush is inside add_message
         commit_t2 = time.perf_counter()
-        await session.commit()
+        try:
+            await self._safe_commit(session)
+        except Exception as exc:
+            commit2_ms = (time.perf_counter() - commit_t2) * 1000.0
+            if trace:
+                trace.record_db_commit(commit2_ms)
+                trace.record("persistence_commit_ms", commit2_ms)
+                trace.record("database_commit_ms", commit2_ms)
+                trace.add_error(f"assistant_commit_failed: {exc}")
+                trace.emit_performance_summary(outcome="FAILED", error_category="DATABASE_COMMIT_ERROR")
+            raise
         commit2_ms = (time.perf_counter() - commit_t2) * 1000.0
+        if trace:
+            trace.record_db_commit(commit2_ms)
         refresh_ms = 0.0  # no refresh: expire_on_commit=False keeps flushed attributes
         persist_ms = (time.perf_counter() - persist_t0) * 1000.0
         db_total_ms = conv_ms + persist_user_ms + hist_ms + commit_ms + create_ms + commit2_ms
@@ -574,18 +618,41 @@ class RAGService:
             groundedness=groundedness_dict,
         )
 
-    async def stream_chat(
+    def stream_chat(
         self,
         session: AsyncSession,
         organization_id: str,
         user_id: str,
         request: RAGChatRequest,
+        trace: RequestTrace | None = None,
+    ) -> AsyncGenerator[str, None]:
+        """Execute streaming RAG generation yielding Server-Sent Events (SSE)."""
+        if trace is None:
+            trace = get_current_trace()
+        return isolate_stream_trace(
+            self._stream_chat_internal(
+                session=session,
+                organization_id=organization_id,
+                user_id=user_id,
+                request=request,
+                trace=trace,
+            ),
+            trace,
+        )
+
+    async def _stream_chat_internal(
+        self,
+        session: AsyncSession,
+        organization_id: str,
+        user_id: str,
+        request: RAGChatRequest,
+        trace: RequestTrace | None = None,
     ) -> AsyncGenerator[str, None]:
         import uuid
 
-        """Execute streaming RAG generation yielding Server-Sent Events (SSE)."""
         total_start = time.perf_counter()
-        trace = get_current_trace()
+        if trace is None:
+            trace = get_current_trace()
         if trace:
             trace.mark("request_received")
             prep_t0 = time.perf_counter()
@@ -624,9 +691,20 @@ class RAGService:
             if trace:
                 trace.record("user_message_persist_ms", (time.perf_counter() - persist_t0) * 1000.0)
             commit_t0 = time.perf_counter()
-            await session.commit()
+            try:
+                await self._safe_commit(session)
+            except Exception as exc:
+                commit_ms = (time.perf_counter() - commit_t0) * 1000.0
+                if trace:
+                    trace.record_db_commit(commit_ms)
+                    trace.record("user_message_commit_ms", commit_ms)
+                    trace.add_error(f"user_message_commit_failed: {exc}")
+                    trace.emit_performance_summary(outcome="FAILED", error_category="DATABASE_COMMIT_ERROR")
+                raise
             if trace:
-                trace.record("user_message_commit_ms", (time.perf_counter() - commit_t0) * 1000.0)
+                commit_ms = (time.perf_counter() - commit_t0) * 1000.0
+                trace.record_db_commit(commit_ms)
+                trace.record("user_message_commit_ms", commit_ms)
                 trace.mark("user_message_done")
 
             # Yield start event
@@ -661,15 +739,16 @@ class RAGService:
             async def _load_history_early() -> tuple[list, float]:
                 if request.conversation_id is None:
                     return [], 0.0
-                hist_inner_t0 = time.perf_counter()
-                hist_maker = async_sessionmaker(bind=session.bind, expire_on_commit=False)
-                async with hist_maker() as hist_session:
-                    msgs = await ConversationService.get_recent_messages(
-                        session=hist_session,
-                        conversation_id=conv.id,
-                        limit=settings.MAX_HISTORY_MESSAGES + 1,
-                    )
-                return msgs, (time.perf_counter() - hist_inner_t0) * 1000.0
+                with trace_context(trace) if trace else nullcontext():
+                    hist_inner_t0 = time.perf_counter()
+                    hist_maker = async_sessionmaker(bind=session.bind, expire_on_commit=False)
+                    async with hist_maker() as hist_session:
+                        msgs = await ConversationService.get_recent_messages(
+                            session=hist_session,
+                            conversation_id=conv.id,
+                            limit=settings.MAX_HISTORY_MESSAGES + 1,
+                        )
+                    return msgs, (time.perf_counter() - hist_inner_t0) * 1000.0
 
             history_task = asyncio.create_task(_load_history_early())
             history_task.add_done_callback(lambda t: t.exception() if not t.cancelled() else None)
@@ -841,10 +920,20 @@ class RAGService:
 
             # Release DB connection before long-lived LLM streaming
             commit_t0 = time.perf_counter()
-            with contextlib.suppress(Exception):
-                await session.commit()
+            try:
+                await self._safe_commit(session)
+            except Exception as exc:
+                commit_ms = (time.perf_counter() - commit_t0) * 1000.0
+                if trace:
+                    trace.record_db_commit(commit_ms)
+                    trace.record("pre_llm_commit_ms", commit_ms)
+                    trace.add_error(f"pre_llm_commit_failed: {exc}")
+                    trace.emit_performance_summary(outcome="FAILED", error_category="DATABASE_COMMIT_ERROR")
+                raise
             if trace:
-                trace.record("pre_llm_commit_ms", (time.perf_counter() - commit_t0) * 1000.0)
+                commit_ms = (time.perf_counter() - commit_t0) * 1000.0
+                trace.record_db_commit(commit_ms)
+                trace.record("pre_llm_commit_ms", commit_ms)
 
             # 7. Construct prompt
             prompt_t0 = time.perf_counter()
@@ -1081,10 +1170,22 @@ class RAGService:
                     "user_message_save_ms", trace.stages.get("user_message_persist_ms", 0.0)
                 )
             commit_t0 = time.perf_counter()
-            await session.commit()
+            try:
+                await self._safe_commit(session)
+            except Exception as exc:
+                commit_ms = (time.perf_counter() - commit_t0) * 1000.0
+                if trace:
+                    trace.record_db_commit(commit_ms)
+                    trace.record("persistence_commit_ms", commit_ms)
+                    trace.record("database_commit_ms", commit_ms)
+                    trace.add_error(f"streaming_assistant_commit_failed: {exc}")
+                    trace.emit_performance_summary(outcome="FAILED", error_category="DATABASE_COMMIT_ERROR")
+                raise
             if trace:
-                trace.record("persistence_commit_ms", (time.perf_counter() - commit_t0) * 1000.0)
-                trace.record("database_commit_ms", (time.perf_counter() - commit_t0) * 1000.0)
+                commit_ms = (time.perf_counter() - commit_t0) * 1000.0
+                trace.record_db_commit(commit_ms)
+                trace.record("persistence_commit_ms", commit_ms)
+                trace.record("database_commit_ms", commit_ms)
             # No refresh: expire_on_commit=False keeps flushed attributes (id set client-side).
             if trace:
                 trace.record("persistence_refresh_ms", 0.0)
@@ -1137,7 +1238,8 @@ class RAGService:
             logger.exception("RAG streaming unexpected failure: %s", exc)
             if trace:
                 trace.add_error(str(exc))
-                trace.emit_performance_summary(outcome="FAILED", error_category="INTERNAL_ERROR")
+                cat = trace.error_category or "INTERNAL_ERROR"
+                trace.emit_performance_summary(outcome="FAILED", error_category=cat)
             fallback_err = {
                 "code": "GENERATION_FAILED",
                 "message": "We couldn't generate an answer. Please try again.",

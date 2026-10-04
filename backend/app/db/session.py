@@ -92,6 +92,24 @@ def _register_engine_listeners(sync_engine) -> None:
 
     from app.core.tracing import get_current_trace
 
+    # Instrument pool checkout / connection acquisition time
+    pool = getattr(sync_engine, "pool", None)
+    if pool is not None and not getattr(pool, "_byok_instrumented", False):
+        orig_connect = pool.connect
+
+        def instrumented_pool_connect(*args, **kwargs):
+            t0 = time.perf_counter()
+            try:
+                return orig_connect(*args, **kwargs)
+            finally:
+                duration_ms = (time.perf_counter() - t0) * 1000.0
+                trace = get_current_trace()
+                if trace is not None:
+                    trace.record_db_connection_acquisition(duration_ms)
+
+        pool.connect = instrumented_pool_connect
+        pool._byok_instrumented = True
+
     @event.listens_for(sync_engine, "before_cursor_execute")
     def before_cursor_execute(_conn, _cursor, _statement, _parameters, context, _executemany):
         context._byok_query_t0 = time.perf_counter()
@@ -104,6 +122,17 @@ def _register_engine_listeners(sync_engine) -> None:
             if trace is not None:
                 category = _categorize_statement(statement)
                 trace.record_db_query(category, duration_ms)
+
+    @event.listens_for(sync_engine, "handle_error")
+    def handle_error(exception_context):
+        ctx = getattr(exception_context, "execution_context", None)
+        if ctx and hasattr(ctx, "_byok_query_t0"):
+            duration_ms = (time.perf_counter() - ctx._byok_query_t0) * 1000.0
+            trace = get_current_trace()
+            if trace is not None:
+                statement = getattr(exception_context, "statement", "") or ""
+                category = _categorize_statement(statement)
+                trace.record_db_query(f"{category}_error", duration_ms)
 
 
 def get_session_factory() -> async_sessionmaker[AsyncSession]:
