@@ -7,6 +7,7 @@ import json
 import logging
 import time
 import uuid
+from collections.abc import AsyncGenerator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import Any
@@ -75,10 +76,31 @@ class RequestTrace:
         self.counters["db_total_time_ms"] = round(
             self.counters.get("db_total_time_ms", 0.0) + d_ms, 2
         )
+        self.counters["sql_statement_execution_ms"] = self.counters["db_total_time_ms"]
+        self.stages["sql_statement_execution_ms"] = self.counters["sql_statement_execution_ms"]
         current_slowest = self.counters.get("slowest_query_ms", 0.0)
         if d_ms > current_slowest:
             self.counters["slowest_query_ms"] = d_ms
             self.counters["slowest_query_category"] = category
+
+    def record_db_connection_acquisition(self, duration_ms: float) -> None:
+        """Record database connection pool checkout / acquisition overhead in ms."""
+        d_ms = round(float(duration_ms), 2)
+        self.counters["db_pool_checkouts"] = self.counters.get("db_pool_checkouts", 0) + 1
+        self.counters["db_connection_acquisition_ms"] = round(
+            self.counters.get("db_connection_acquisition_ms", 0.0) + d_ms, 2
+        )
+        self.stages["db_connection_acquisition_ms"] = self.counters["db_connection_acquisition_ms"]
+
+    def record_db_commit(self, duration_ms: float) -> None:
+        """Record database transaction flush and commit overhead in ms."""
+        d_ms = round(float(duration_ms), 2)
+        self.counters["db_commits"] = self.counters.get("db_commits", 0) + 1
+        self.counters["db_commit_ms"] = round(
+            self.counters.get("db_commit_ms", 0.0) + d_ms, 2
+        )
+        self.stages["db_commit_ms"] = self.counters["db_commit_ms"]
+        self.stages["database_commit_ms"] = self.counters["db_commit_ms"]
 
     @contextmanager
     def span(self, stage: str):
@@ -349,6 +371,22 @@ class RequestTrace:
                     "done_event_sent_ms": self.stages.get("done_event_sent_ms", 0.0),
                     "sse_done_gap_ms": self.stages.get("sse_done_gap_ms", 0.0),
                 },
+                "database": {
+                    "sql_statement_execution_ms": self.stages.get(
+                        "sql_statement_execution_ms",
+                        self.counters.get("sql_statement_execution_ms", self.counters.get("db_total_time_ms", 0.0)),
+                    ),
+                    "db_connection_acquisition_ms": self.stages.get(
+                        "db_connection_acquisition_ms",
+                        self.counters.get("db_connection_acquisition_ms", 0.0),
+                    ),
+                    "db_commit_ms": self.stages.get(
+                        "db_commit_ms",
+                        self.counters.get("db_commit_ms", 0.0),
+                    ),
+                    "total_ms": self.stages.get("database_latency_ms", 0.0),
+                    "queries_count": int(self.counters.get("db_queries", 0)),
+                },
                 "persistence": {
                     "conversation_lookup_ms": self.stages.get("conversation_lookup_ms", 0.0),
                     "user_message_save_ms": self.stages.get(
@@ -360,6 +398,10 @@ class RequestTrace:
                     ),
                     "database_commit_ms": self.stages.get(
                         "database_commit_ms", self.stages.get("persistence_commit_ms", 0.0)
+                    ),
+                    "db_commit_ms": self.stages.get(
+                        "db_commit_ms",
+                        self.stages.get("database_commit_ms", self.stages.get("persistence_commit_ms", 0.0)),
                     ),
                     "total_ms": self.stages.get("persistence_total_ms", 0.0),
                 },
@@ -477,6 +519,27 @@ class RequestTrace:
                 "query_embedding_ms": round(embed_ms, 2),
                 "embedding_cache_latency_ms": round(cache_lat_ms, 2),
                 "database_latency_ms": db_time,
+                "sql_statement_execution_ms": round(
+                    self.stages.get(
+                        "sql_statement_execution_ms",
+                        self.counters.get("sql_statement_execution_ms", self.counters.get("db_total_time_ms", 0.0)),
+                    ),
+                    2,
+                ),
+                "db_connection_acquisition_ms": round(
+                    self.stages.get(
+                        "db_connection_acquisition_ms",
+                        self.counters.get("db_connection_acquisition_ms", 0.0),
+                    ),
+                    2,
+                ),
+                "db_commit_ms": round(
+                    self.stages.get(
+                        "db_commit_ms",
+                        self.counters.get("db_commit_ms", 0.0),
+                    ),
+                    2,
+                ),
                 "retrieval_latency_ms": round(retrieval_ms, 2),
                 "parallel_retrieval": {
                     "wall_clock_ms": parallel_metrics["parallel_wall_time_ms"],
@@ -497,6 +560,8 @@ class RequestTrace:
                 "context_chunks": context_chunks,
                 "llm_calls": llm_calls,
                 "db_queries": int(self.counters.get("db_queries", 0)),
+                "db_commits": int(self.counters.get("db_commits", 0)),
+                "db_pool_checkouts": int(self.counters.get("db_pool_checkouts", 0)),
                 "db_sessions_created": int(self.counters.get("db_sessions_created", 0)),
                 "embedding_cache_hit": bool(cache_hit),
                 "embedding_provider_calls": int(
@@ -513,10 +578,11 @@ class RequestTrace:
     ) -> dict[str, Any]:
         """Emit a structured single-line JSON performance summary at INFO level safely."""
         try:
-            if outcome:
-                self.outcome = outcome
-            if error_category:
-                self.error_category = error_category
+            if not self._summary_emitted:
+                if outcome:
+                    self.outcome = outcome
+                if error_category:
+                    self.error_category = error_category
             summary = self.to_performance_summary()
             if not self._summary_emitted:
                 self._summary_emitted = True
@@ -555,3 +621,42 @@ def trace_context(trace: RequestTrace):
         _current_trace_ctx.reset(tok)
         trace_id_ctx_var.reset(tid_tok)
         request_id_ctx_var.reset(rid_tok)
+
+
+async def isolate_stream_trace(
+    gen: AsyncGenerator[Any, None],
+    trace: RequestTrace | None,
+) -> AsyncGenerator[Any, None]:
+    """Wrap an async generator ensuring RequestTrace context isolation per step.
+
+    Guarantees that concurrent or interleaved streaming generators do not
+    cross-contaminate ContextVars (such as active trace, request ID, and trace ID)
+    during async I/O, database queries, and SSE yields.
+    """
+    if trace is None:
+        async for item in gen:
+            yield item
+        return
+
+    try:
+        while True:
+            try:
+                with trace_context(trace):
+                    item = await anext(gen)
+            except StopAsyncIteration:
+                break
+            try:
+                yield item
+            except GeneratorExit:
+                break
+            except BaseException as exc:
+                with trace_context(trace):
+                    try:
+                        item = await gen.athrow(exc)
+                    except StopAsyncIteration:
+                        break
+                yield item
+    finally:
+        with trace_context(trace):
+            await gen.aclose()
+

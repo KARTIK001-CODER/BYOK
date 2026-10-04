@@ -12,6 +12,7 @@ from app.core.tracing import get_current_trace
 from app.db.session import get_db
 from app.models.document import Document
 from app.models.embedding_job import EmbeddingJob
+from app.models.incident import Incident
 from app.models.ingestion_job import IngestionJob
 from app.models.knowledge_base import KnowledgeBase
 from app.models.membership import OrganizationMembership, OrganizationRole
@@ -200,3 +201,27 @@ async def get_embedding_job_or_404(
     if membership is None:
         raise NotFoundException(message="Embedding job not found.")
     return job, membership
+
+
+async def get_incident_or_404(
+    incident_id: str,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> tuple[Incident, OrganizationMembership]:
+    """Retrieve Incident and verify caller has organization access."""
+    from sqlalchemy import select
+
+    stmt = select(Incident).where(Incident.id == incident_id)
+    result = await session.execute(stmt)
+    incident = result.scalar_one_or_none()
+    if incident is None:
+        raise NotFoundException(message="Incident not found.")
+    membership = await OrganizationService.get_membership(
+        session=session,
+        organization_id=incident.organization_id,
+        user_id=current_user.id,
+    )
+    if membership is None:
+        raise NotFoundException(message="Incident not found.")
+    return incident, membership
+

@@ -245,7 +245,7 @@ class RetrievalService:
                         raise RetrievalException(
                             message=str(ve),
                             code=RetrievalErrorCode.EMBEDDING_DIMENSION_MISMATCH,
-                        )
+                        ) from ve
                     embed_infer_ms = 0.0 if is_cache_hit else calc_ms
                     embed_duration_ms = calc_ms if is_cache_hit else (embed_init_ms + calc_ms)
                 else:
@@ -272,7 +272,7 @@ class RetrievalService:
                         raise RetrievalException(
                             message=str(ve),
                             code=RetrievalErrorCode.EMBEDDING_DIMENSION_MISMATCH,
-                        )
+                        ) from ve
                     embed_infer_ms = 0.0 if is_cache_hit else calc_ms
                     embed_duration_ms = calc_ms if is_cache_hit else (embed_init_ms + calc_ms)
                 else:
