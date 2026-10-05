@@ -97,8 +97,8 @@ export const DocumentsApi = {
 
   async process(documentId: string): Promise<void> {
     // Orchestrate ingest + embed sequentially for one-click processing
-    await ApiClient.request(`/documents/${documentId}/ingest`, { method: "POST" });
-    await ApiClient.request(`/documents/${documentId}/embed`, { method: "POST" });
+    await DocumentsApi.ingest(documentId);
+    await DocumentsApi.embed(documentId);
   },
 
   async getChunks(documentId: string, limit = 20, offset = 0): Promise<PaginatedChunks> {

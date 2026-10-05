@@ -39,12 +39,16 @@ async def main():
             await conn.execute(text("SELECT 1;"))
             pings.append((time.perf_counter() - t0) * 1000.0)
 
-        print(f"Network Ping (SELECT 1) over TLS to Neon AWS us-east-2:")
-        print(f"  min: {min(pings):.2f} ms | p50: {pings[len(pings)//2]:.2f} ms | max: {max(pings):.2f} ms")
+        print("Network Ping (SELECT 1) over TLS to Neon AWS us-east-2:")
+        print(
+            f"  min: {min(pings):.2f} ms | p50: {pings[len(pings) // 2]:.2f} ms | max: {max(pings):.2f} ms"
+        )
         print("-" * 80)
 
         # Find target KB
-        r_kb = await conn.execute(text("SELECT id, organization_id, name FROM knowledge_bases LIMIT 1;"))
+        r_kb = await conn.execute(
+            text("SELECT id, organization_id, name FROM knowledge_bases LIMIT 1;")
+        )
         kb_row = r_kb.fetchone()
         if not kb_row:
             print("No KB found.")
@@ -73,7 +77,7 @@ async def main():
         server_vec_time = plan_vec[0]["Execution Time"]
         planning_vec_time = plan_vec[0]["Planning Time"]
 
-        print(f"\nVector Query Performance:")
+        print("\nVector Query Performance:")
         print(f"  Client-measured round trip:   {client_vec_ms:.2f} ms")
         print(f"  Server-side planning time:    {planning_vec_time:.2f} ms")
         print(f"  Server-side execution time:   {server_vec_time:.2f} ms")
@@ -101,7 +105,7 @@ async def main():
         server_kw_time = plan_kw[0]["Execution Time"]
         planning_kw_time = plan_kw[0]["Planning Time"]
 
-        print(f"\nKeyword Query Performance:")
+        print("\nKeyword Query Performance:")
         print(f"  Client-measured round trip:   {client_kw_ms:.2f} ms")
         print(f"  Server-side planning time:    {planning_kw_time:.2f} ms")
         print(f"  Server-side execution time:   {server_kw_time:.2f} ms")

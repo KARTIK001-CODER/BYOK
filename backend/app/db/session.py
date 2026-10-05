@@ -211,8 +211,8 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
                 await session.rollback()
             raise
         finally:
+            # No explicit session.close(): `async with session_factory()` already
+            # closes the session on exit; only record release timing here.
             close_t0 = time.perf_counter()
-            with contextlib.suppress(Exception):
-                await session.close()
             if trace:
                 trace.record("db_connection_release_ms", (time.perf_counter() - close_t0) * 1000.0)

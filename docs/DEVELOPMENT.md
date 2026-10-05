@@ -48,6 +48,9 @@ alembic upgrade head --sql
 - `0004_ingestion_jobs_and_chunks`: Creates ingestion jobs and document chunks tables.
 - `0005_embeddings_and_vector_storage`: Adds vector embedding column, embedding metadata, embedding jobs table, and HNSW cosine index.
 - `0006_retrieval_and_full_text_search`: Adds `search_vector` TSVECTOR column, GIN index, and retrieval composite indexes.
+- `0007_conversations_and_messages`: Creates conversations and messages tables for RAG chat history and provenance.
+- `0008_incident_foundation`: Creates incidents and evidence_events tables for TracePilot Incident Foundation v0.
+- `0009_evidence_dedup_idempotency`: Adds UNIQUE constraint on `(incident_id, deduplication_key)` for evidence idempotency and aligns the `source_type` composite index with ORM metadata.
 
 ---
 
@@ -75,6 +78,14 @@ Run the complete test suite with `pytest`:
 cd backend
 pytest -v
 ```
+
+> **SQLite vs PostgreSQL test parity.** The pytest suite runs against an
+> in-memory SQLite database (`sqlite+aiosqlite`, schema created from ORM
+> metadata via `Base.metadata.create_all`) with a pure-Python lexical
+> fallback for keyword search. It does **not** exercise Alembic migrations,
+> pgvector HNSW cosine (`<=>`), `TSVECTOR`/GIN ranking, or Postgres-scale
+> RRF behavior. Run Postgres-backed integration (Docker Compose or Neon)
+> plus `alembic upgrade head --sql` review before release.
 
 Run the offline IR retrieval benchmark:
 ```bash

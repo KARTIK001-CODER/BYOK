@@ -175,7 +175,9 @@ async def benchmark_scenario(
 
     if concurrency == 1:
         for _ in range(iterations):
-            res = await run_single_request(session_maker, org_id, kb_id, query, search_mode, parallel)
+            res = await run_single_request(
+                session_maker, org_id, kb_id, query, search_mode, parallel
+            )
             latencies.append(res["latency_ms"])
             secondary_sessions_list.append(res["secondary_sessions"])
     else:
@@ -191,7 +193,9 @@ async def benchmark_scenario(
                 secondary_sessions_list.append(res["secondary_sessions"])
 
     p50, p95, avg = compute_percentiles(latencies)
-    avg_secondary_sessions = statistics.mean(secondary_sessions_list) if secondary_sessions_list else 0
+    avg_secondary_sessions = (
+        statistics.mean(secondary_sessions_list) if secondary_sessions_list else 0
+    )
 
     return {
         "scenario": name,
@@ -201,7 +205,8 @@ async def benchmark_scenario(
         "p95_ms": p95,
         "avg_ms": avg,
         "secondary_sessions_per_req": avg_secondary_sessions,
-        "peak_concurrent_connections_est": concurrency * (1 + (2 if (parallel and search_mode == SearchMode.HYBRID) else 0)),
+        "peak_concurrent_connections_est": concurrency
+        * (1 + (2 if (parallel and search_mode == SearchMode.HYBRID) else 0)),
     }
 
 
@@ -245,17 +250,33 @@ async def test_run_session_optimization_benchmark(
         ("Sequential HYBRID (Optimized: Sequential)", SearchMode.HYBRID, False, N_SEQ, 1),
         ("Concurrent VECTOR-Only (c=4)", SearchMode.VECTOR, None, N_CONC, CONC_WORKERS),
         ("Concurrent KEYWORD-Only (c=4)", SearchMode.KEYWORD, None, N_CONC, CONC_WORKERS),
-        ("Concurrent HYBRID (Baseline: Parallel, c=4)", SearchMode.HYBRID, True, N_CONC, CONC_WORKERS),
-        ("Concurrent HYBRID (Optimized: Sequential, c=4)", SearchMode.HYBRID, False, N_CONC, CONC_WORKERS),
+        (
+            "Concurrent HYBRID (Baseline: Parallel, c=4)",
+            SearchMode.HYBRID,
+            True,
+            N_CONC,
+            CONC_WORKERS,
+        ),
+        (
+            "Concurrent HYBRID (Optimized: Sequential, c=4)",
+            SearchMode.HYBRID,
+            False,
+            N_CONC,
+            CONC_WORKERS,
+        ),
     ]
 
     results = []
     for name, mode, par, iters, conc in scenarios:
-        res = await benchmark_scenario(name, session_maker, org.id, test_kb.id, query, mode, par, iters, conc)
+        res = await benchmark_scenario(
+            name, session_maker, org.id, test_kb.id, query, mode, par, iters, conc
+        )
         results.append(res)
 
     print("\n" + "=" * 98)
-    print(f"{'Scenario':<46} | {'N':<3} | {'p50 (ms)':<9} | {'p95 (ms)':<9} | {'Sessions':<8} | {'Peak Conns':<10}")
+    print(
+        f"{'Scenario':<46} | {'N':<3} | {'p50 (ms)':<9} | {'p95 (ms)':<9} | {'Sessions':<8} | {'Peak Conns':<10}"
+    )
     print("-" * 98)
     for r in results:
         print(

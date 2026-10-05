@@ -6,21 +6,19 @@ mutation isolation, cache disabled toggle, and trace metrics.
 """
 
 import asyncio
+from unittest.mock import patch
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 
 from app.core.config import get_settings
 from app.core.tracing import RequestTrace, trace_context
 from app.models.knowledge_base import KnowledgeBase
 from app.models.organization import Organization
-from app.models.user import User
 from app.services.embeddings.base import BaseEmbeddingProvider
 from app.services.embeddings.cache import QueryEmbeddingCache, get_query_embedding_cache
 from app.services.embeddings.errors import EmbeddingErrorCode, EmbeddingException
 from app.services.llm.factory import LLMProviderFactory
 from app.services.llm.providers.mock import MockLLMProvider
-from app.services.rag.schemas import RAGChatRequest
-from app.services.rag.service import RAGService
 from app.services.retrieval.schemas import RetrievalRequest, SearchMode
 from app.services.retrieval.service import RetrievalService
 
@@ -134,7 +132,9 @@ def test_different_models_produce_different_keys():
 def test_query_normalization_behavior():
     """5. Query normalization behavior (whitespace invariance)."""
     key_clean = QueryEmbeddingCache.generate_cache_key("what is byok?", "local", "model-a", 384)
-    key_padded = QueryEmbeddingCache.generate_cache_key("   what is byok?  \t\n", "local", "model-a", 384)
+    key_padded = QueryEmbeddingCache.generate_cache_key(
+        "   what is byok?  \t\n", "local", "model-a", 384
+    )
 
     assert key_clean == key_padded
 
@@ -150,10 +150,7 @@ async def test_concurrent_requests_stampede_deduplication():
         return provider.embed_query("concurrent query")
 
     # Launch 5 identical concurrent queries simultaneously
-    tasks = [
-        cache.get_or_compute("concurrent query", provider, slow_compute)
-        for _ in range(5)
-    ]
+    tasks = [cache.get_or_compute("concurrent query", provider, slow_compute) for _ in range(5)]
     results = await asyncio.gather(*tasks)
 
     # All 5 return correct vector
@@ -207,9 +204,7 @@ async def test_cancellation_and_in_flight_cleanup():
         await asyncio.sleep(5.0)
         return provider.embed_query("hang")
 
-    task = asyncio.create_task(
-        cache.get_or_compute("hang", provider, hanging_compute)
-    )
+    task = asyncio.create_task(cache.get_or_compute("hang", provider, hanging_compute))
     await asyncio.sleep(0.01)
     task.cancel()
 
@@ -267,7 +262,6 @@ async def test_retrieval_service_cache_hit_and_trace_metrics(
     test_kb: KnowledgeBase,
 ):
     """12 & 13. End-to-end RetrievalService integration: cache hit separates latency and updates trace."""
-    user: User = test_user_and_org["user"]
     org: Organization = test_user_and_org["org"]
 
     mock_provider = MockLLMProvider()
@@ -318,7 +312,6 @@ async def test_cache_disabled_toggle(
     test_kb: KnowledgeBase,
 ):
     """9. When cache is disabled via settings, cache is bypassed and every search computes."""
-    user: User = test_user_and_org["user"]
     org: Organization = test_user_and_org["org"]
 
     mock_provider = MockLLMProvider()
@@ -354,4 +347,3 @@ async def test_cache_disabled_toggle(
         assert resp2 is not None
         # Cache hit must still be False because cache is disabled
         assert trace2.counters.get("embedding_cache_hit") is False
-

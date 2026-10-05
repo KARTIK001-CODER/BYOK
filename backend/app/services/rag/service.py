@@ -89,17 +89,23 @@ class RAGService:
         except LLMException as exc:
             if trace:
                 trace.add_error(f"LLMException {exc.code}: {exc.message}")
-                trace.emit_performance_summary(outcome="FAILED", error_category=f"LLM_{exc.code.upper()}")
+                trace.emit_performance_summary(
+                    outcome="FAILED", error_category=f"LLM_{exc.code.upper()}"
+                )
             raise
         except RetrievalException as exc:
             if trace:
                 code_name = exc.code.name if hasattr(exc.code, "name") else str(exc.code)
                 trace.add_error(f"RetrievalException {code_name}: {exc.message}")
-                trace.emit_performance_summary(outcome="FAILED", error_category=f"RETRIEVAL_{code_name.upper()}")
+                trace.emit_performance_summary(
+                    outcome="FAILED", error_category=f"RETRIEVAL_{code_name.upper()}"
+                )
             raise
         except asyncio.CancelledError:
             if trace:
-                trace.emit_performance_summary(outcome="CANCELLED", error_category="CLIENT_DISCONNECT")
+                trace.emit_performance_summary(
+                    outcome="CANCELLED", error_category="CLIENT_DISCONNECT"
+                )
             raise
         except Exception as exc:
             if trace:
@@ -300,16 +306,17 @@ class RAGService:
                 trace.record(
                     "retrieval_embedding_ms", retrieval_resp.trace.query_embedding_duration_ms
                 )
-                trace.record(
-                    "query_embedding_ms", retrieval_resp.trace.query_embedding_duration_ms
-                )
+                trace.record("query_embedding_ms", retrieval_resp.trace.query_embedding_duration_ms)
                 trace.record("retrieval_vector_ms", retrieval_resp.trace.vector_search_duration_ms)
                 trace.record(
                     "retrieval_keyword_ms", retrieval_resp.trace.keyword_search_duration_ms
                 )
                 trace.record("retrieval_fusion_ms", retrieval_resp.trace.fusion_duration_ms)
                 if retrieval_resp.trace.embedding_cache_hit:
-                    trace.record("embedding_cache_latency_ms", retrieval_resp.trace.embedding_cache_latency_ms)
+                    trace.record(
+                        "embedding_cache_latency_ms",
+                        retrieval_resp.trace.embedding_cache_latency_ms,
+                    )
                     trace.set_counter("embedding_cache_hit", True)
                     trace.set_counter("embedding_provider_calls", 0)
                 else:
@@ -411,7 +418,9 @@ class RAGService:
                 trace.record_db_commit(commit_ms)
                 trace.record("pre_llm_commit_ms", commit_ms)
                 trace.add_error(f"pre_llm_commit_failed: {exc}")
-                trace.emit_performance_summary(outcome="FAILED", error_category="DATABASE_COMMIT_ERROR")
+                trace.emit_performance_summary(
+                    outcome="FAILED", error_category="DATABASE_COMMIT_ERROR"
+                )
             raise
         commit_ms = (time.perf_counter() - commit_t0) * 1000.0
         if trace:
@@ -577,7 +586,9 @@ class RAGService:
                 trace.record("persistence_commit_ms", commit2_ms)
                 trace.record("database_commit_ms", commit2_ms)
                 trace.add_error(f"assistant_commit_failed: {exc}")
-                trace.emit_performance_summary(outcome="FAILED", error_category="DATABASE_COMMIT_ERROR")
+                trace.emit_performance_summary(
+                    outcome="FAILED", error_category="DATABASE_COMMIT_ERROR"
+                )
             raise
         commit2_ms = (time.perf_counter() - commit_t2) * 1000.0
         if trace:
@@ -699,7 +710,9 @@ class RAGService:
                     trace.record_db_commit(commit_ms)
                     trace.record("user_message_commit_ms", commit_ms)
                     trace.add_error(f"user_message_commit_failed: {exc}")
-                    trace.emit_performance_summary(outcome="FAILED", error_category="DATABASE_COMMIT_ERROR")
+                    trace.emit_performance_summary(
+                        outcome="FAILED", error_category="DATABASE_COMMIT_ERROR"
+                    )
                 raise
             if trace:
                 commit_ms = (time.perf_counter() - commit_t0) * 1000.0
@@ -855,7 +868,10 @@ class RAGService:
                     )
                     trace.record("retrieval_fusion_ms", retrieval_resp.trace.fusion_duration_ms)
                     if retrieval_resp.trace.embedding_cache_hit:
-                        trace.record("embedding_cache_latency_ms", retrieval_resp.trace.embedding_cache_latency_ms)
+                        trace.record(
+                            "embedding_cache_latency_ms",
+                            retrieval_resp.trace.embedding_cache_latency_ms,
+                        )
                         trace.set_counter("embedding_cache_hit", True)
                         trace.set_counter("embedding_provider_calls", 0)
                     else:
@@ -871,7 +887,9 @@ class RAGService:
                     trace.set_counter("keyword_candidates", k_count)
                     trace.set_counter(
                         "retrieved_candidates",
-                        (v_count + k_count) if (v_count + k_count) > 0 else len(retrieval_resp.results),
+                        (v_count + k_count)
+                        if (v_count + k_count) > 0
+                        else len(retrieval_resp.results),
                     )
                 trace.set_counter("retained_candidates", len(retrieval_resp.results))
                 trace.mark("retrieval_complete")
@@ -928,7 +946,9 @@ class RAGService:
                     trace.record_db_commit(commit_ms)
                     trace.record("pre_llm_commit_ms", commit_ms)
                     trace.add_error(f"pre_llm_commit_failed: {exc}")
-                    trace.emit_performance_summary(outcome="FAILED", error_category="DATABASE_COMMIT_ERROR")
+                    trace.emit_performance_summary(
+                        outcome="FAILED", error_category="DATABASE_COMMIT_ERROR"
+                    )
                 raise
             if trace:
                 commit_ms = (time.perf_counter() - commit_t0) * 1000.0
@@ -1179,7 +1199,9 @@ class RAGService:
                     trace.record("persistence_commit_ms", commit_ms)
                     trace.record("database_commit_ms", commit_ms)
                     trace.add_error(f"streaming_assistant_commit_failed: {exc}")
-                    trace.emit_performance_summary(outcome="FAILED", error_category="DATABASE_COMMIT_ERROR")
+                    trace.emit_performance_summary(
+                        outcome="FAILED", error_category="DATABASE_COMMIT_ERROR"
+                    )
                 raise
             if trace:
                 commit_ms = (time.perf_counter() - commit_t0) * 1000.0
@@ -1225,13 +1247,17 @@ class RAGService:
 
         except asyncio.CancelledError:
             if trace:
-                trace.emit_performance_summary(outcome="CANCELLED", error_category="CLIENT_DISCONNECT")
+                trace.emit_performance_summary(
+                    outcome="CANCELLED", error_category="CLIENT_DISCONNECT"
+                )
             raise
         except LLMException as exc:
             logger.warning("RAG streaming encountered domain error: [%s] %s", exc.code, exc.message)
             if trace:
                 trace.add_error(f"LLMException {exc.code}: {exc.message}")
-                trace.emit_performance_summary(outcome="FAILED", error_category=f"LLM_{exc.code.upper()}")
+                trace.emit_performance_summary(
+                    outcome="FAILED", error_category=f"LLM_{exc.code.upper()}"
+                )
             err_data = {"code": exc.code, "message": exc.message}
             yield f"event: error\ndata: {json.dumps(err_data)}\n\n"
         except Exception as exc:

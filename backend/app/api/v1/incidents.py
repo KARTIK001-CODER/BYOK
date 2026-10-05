@@ -1,4 +1,3 @@
-import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, Response, status
@@ -24,8 +23,6 @@ from app.schemas.incidents import (
 )
 from app.services.incidents.service import IncidentService
 from app.services.organizations.service import OrganizationService
-
-logger = logging.getLogger("app.api.v1.incidents")
 
 router = APIRouter(prefix="/incidents", tags=["Incidents & SRE Investigation"])
 
@@ -123,9 +120,7 @@ async def list_incidents(
     description="Retrieve an incident by ID. Enforces strict tenant isolation.",
 )
 async def get_incident(
-    incident_data: Annotated[
-        tuple[Incident, OrganizationMembership], Depends(get_incident_or_404)
-    ],
+    incident_data: Annotated[tuple[Incident, OrganizationMembership], Depends(get_incident_or_404)],
 ) -> IncidentResponse:
     incident, _ = incident_data
     resp = IncidentResponse.model_validate(incident)
@@ -147,9 +142,7 @@ async def ingest_evidence(
     incident_id: str,
     payload: EvidenceEventCreate,
     response: Response,
-    incident_data: Annotated[
-        tuple[Incident, OrganizationMembership], Depends(get_incident_or_404)
-    ],
+    incident_data: Annotated[tuple[Incident, OrganizationMembership], Depends(get_incident_or_404)],
     session: Annotated[AsyncSession, Depends(get_db)],
 ) -> EvidenceEventResponse:
     _incident, membership = incident_data
@@ -176,9 +169,7 @@ async def ingest_evidence(
 )
 async def list_evidence(
     incident_id: str,
-    incident_data: Annotated[
-        tuple[Incident, OrganizationMembership], Depends(get_incident_or_404)
-    ],
+    incident_data: Annotated[tuple[Incident, OrganizationMembership], Depends(get_incident_or_404)],
     session: Annotated[AsyncSession, Depends(get_db)],
     source_type: str | None = Query(default=None),
     limit: int = Query(default=50, ge=1, le=100),
@@ -209,9 +200,7 @@ async def list_evidence(
 )
 async def get_timeline(
     incident_id: str,
-    incident_data: Annotated[
-        tuple[Incident, OrganizationMembership], Depends(get_incident_or_404)
-    ],
+    incident_data: Annotated[tuple[Incident, OrganizationMembership], Depends(get_incident_or_404)],
     session: Annotated[AsyncSession, Depends(get_db)],
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),

@@ -8,16 +8,14 @@ Verifies:
 5. Error handling and timing attribution on failed SQL statements and commits.
 """
 
-import asyncio
-import time
-from unittest.mock import AsyncMock, patch
+import contextlib
 
 import pytest
 from sqlalchemy import text
 from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
-from app.core.tracing import RequestTrace, get_current_trace, trace_context
+from app.core.tracing import RequestTrace, trace_context
 from app.db.session import _register_engine_listeners
 from app.models.knowledge_base import KnowledgeBase
 from app.models.organization import Organization
@@ -39,7 +37,9 @@ async def test_sql_statement_execution_timing_and_counter():
     with trace_context(trace):
         async with AsyncSession(engine) as session:
             await session.execute(text("CREATE TABLE test_users (id INT, email TEXT)"))
-            await session.execute(text("INSERT INTO test_users (id, email) VALUES (1, 'u@test.com')"))
+            await session.execute(
+                text("INSERT INTO test_users (id, email) VALUES (1, 'u@test.com')")
+            )
             await session.execute(text("SELECT * FROM test_users WHERE id = 1"))
             await session.commit()
 
@@ -128,10 +128,8 @@ async def test_sql_error_statement_timing_attribution():
 
     with trace_context(trace):
         async with AsyncSession(engine) as session:
-            try:
+            with contextlib.suppress(ProgrammingError, OperationalError):
                 await session.execute(text("SELECT * FROM non_existent_table_xyz_123"))
-            except (ProgrammingError, OperationalError):
-                pass
 
     # handle_error should record the failed query
     assert trace.counters.get("db_queries") == 1

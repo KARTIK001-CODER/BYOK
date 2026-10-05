@@ -6,7 +6,7 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import create_access_token
-from app.models.document import Document, DocumentStatus, EmbeddingStatus
+from app.models.document import Document, DocumentStatus
 from app.models.membership import OrganizationMembership, OrganizationRole
 from app.models.organization import Organization
 from app.models.user import User
@@ -263,7 +263,9 @@ async def test_knowledge_base_stats_empty_and_tenant_isolation(
     member_token = create_access_token(member.id)
     member_headers = {"Authorization": f"Bearer {member_token}"}
 
-    res_member = await client.get(f"/api/v1/knowledge-bases/{test_kb.id}/stats", headers=member_headers)
+    res_member = await client.get(
+        f"/api/v1/knowledge-bases/{test_kb.id}/stats", headers=member_headers
+    )
     assert res_member.status_code == status.HTTP_200_OK
     assert res_member.json()["total_documents"] == 0
 
@@ -280,7 +282,9 @@ async def test_knowledge_base_stats_empty_and_tenant_isolation(
     other_token = create_access_token(other_user.id)
     other_headers = {"Authorization": f"Bearer {other_token}"}
 
-    res_other = await client.get(f"/api/v1/knowledge-bases/{test_kb.id}/stats", headers=other_headers)
+    res_other = await client.get(
+        f"/api/v1/knowledge-bases/{test_kb.id}/stats", headers=other_headers
+    )
     assert res_other.status_code == status.HTTP_404_NOT_FOUND
 
 
@@ -359,5 +363,3 @@ async def test_knowledge_base_stats_mixed_statuses_and_soft_delete(
     assert stats["failed_embeddings"] == 0
     assert stats["total_chunks"] > 0
     assert stats["total_file_size_bytes"] > 0
-
-

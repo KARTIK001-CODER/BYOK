@@ -225,7 +225,9 @@ async def test_document_response_embedding_status_and_chunk_count(
     headers = {"Authorization": f"Bearer {token}"}
 
     # 1. Upload a markdown file
-    md_content = b"# Architecture Overview\n\nSection 1 text with details.\n\nSection 2 text with more info."
+    md_content = (
+        b"# Architecture Overview\n\nSection 1 text with details.\n\nSection 2 text with more info."
+    )
     res_upload = await client.post(
         f"/api/v1/knowledge-bases/{test_kb.id}/documents",
         headers=headers,
@@ -305,7 +307,9 @@ async def test_document_storage_key_role_isolation(
     assert res_owner_get.json()["storage_key"] is not None
     assert "org/" in res_owner_get.json()["storage_key"]
 
-    res_owner_list = await client.get(f"/api/v1/knowledge-bases/{test_kb.id}/documents", headers=owner_headers)
+    res_owner_list = await client.get(
+        f"/api/v1/knowledge-bases/{test_kb.id}/documents", headers=owner_headers
+    )
     assert res_owner_list.status_code == status.HTTP_200_OK
     owner_item = next(d for d in res_owner_list.json()["items"] if d["id"] == doc_id)
     assert owner_item["storage_key"] is not None
@@ -337,7 +341,9 @@ async def test_document_storage_key_role_isolation(
     assert res_member_get.json()["storage_key"] is None
 
     # Member list documents also redacts storage_key
-    res_member_list = await client.get(f"/api/v1/knowledge-bases/{test_kb.id}/documents", headers=member_headers)
+    res_member_list = await client.get(
+        f"/api/v1/knowledge-bases/{test_kb.id}/documents", headers=member_headers
+    )
     assert res_member_list.status_code == status.HTTP_200_OK
     member_item = next(d for d in res_member_list.json()["items"] if d["id"] == doc_id)
     assert member_item["storage_key"] is None
@@ -411,12 +417,20 @@ async def test_document_chunk_pagination_and_isolation(
     res_upload = await client.post(
         f"/api/v1/knowledge-bases/{test_kb.id}/documents",
         headers=headers,
-        files={"file": ("pagination_doc.md", b"# Title\n\nParagraph 1\n\nParagraph 2\n\nParagraph 3", "text/markdown")},
+        files={
+            "file": (
+                "pagination_doc.md",
+                b"# Title\n\nParagraph 1\n\nParagraph 2\n\nParagraph 3",
+                "text/markdown",
+            )
+        },
     )
     doc_id = res_upload.json()["document"]["id"]
 
     # Before ingestion, chunks should be empty (0 chunks)
-    res_empty_chunks = await client.get(f"/api/v1/documents/{doc_id}/chunks?limit=10&offset=0", headers=headers)
+    res_empty_chunks = await client.get(
+        f"/api/v1/documents/{doc_id}/chunks?limit=10&offset=0", headers=headers
+    )
     assert res_empty_chunks.status_code == status.HTTP_200_OK
     assert res_empty_chunks.json()["total"] == 0
     assert len(res_empty_chunks.json()["items"]) == 0
@@ -425,7 +439,9 @@ async def test_document_chunk_pagination_and_isolation(
     await client.post(f"/api/v1/documents/{doc_id}/ingest", headers=headers)
 
     # After ingestion, verify paginated chunks
-    res_chunks = await client.get(f"/api/v1/documents/{doc_id}/chunks?limit=1&offset=0", headers=headers)
+    res_chunks = await client.get(
+        f"/api/v1/documents/{doc_id}/chunks?limit=1&offset=0", headers=headers
+    )
     assert res_chunks.status_code == status.HTTP_200_OK
     data = res_chunks.json()
     assert data["total"] > 0
@@ -433,5 +449,3 @@ async def test_document_chunk_pagination_and_isolation(
     assert data["limit"] == 1
     assert data["offset"] == 0
     assert data["items"][0]["chunk_index"] == 0
-
-

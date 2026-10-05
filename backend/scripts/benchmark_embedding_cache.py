@@ -8,9 +8,8 @@ import statistics
 import time
 
 from app.core.config import get_settings
-from app.services.embeddings.cache import QueryEmbeddingCache, get_query_embedding_cache
+from app.services.embeddings.cache import QueryEmbeddingCache
 from app.services.embeddings.providers import get_embedding_provider
-
 
 REPRESENTATIVE_QUERIES = [
     "What are the role permissions for Organization Admin?",
@@ -28,9 +27,13 @@ async def run_benchmark(iterations: int = 10):
 
     print("=" * 70)
     print("RAGForge Query Embedding Cache Synthetic Benchmark")
-    print(f"Provider: {provider.provider_name} | Model: {provider.model_name} (dim: {provider.dimension})")
+    print(
+        f"Provider: {provider.provider_name} | Model: {provider.model_name} (dim: {provider.dimension})"
+    )
     print(f"Configured Capacity: {cache.max_size} entries")
-    print(f"Unique Queries: {len(REPRESENTATIVE_QUERIES)} | Repetitions: {iterations} | Total Requests: {len(REPRESENTATIVE_QUERIES) * iterations}")
+    print(
+        f"Unique Queries: {len(REPRESENTATIVE_QUERIES)} | Repetitions: {iterations} | Total Requests: {len(REPRESENTATIVE_QUERIES) * iterations}"
+    )
     print("=" * 70)
 
     cold_latencies = []

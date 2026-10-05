@@ -128,7 +128,9 @@ def create_application() -> FastAPI:
             response.headers["X-Trace-ID"] = trace_id
 
             # Log trace summary for non-stream chat endpoints
-            if request.url.path.startswith("/api/v1/chat") and not request.url.path.endswith("/stream"):
+            if request.url.path.startswith("/api/v1/chat") and not request.url.path.endswith(
+                "/stream"
+            ):
                 trace.log_summary()
                 if not trace._summary_emitted:
                     trace.emit_performance_summary(
@@ -154,7 +156,9 @@ def create_application() -> FastAPI:
             trace.add_error(str(exc))
             trace.mark("request_completed")
             if not trace._summary_emitted:
-                trace.emit_performance_summary(outcome="FAILED", error_category="MIDDLEWARE_EXCEPTION")
+                trace.emit_performance_summary(
+                    outcome="FAILED", error_category="MIDDLEWARE_EXCEPTION"
+                )
             logger.error(
                 "%s %s failed with exception: %s (%.2f ms) trace=%s",
                 request.method,

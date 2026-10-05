@@ -613,9 +613,20 @@ class RetrievalService:
             total_duration_ms=round(total_duration_ms, 2),
             partial_failure=partial_failure,
             partial_failure_reason=partial_reason,
-            embedding_cache_hit=is_cache_hit if effective_search_mode in (SearchMode.VECTOR, SearchMode.HYBRID) else False,
-            embedding_cache_latency_ms=round(embed_duration_ms if (effective_search_mode in (SearchMode.VECTOR, SearchMode.HYBRID) and is_cache_hit) else 0.0, 2),
-            db_sessions_created=timing_data.get("db_sessions_created", 0) if effective_search_mode == SearchMode.HYBRID else 0,
+            embedding_cache_hit=is_cache_hit
+            if effective_search_mode in (SearchMode.VECTOR, SearchMode.HYBRID)
+            else False,
+            embedding_cache_latency_ms=round(
+                embed_duration_ms
+                if (
+                    effective_search_mode in (SearchMode.VECTOR, SearchMode.HYBRID) and is_cache_hit
+                )
+                else 0.0,
+                2,
+            ),
+            db_sessions_created=timing_data.get("db_sessions_created", 0)
+            if effective_search_mode == SearchMode.HYBRID
+            else 0,
             query_analysis=query_analysis_dict,
         )
 

@@ -175,5 +175,3 @@ class Document(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     @error_message.setter
     def error_message(self, value: str | None) -> None:
         self._error_message = value
-
-

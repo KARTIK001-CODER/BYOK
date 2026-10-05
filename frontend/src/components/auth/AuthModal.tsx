@@ -3,6 +3,7 @@ import { Bot, LogIn, UserPlus } from "lucide-react";
 import { AuthApi } from "../../api/auth";
 import { ApiClient } from "../../api/client";
 import { User, Organization } from "../../types";
+import { getPrimaryOrganization } from "../../utils/documents";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -29,13 +30,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onSuccess }) => {
       if (isLogin) {
         const resp = await AuthApi.login({ email, password });
         ApiClient.setToken(resp.access_token);
+        ApiClient.setRefreshToken(resp.refresh_token);
         const user = await AuthApi.getCurrentUser();
         const memberships = await AuthApi.getUserOrganizations();
-        const primaryOrg = memberships[0]?.organization || (memberships[0] ? {
-          id: memberships[0].organization_id,
-          name: "Workspace",
-          slug: "workspace",
-        } : null);
+        const primaryOrg = getPrimaryOrganization(memberships);
         if (primaryOrg) {
           ApiClient.setOrganizationId(primaryOrg.id);
         }
@@ -48,6 +46,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onSuccess }) => {
           organization_name: orgName,
         });
         ApiClient.setToken(resp.tokens.access_token);
+        ApiClient.setRefreshToken(resp.tokens.refresh_token);
         ApiClient.setOrganizationId(resp.organization.id);
         onSuccess(resp.user, resp.organization);
       }

@@ -5,11 +5,12 @@ concurrency isolation, parallel retrieval semantics, streaming, and sanitization
 """
 
 import asyncio
-import json
+import contextlib
 import logging
+from unittest.mock import AsyncMock, patch
+
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
-from unittest.mock import AsyncMock, patch
 
 from app.core.logging import SensitiveDataFilter
 from app.core.tracing import RequestTrace, get_current_trace, trace_context
@@ -127,14 +128,13 @@ async def test_failed_llm_stage_attribution(
     )
 
     trace = RequestTrace(trace_id="test-fail-llm-trace", request_id="test-fail-llm-req")
-    with trace_context(trace):
-        with pytest.raises(LLMException):
-            await rag_service.generate(
-                session=db_session,
-                organization_id=org.id,
-                user_id=user.id,
-                request=req,
-            )
+    with trace_context(trace), pytest.raises(LLMException):
+        await rag_service.generate(
+            session=db_session,
+            organization_id=org.id,
+            user_id=user.id,
+            request=req,
+        )
 
     # Verification: trace captured failure without crashing
     assert trace.outcome == "FAILED"
@@ -166,8 +166,9 @@ async def test_failed_retrieval_stage_attribution(
     )
 
     trace = RequestTrace(trace_id="test-fail-retrieval-trace", request_id="test-fail-retrieval-req")
-    with trace_context(trace):
-        with patch.object(
+    with (
+        trace_context(trace),
+        patch.object(
             RetrievalService,
             "search",
             side_effect=RetrievalException(
@@ -175,14 +176,15 @@ async def test_failed_retrieval_stage_attribution(
                 code=RetrievalErrorCode.UNAUTHORIZED_KNOWLEDGE_BASE,
                 status_code=403,
             ),
-        ):
-            with pytest.raises(RetrievalException):
-                await rag_service.generate(
-                    session=db_session,
-                    organization_id=org.id,
-                    user_id=user.id,
-                    request=req,
-                )
+        ),
+        pytest.raises(RetrievalException),
+    ):
+        await rag_service.generate(
+            session=db_session,
+            organization_id=org.id,
+            user_id=user.id,
+            request=req,
+        )
 
     assert trace.outcome == "FAILED"
     assert trace.error_category == "RETRIEVAL_UNAUTHORIZED_KNOWLEDGE_BASE"
@@ -209,6 +211,7 @@ def test_trace_id_propagation():
 @pytest.mark.asyncio
 async def test_concurrent_requests_trace_isolation():
     """Verify concurrent async requests maintain isolated traces, counters, and stage timings."""
+
     async def worker(worker_id: int):
         t_id = f"worker-trace-{worker_id}"
         r_id = f"worker-req-{worker_id}"
@@ -339,10 +342,8 @@ async def test_streaming_chat_client_cancellation_semantics(
         )
         # Read first event then simulate client disconnect (throw CancelledError into generator)
         await anext(gen)
-        try:
+        with contextlib.suppress(asyncio.CancelledError, StopAsyncIteration):
             await gen.athrow(asyncio.CancelledError())
-        except (asyncio.CancelledError, StopAsyncIteration):
-            pass
 
     assert trace.outcome == "CANCELLED"
     assert trace.error_category == "CLIENT_DISCONNECT"

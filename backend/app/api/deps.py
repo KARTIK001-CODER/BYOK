@@ -4,7 +4,9 @@ from collections.abc import Callable
 
 from fastapi import Depends
 from fastapi.security import OAuth2PasswordBearer
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.exceptions import ForbiddenException, NotFoundException, UnauthorizedException
 from app.core.security import decode_access_token
@@ -209,9 +211,11 @@ async def get_incident_or_404(
     session: AsyncSession = Depends(get_db),
 ) -> tuple[Incident, OrganizationMembership]:
     """Retrieve Incident and verify caller has organization access."""
-    from sqlalchemy import select
-
-    stmt = select(Incident).where(Incident.id == incident_id)
+    stmt = (
+        select(Incident)
+        .where(Incident.id == incident_id)
+        .options(selectinload(Incident.evidence_events))
+    )
     result = await session.execute(stmt)
     incident = result.scalar_one_or_none()
     if incident is None:
@@ -224,4 +228,3 @@ async def get_incident_or_404(
     if membership is None:
         raise NotFoundException(message="Incident not found.")
     return incident, membership
-

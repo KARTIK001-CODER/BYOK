@@ -201,9 +201,8 @@ class DocumentService:
         )
         err_msg_col = func.coalesce(ingestion_err_subq, embedding_err_subq).label("error_message")
 
-        stmt = (
-            select(Document, chunk_count_subq.label("chunk_count"), err_msg_col)
-            .where(Document.id == document_id)
+        stmt = select(Document, chunk_count_subq.label("chunk_count"), err_msg_col).where(
+            Document.id == document_id
         )
         if organization_id:
             stmt = stmt.where(Document.organization_id == organization_id)

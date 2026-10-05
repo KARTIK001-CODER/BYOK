@@ -194,26 +194,28 @@ class KnowledgeBaseService:
             func.count(Document.id).label("total_documents"),
             chunk_subq.label("total_chunks"),
             func.coalesce(func.sum(Document.file_size), 0).label("total_file_size_bytes"),
-            func.count(
-                case((Document.status == DocumentStatus.READY, 1))
-            ).label("ready_documents"),
+            func.count(case((Document.status == DocumentStatus.READY, 1))).label("ready_documents"),
             func.count(
                 case(
                     (
                         or_(
-                            Document.status.in_([DocumentStatus.UPLOADING, DocumentStatus.PROCESSING]),
+                            Document.status.in_(
+                                [DocumentStatus.UPLOADING, DocumentStatus.PROCESSING]
+                            ),
                             and_(
                                 Document.status == DocumentStatus.READY,
-                                Document.embedding_status.in_([EmbeddingStatus.PROCESSING, EmbeddingStatus.PENDING]),
+                                Document.embedding_status.in_(
+                                    [EmbeddingStatus.PROCESSING, EmbeddingStatus.PENDING]
+                                ),
                             ),
                         ),
                         1,
                     )
                 )
             ).label("processing_documents"),
-            func.count(
-                case((Document.status == DocumentStatus.FAILED, 1))
-            ).label("failed_documents"),
+            func.count(case((Document.status == DocumentStatus.FAILED, 1))).label(
+                "failed_documents"
+            ),
             func.count(
                 case(
                     (
@@ -228,9 +230,9 @@ class KnowledgeBaseService:
                     )
                 )
             ).label("pending_embeddings"),
-            func.count(
-                case((Document.embedding_status == EmbeddingStatus.FAILED, 1))
-            ).label("failed_embeddings"),
+            func.count(case((Document.embedding_status == EmbeddingStatus.FAILED, 1))).label(
+                "failed_embeddings"
+            ),
         ).where(
             Document.knowledge_base_id == kb_id,
             Document.organization_id == organization_id,

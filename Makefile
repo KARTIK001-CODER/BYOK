@@ -47,8 +47,8 @@ frontend-build:
 
 ci:
 	cd backend && pytest -q
-	cd backend && ruff check app
-	cd backend && ruff format --check app
+	cd backend && ruff check .
+	cd backend && ruff format --check .
 	cd frontend && npm run build
 
 clean:

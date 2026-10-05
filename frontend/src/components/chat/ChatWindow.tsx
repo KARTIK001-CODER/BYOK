@@ -16,6 +16,7 @@ interface ChatWindowProps {
   onOpenSource: (citations: CitationItem[], selectedId?: number) => void;
   hasKnowledgeBase?: boolean;
   kbName?: string | null;
+  bannerError?: string | null;
 }
 
 const STARTER_QUESTIONS = [
@@ -37,6 +38,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   onOpenSource,
   hasKnowledgeBase,
   kbName,
+  bannerError,
 }) => {
   const scrollBottomRef = useRef<HTMLDivElement>(null);
 
@@ -52,6 +54,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         <div className="banner banner-warning" role="alert">
           <TriangleAlert size={14} />
           <span>No knowledge base selected — answers won't be grounded. Create or pick one from Knowledge.</span>
+        </div>
+      )}
+      {bannerError && (
+        <div className="banner banner-error" role="alert">
+          <TriangleAlert size={14} />
+          <span>{bannerError}</span>
         </div>
       )}
       <div className="messages-container">

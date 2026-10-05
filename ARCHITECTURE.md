@@ -20,7 +20,7 @@ The frontend is built for performance and a modern development experience:
 - **Framework**: [React 19](https://react.dev/) - A JavaScript library for building user interfaces.
 - **Build Tool**: [Vite](https://vitejs.dev/) - A fast, modern frontend build tool.
 - **Language**: [TypeScript](https://www.typescriptlang.org/) - For static typing and better developer tooling.
-- **Routing**: [React Router](https://reactrouter.com/) (v7) - For client-side navigation.
+- **Routing**: View switching is state-driven in `App.tsx` (`chat` | `knowledge`); `react-router-dom` (v7) is installed but currently unused — no client-side routes are defined.
 - **Icons**: [Lucide React](https://lucide.dev/) - A beautiful and consistent icon toolkit.
 - **Markdown Rendering**: [React Markdown](https://github.com/remarkjs/react-markdown) (with GFM via `remark-gfm`; code blocks styled with app CSS) for displaying rich chat responses.
 
@@ -58,11 +58,22 @@ The backend (`/backend/app`) is designed in a modular way, where different domai
    - `reranking/` + `verification/`: Opt-in rerank (2s bounded) and groundedness checks.
    - `llm/`: Provider factory (`groq/openai/gemini/mock`); server-key fallback (BYOK vault schema-only).
    - `rag/`: The orchestrator that ties Retrieval and LLMs together (context budget, prompt, citations, SSE `start/retrieval/token/citation/groundedness/done/error`, pre-LLM commit).
+   - `incidents/`: TracePilot Incident Foundation v0 — tenant-scoped incidents, idempotent evidence ingestion (`UNIQUE(incident_id, deduplication_key)`), deterministic timeline (`event_timestamp ASC, id ASC`). No causal inference at this layer.
    - `documents/`, `users/`, `organizations/`: Standard CRUD services for application entities.
+
+## 4. TracePilot Incident Foundation v0
+
+Tenant-isolated SRE incident records (`incidents`, `evidence_events`; migration `0008`, hardened by `0009`):
+
+- **Endpoints** (`/api/v1/incidents`): create/list/get incident, ingest/list evidence (idempotent via `deduplication_key`, duplicate signalled with `X-TracePilot-Duplicate`), deterministic timeline.
+- **Isolation**: every incident/evidence query filters by `organization_id`; cross-tenant access returns `404` (no existence leak); explicit `organization_id` outside membership returns `403`.
+- **Guarantee**: timeline provides chronological evidence only — no root-cause hypotheses (Milestone 2 scope).
 
 ---
 
-## 4. The Core Flow (How a Chat Works)
+---
+
+## 5. The Core Flow (How a Chat Works)
 
 When a user asks a question about their uploaded documents, the data flows through the system as follows:
 

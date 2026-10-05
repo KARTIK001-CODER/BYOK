@@ -231,9 +231,7 @@ async def test_rag_stream_chat_coalesced_persistence(
 
     # Check messages in that conversation
     msg_stmt = (
-        select(Message)
-        .where(Message.conversation_id == conv.id)
-        .order_by(Message.created_at.asc())
+        select(Message).where(Message.conversation_id == conv.id).order_by(Message.created_at.asc())
     )
     m_res = await db_session.execute(msg_stmt)
     msgs = list(m_res.scalars().all())
@@ -242,4 +240,3 @@ async def test_rag_stream_chat_coalesced_persistence(
     assert msgs[0].role == MessageRole.USER
     assert msgs[0].content == "Explain vacation accrual rules."
     assert msgs[1].role == MessageRole.ASSISTANT
-

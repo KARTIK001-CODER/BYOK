@@ -1,9 +1,10 @@
 import logging
 
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import NotFoundException
+from app.core.exceptions import ConflictException, NotFoundException
 from app.models.evidence import EvidenceEvent
 from app.models.incident import Incident, IncidentSeverity, IncidentStatus
 from app.schemas.incidents import EvidenceEventCreate, IncidentCreate, IncidentUpdate
@@ -60,12 +61,9 @@ class IncidentService:
         organization_id: str,
     ) -> Incident | None:
         """Fetch incident enforcing strict tenant isolation."""
-        stmt = (
-            select(Incident)
-            .where(
-                Incident.id == incident_id,
-                Incident.organization_id == organization_id,
-            )
+        stmt = select(Incident).where(
+            Incident.id == incident_id,
+            Incident.organization_id == organization_id,
         )
         result = await session.execute(stmt)
         return result.scalar_one_or_none()
@@ -138,9 +136,7 @@ class IncidentService:
                 else payload.status
             )
         if payload.service_name is not None:
-            incident.service_name = (
-                payload.service_name.strip() if payload.service_name else None
-            )
+            incident.service_name = payload.service_name.strip() if payload.service_name else None
         if payload.environment is not None:
             incident.environment = payload.environment.strip()
         if payload.incident_metadata is not None:
@@ -166,19 +162,20 @@ class IncidentService:
         if incident is None:
             raise NotFoundException(message="Incident not found.")
 
-        # Idempotency check
-        if payload.deduplication_key:
+        # Idempotency check (normalize whitespace so " key " matches "key")
+        dedup_key = payload.deduplication_key.strip() if payload.deduplication_key else None
+        if dedup_key:
             stmt = select(EvidenceEvent).where(
                 EvidenceEvent.incident_id == incident_id,
                 EvidenceEvent.organization_id == organization_id,
-                EvidenceEvent.deduplication_key == payload.deduplication_key,
+                EvidenceEvent.deduplication_key == dedup_key,
             )
             existing = (await session.execute(stmt)).scalar_one_or_none()
             if existing is not None:
                 logger.info(
                     "Duplicate evidence event detected for incident %s (dedup_key=%s). Returning existing event %s.",
                     incident_id,
-                    payload.deduplication_key,
+                    dedup_key,
                     existing.id,
                 )
                 return existing, False
@@ -186,22 +183,44 @@ class IncidentService:
         evidence = EvidenceEvent(
             incident_id=incident_id,
             organization_id=organization_id,
-            source_type=(
-                payload.source_type.value
-                if hasattr(payload.source_type, "value")
-                else payload.source_type
-            ),
+            source_type=payload.source_type.value,
             event_type=payload.event_type.strip(),
             event_timestamp=payload.event_timestamp,
             summary=payload.summary.strip(),
             normalized_payload=payload.normalized_payload,
             source_reference=payload.source_reference.strip() if payload.source_reference else None,
-            deduplication_key=payload.deduplication_key.strip()
-            if payload.deduplication_key
-            else None,
+            deduplication_key=dedup_key,
         )
         session.add(evidence)
-        await session.commit()
+        try:
+            await session.commit()
+        except IntegrityError as exc:
+            # Concurrent duplicate insert lost the check-then-insert race.
+            # The UNIQUE constraint (incident_id, deduplication_key) rejected it.
+            await session.rollback()
+            if dedup_key:
+                retry_stmt = select(EvidenceEvent).where(
+                    EvidenceEvent.incident_id == incident_id,
+                    EvidenceEvent.organization_id == organization_id,
+                    EvidenceEvent.deduplication_key == dedup_key,
+                )
+                raced = (await session.execute(retry_stmt)).scalar_one_or_none()
+                if raced is not None:
+                    logger.info(
+                        "Concurrent duplicate evidence event for incident %s (dedup_key=%s). Returning existing event %s.",
+                        incident_id,
+                        dedup_key,
+                        raced.id,
+                    )
+                    return raced, False
+            logger.warning(
+                "Evidence insert conflict for incident %s: %s",
+                incident_id,
+                type(exc).__name__,
+            )
+            raise ConflictException(
+                message="Evidence event conflicts with an existing record."
+            ) from exc
         await session.refresh(evidence)
         logger.info(
             "Ingested evidence event %s for incident %s (source=%s, type=%s)",

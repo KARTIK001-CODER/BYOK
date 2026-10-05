@@ -11,6 +11,7 @@ export interface ApiError {
 
 export class ApiClient {
   private static token: string | null = localStorage.getItem("ragforge_token");
+  private static refreshToken: string | null = localStorage.getItem("ragforge_refresh_token");
   private static organizationId: string | null = localStorage.getItem("ragforge_org_id");
 
   static setToken(token: string | null) {
@@ -24,6 +25,19 @@ export class ApiClient {
 
   static getToken(): string | null {
     return this.token;
+  }
+
+  static setRefreshToken(token: string | null) {
+    this.refreshToken = token;
+    if (token) {
+      localStorage.setItem("ragforge_refresh_token", token);
+    } else {
+      localStorage.removeItem("ragforge_refresh_token");
+    }
+  }
+
+  static getRefreshToken(): string | null {
+    return this.refreshToken;
   }
 
   static setOrganizationId(orgId: string | null) {
@@ -76,6 +90,13 @@ export class ApiClient {
         message: data.detail || response.statusText || "Request failed.",
       };
       throw errorObj;
+    }
+
+    if (data === null || typeof data !== "object") {
+      throw {
+        code: "INVALID_RESPONSE",
+        message: "Unexpected response format from server.",
+      } as ApiError;
     }
 
     return data as T;

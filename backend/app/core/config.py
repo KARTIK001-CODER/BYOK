@@ -1,3 +1,5 @@
+import json
+import re
 from functools import lru_cache
 from typing import Any, Literal
 
@@ -59,8 +61,6 @@ class Settings(BaseSettings):
                     "sslmode=prefer", "ssl=prefer"
                 )
             if "channel_binding=" in v:
-                import re
-
                 v = re.sub(r"[&?]channel_binding=[^&]*", "", v)
                 if "?" not in v and "&" in v:
                     v = v.replace("&", "?", 1)
@@ -175,13 +175,11 @@ class Settings(BaseSettings):
     @classmethod
     def parse_cors_origins(cls, value: Any) -> list[str]:
         if isinstance(value, str):
-            import json
-
             try:
                 parsed = json.loads(value)
                 if isinstance(parsed, list):
                     return parsed
-            except Exception:
+            except ValueError:
                 pass
             return [origin.strip() for origin in value.split(",") if origin.strip()]
         return value

@@ -10,7 +10,6 @@ Validates Step 9:
 """
 
 import asyncio
-import json
 import logging
 import statistics
 import sys
@@ -26,15 +25,12 @@ if "pytest" in sys.modules:
     del sys.modules["pytest"]
 
 from sqlalchemy import select, text
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config import get_settings
 from app.core.tracing import RequestTrace, trace_context
-from app.db.session import get_engine, get_pool_status, get_session_factory
+from app.db.session import get_engine, get_session_factory
 from app.models.document_chunk import DocumentChunk
 from app.models.knowledge_base import KnowledgeBase
-from app.models.organization import Organization
-from app.services.retrieval.errors import RetrievalErrorCode, RetrievalException
 from app.services.retrieval.schemas import RetrievalRequest, SearchMode
 from app.services.retrieval.service import RetrievalService
 
@@ -201,7 +197,9 @@ async def run_concurrency_batch(
         "failures": failures,
         "pool_timeouts": pool_timeouts,
         "success_rate": round((successes / total_requests) * 100.0, 1) if total_requests else 0.0,
-        "throughput_rps": round((successes / (total_wall_ms / 1000.0)), 1) if total_wall_ms > 0 else 0.0,
+        "throughput_rps": round((successes / (total_wall_ms / 1000.0)), 1)
+        if total_wall_ms > 0
+        else 0.0,
         "peak_conns": peak_conns_observed,
         "latency": lat_stats,
         "checkout_wait": wait_stats,
@@ -287,27 +285,33 @@ async def test_retrieval_equivalence(
         is_match = True
         if len(par_chunks) != len(seq_chunks):
             is_match = False
-            detailed_diffs.append({
-                "query": q,
-                "reason": f"Result count mismatch: par={len(par_chunks)} vs seq={len(seq_chunks)}",
-            })
+            detailed_diffs.append(
+                {
+                    "query": q,
+                    "reason": f"Result count mismatch: par={len(par_chunks)} vs seq={len(seq_chunks)}",
+                }
+            )
         else:
             for p, s in zip(par_chunks, seq_chunks, strict=True):
                 # ID and rank must match identically
                 if p["id"] != s["id"] or p["rank"] != s["rank"]:
                     is_match = False
-                    detailed_diffs.append({
-                        "query": q,
-                        "reason": f"Rank/ID mismatch: par={p['id']} (rank {p['rank']}) vs seq={s['id']} (rank {s['rank']})",
-                    })
+                    detailed_diffs.append(
+                        {
+                            "query": q,
+                            "reason": f"Rank/ID mismatch: par={p['id']} (rank {p['rank']}) vs seq={s['id']} (rank {s['rank']})",
+                        }
+                    )
                     break
                 # Score within float tolerance
                 if abs(p["score"] - s["score"]) > 1e-4:
                     is_match = False
-                    detailed_diffs.append({
-                        "query": q,
-                        "reason": f"Score drift: par={p['score']} vs seq={s['score']}",
-                    })
+                    detailed_diffs.append(
+                        {
+                            "query": q,
+                            "reason": f"Score drift: par={p['score']} vs seq={s['score']}",
+                        }
+                    )
                     break
 
         if is_match:
@@ -333,7 +337,9 @@ async def main():
     # 1. Inspect PostgreSQL Environment
     async with engine.connect() as conn:
         pg_v = await conn.scalar(text("SELECT version();"))
-        pgvec_v = await conn.scalar(text("SELECT extversion FROM pg_extension WHERE extname='vector';"))
+        pgvec_v = await conn.scalar(
+            text("SELECT extversion FROM pg_extension WHERE extname='vector';")
+        )
 
     print(f"Database Dialect: {engine.dialect.name.upper()} (Driver: {engine.dialect.driver})")
     print(f"PostgreSQL Version: {pg_v[:80]}")
@@ -359,9 +365,9 @@ async def main():
         kb_id, org_id, kb_name = str(kb_row[0]), str(kb_row[1]), str(kb_row[2])
 
         chunk_count = await session.scalar(
-            select(text("count(*)")).select_from(DocumentChunk).where(
-                DocumentChunk.knowledge_base_id == kb_id
-            )
+            select(text("count(*)"))
+            .select_from(DocumentChunk)
+            .where(DocumentChunk.knowledge_base_id == kb_id)
         )
 
     print(f"Target Knowledge Base: '{kb_name}' (ID: {kb_id})")
@@ -374,7 +380,9 @@ async def main():
     requests_per_level = 12
 
     print("\n[PHASE 2] Running Concurrency & Pool Behavior Benchmarks...")
-    print(f"{'Mode':<12} | {'c':<3} | {'Reqs':<5} | {'Succ%':<6} | {'p50 (ms)':<9} | {'p95 (ms)':<9} | {'p99 (ms)':<9} | {'Peak Conns':<10} | {'Wait p50':<9} | {'Sessions/Req':<12}")
+    print(
+        f"{'Mode':<12} | {'c':<3} | {'Reqs':<5} | {'Succ%':<6} | {'p50 (ms)':<9} | {'p95 (ms)':<9} | {'p99 (ms)':<9} | {'Peak Conns':<10} | {'Wait p50':<9} | {'Sessions/Req':<12}"
+    )
     print("-" * 105)
 
     sequential_results = []
@@ -383,7 +391,13 @@ async def main():
     for c in concurrency_levels:
         # A) Sequential Mode
         seq_res = await run_concurrency_batch(
-            session_factory, org_id, kb_id, test_query, parallel=False, concurrency=c, total_requests=requests_per_level
+            session_factory,
+            org_id,
+            kb_id,
+            test_query,
+            parallel=False,
+            concurrency=c,
+            total_requests=requests_per_level,
         )
         sequential_results.append(seq_res)
         print(
@@ -394,7 +408,13 @@ async def main():
 
         # B) Parallel Mode
         par_res = await run_concurrency_batch(
-            session_factory, org_id, kb_id, test_query, parallel=True, concurrency=c, total_requests=requests_per_level
+            session_factory,
+            org_id,
+            kb_id,
+            test_query,
+            parallel=True,
+            concurrency=c,
+            total_requests=requests_per_level,
         )
         parallel_results.append(par_res)
         print(
@@ -410,7 +430,9 @@ async def main():
     )
     print(f"Cancellation Rounds Executed: {cancellation_report['rounds']}")
     print(f"Connections Leaked: {cancellation_report['connections_leaked']}")
-    print(f"Subsequent Recovery Request Succeeded: {cancellation_report['recovery_request_success']}")
+    print(
+        f"Subsequent Recovery Request Succeeded: {cancellation_report['recovery_request_success']}"
+    )
     print(f"Clean Recovery Invariant Maintained: {cancellation_report['clean_recovery']}")
 
     # 4. Phase 4: Retrieval Equivalence Verification
@@ -426,7 +448,9 @@ async def main():
         session_factory, org_id, kb_id, test_queries
     )
     print(f"Queries Tested: {equivalence_report['total_queries_tested']}")
-    print(f"Identical Matches (IDs, Ranks, Scores): {equivalence_report['exact_matches']}/{equivalence_report['total_queries_tested']}")
+    print(
+        f"Identical Matches (IDs, Ranks, Scores): {equivalence_report['exact_matches']}/{equivalence_report['total_queries_tested']}"
+    )
     print(f"Equivalence Rate: {equivalence_report['equivalence_rate_pct']}%")
     if equivalence_report["differences"]:
         print(f"Differences Noted: {equivalence_report['differences']}")

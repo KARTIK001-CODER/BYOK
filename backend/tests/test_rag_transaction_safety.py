@@ -5,8 +5,6 @@ is aborted when persistence fails, session rollback is executed, and original ex
 are preserved even if rollback fails.
 """
 
-import asyncio
-import json
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -36,7 +34,9 @@ async def test_generate_pre_llm_commit_failure_prevents_llm_call(
 
     mock_provider = MockLLMProvider()
     mock_provider.generate = AsyncMock(
-        return_value=LLMResponse(content="Should not be generated", model="mock-default", provider="mock")
+        return_value=LLMResponse(
+            content="Should not be generated", model="mock-default", provider="mock"
+        )
     )
     LLMProviderFactory.set_mock_provider(mock_provider)
 
@@ -56,23 +56,24 @@ async def test_generate_pre_llm_commit_failure_prevents_llm_call(
 
     # Force commit failure on pre-LLM commit
     commit_call_count = 0
-    original_commit = db_session.commit
 
     async def failing_commit():
         nonlocal commit_call_count
         commit_call_count += 1
         raise SQLAlchemyError("Simulated database commit failure (disk full / dropped connection)")
 
-    with patch.object(db_session, "commit", side_effect=failing_commit), \
-         patch.object(db_session, "rollback", rollback_mock):
-        with trace_context(trace):
-            with pytest.raises(SQLAlchemyError, match="Simulated database commit failure"):
-                await rag_service.generate(
-                    session=db_session,
-                    organization_id=org.id,
-                    user_id=user.id,
-                    request=req,
-                )
+    with (
+        patch.object(db_session, "commit", side_effect=failing_commit),
+        patch.object(db_session, "rollback", rollback_mock),
+        trace_context(trace),
+        pytest.raises(SQLAlchemyError, match="Simulated database commit failure"),
+    ):
+        await rag_service.generate(
+            session=db_session,
+            organization_id=org.id,
+            user_id=user.id,
+            request=req,
+        )
 
     # 1. LLM provider must NEVER have been invoked
     mock_provider.generate.assert_not_called()
@@ -122,16 +123,18 @@ async def test_generate_post_llm_commit_failure_triggers_rollback(
         # Post-LLM assistant commit fails
         raise SQLAlchemyError("Simulated assistant message commit failure")
 
-    with patch.object(db_session, "commit", side_effect=commit_fail_on_second), \
-         patch.object(db_session, "rollback", rollback_mock):
-        with trace_context(trace):
-            with pytest.raises(SQLAlchemyError, match="Simulated assistant message commit failure"):
-                await rag_service.generate(
-                    session=db_session,
-                    organization_id=org.id,
-                    user_id=user.id,
-                    request=req,
-                )
+    with (
+        patch.object(db_session, "commit", side_effect=commit_fail_on_second),
+        patch.object(db_session, "rollback", rollback_mock),
+        trace_context(trace),
+        pytest.raises(SQLAlchemyError, match="Simulated assistant message commit failure"),
+    ):
+        await rag_service.generate(
+            session=db_session,
+            organization_id=org.id,
+            user_id=user.id,
+            request=req,
+        )
 
     # Rollback must have been executed on the assistant commit failure
     rollback_mock.assert_awaited()
@@ -169,16 +172,18 @@ async def test_stream_chat_user_commit_failure_prevents_llm(
         raise SQLAlchemyError("User message commit error")
 
     events = []
-    with patch.object(db_session, "commit", side_effect=fail_user_commit), \
-         patch.object(db_session, "rollback", rollback_mock):
-        with trace_context(trace):
-            async for event_chunk in rag_service.stream_chat(
-                session=db_session,
-                organization_id=org.id,
-                user_id=user.id,
-                request=req,
-            ):
-                events.append(event_chunk)
+    with (
+        patch.object(db_session, "commit", side_effect=fail_user_commit),
+        patch.object(db_session, "rollback", rollback_mock),
+        trace_context(trace),
+    ):
+        async for event_chunk in rag_service.stream_chat(
+            session=db_session,
+            organization_id=org.id,
+            user_id=user.id,
+            request=req,
+        ):
+            events.append(event_chunk)
 
     # 1. LLM stream must NOT have been called
     mock_provider.stream.assert_not_called()
@@ -234,16 +239,18 @@ async def test_stream_chat_pre_llm_commit_failure_aborts_before_tokens(
         raise SQLAlchemyError("Pre-LLM commit failure")
 
     events = []
-    with patch.object(db_session, "commit", side_effect=fail_pre_llm_commit), \
-         patch.object(db_session, "rollback", rollback_mock):
-        with trace_context(trace):
-            async for event_chunk in rag_service.stream_chat(
-                session=db_session,
-                organization_id=org.id,
-                user_id=user.id,
-                request=req,
-            ):
-                events.append(event_chunk)
+    with (
+        patch.object(db_session, "commit", side_effect=fail_pre_llm_commit),
+        patch.object(db_session, "rollback", rollback_mock),
+        trace_context(trace),
+    ):
+        async for event_chunk in rag_service.stream_chat(
+            session=db_session,
+            organization_id=org.id,
+            user_id=user.id,
+            request=req,
+        ):
+            events.append(event_chunk)
 
     # LLM stream must NOT have been called
     mock_provider.stream.assert_not_called()
@@ -295,16 +302,18 @@ async def test_stream_chat_assistant_commit_failure_yields_error_not_done(
         raise SQLAlchemyError("Final assistant commit error")
 
     events = []
-    with patch.object(db_session, "commit", side_effect=fail_final_commit), \
-         patch.object(db_session, "rollback", rollback_mock):
-        with trace_context(trace):
-            async for event_chunk in rag_service.stream_chat(
-                session=db_session,
-                organization_id=org.id,
-                user_id=user.id,
-                request=req,
-            ):
-                events.append(event_chunk)
+    with (
+        patch.object(db_session, "commit", side_effect=fail_final_commit),
+        patch.object(db_session, "rollback", rollback_mock),
+        trace_context(trace),
+    ):
+        async for event_chunk in rag_service.stream_chat(
+            session=db_session,
+            organization_id=org.id,
+            user_id=user.id,
+            request=req,
+        ):
+            events.append(event_chunk)
 
     all_events = "".join(events)
     # Tokens were sent
@@ -322,8 +331,12 @@ async def test_stream_chat_assistant_commit_failure_yields_error_not_done(
 async def test_safe_commit_preserves_original_exception_when_rollback_fails():
     """Verify _safe_commit preserves the commit exception when rollback also fails."""
     mock_session = AsyncMock()
-    mock_session.commit = AsyncMock(side_effect=OperationalError("COMMIT", {}, Exception("DB disconnect")))
-    mock_session.rollback = AsyncMock(side_effect=OperationalError("ROLLBACK", {}, Exception("Socket dead")))
+    mock_session.commit = AsyncMock(
+        side_effect=OperationalError("COMMIT", {}, Exception("DB disconnect"))
+    )
+    mock_session.rollback = AsyncMock(
+        side_effect=OperationalError("ROLLBACK", {}, Exception("Socket dead"))
+    )
 
     with pytest.raises(OperationalError) as exc_info:
         await RAGService._safe_commit(mock_session)

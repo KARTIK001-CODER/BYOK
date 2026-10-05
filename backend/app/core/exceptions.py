@@ -7,7 +7,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.core.logging import get_request_id
+from app.core.logging import get_request_id, get_trace_id
 
 logger = logging.getLogger("app.core.exceptions")
 
@@ -103,11 +103,13 @@ def create_error_response(
     code: str, message: str, status_code: int, details: Any = None
 ) -> JSONResponse:
     req_id = get_request_id() or "unknown"
+    trace_id = get_trace_id() or "unknown"
     content: dict[str, Any] = {
         "error": {
             "code": code,
             "message": message,
             "request_id": req_id,
+            "trace_id": trace_id,
         }
     }
     if details is not None:

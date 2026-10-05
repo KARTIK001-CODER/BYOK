@@ -35,6 +35,20 @@ export const AuthApi = {
     return ApiClient.request<User>("/auth/me");
   },
 
+  async refresh(refreshToken: string): Promise<LoginResponse> {
+    return ApiClient.request<LoginResponse>("/auth/refresh", {
+      method: "POST",
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    });
+  },
+
+  async logout(refreshToken: string): Promise<{ message: string }> {
+    return ApiClient.request<{ message: string }>("/auth/logout", {
+      method: "POST",
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    });
+  },
+
   async getUserOrganizations(): Promise<import("../types").MembershipResponse[]> {
     return ApiClient.request<import("../types").MembershipResponse[]>("/organizations");
   },

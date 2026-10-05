@@ -22,9 +22,7 @@ class IncidentCreate(BaseModel):
     service_name: str | None = Field(
         default=None, max_length=100, description="Affected service name"
     )
-    environment: str = Field(
-        default="production", max_length=50, description="Target environment"
-    )
+    environment: str = Field(default="production", max_length=50, description="Target environment")
     organization_id: str | None = Field(
         default=None,
         description="Target tenant organization ID (defaults to caller's primary organization)",
@@ -146,5 +144,3 @@ class TimelineResponse(BaseModel):
 # Type aliases for paginated responses
 IncidentListResponse = PaginatedResponse[IncidentResponse]
 EvidenceListResponse = PaginatedResponse[EvidenceEventResponse]
-
-

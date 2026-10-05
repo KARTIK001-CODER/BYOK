@@ -56,4 +56,3 @@ class KnowledgeBaseStatsResponse(BaseModel):
     failed_documents: int = 0
     pending_embeddings: int = 0
     failed_embeddings: int = 0
-
