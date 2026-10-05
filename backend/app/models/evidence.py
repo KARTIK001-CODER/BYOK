@@ -9,6 +9,7 @@ from sqlalchemy import (
     Index,
     String,
     Text,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -37,7 +38,14 @@ class EvidenceEvent(Base, UUIDPrimaryKeyMixin, TimestampMixin):
         Index("ix_evidence_events_incident_time", "incident_id", "event_timestamp"),
         Index("ix_evidence_events_org_incident", "organization_id", "incident_id"),
         Index("ix_evidence_events_source_type", "incident_id", "source_type"),
-        Index("ix_evidence_events_dedup", "incident_id", "deduplication_key"),
+        # Idempotency guard: one row per (incident, deduplication_key).
+        # NULL keys never conflict (PostgreSQL and SQLite both treat NULLs
+        # as distinct in unique constraints), so key-less events are unaffected.
+        UniqueConstraint(
+            "incident_id",
+            "deduplication_key",
+            name="uq_evidence_events_incident_dedup",
+        ),
     )
 
     incident_id: Mapped[str] = mapped_column(

@@ -268,7 +268,8 @@ class HybridRetriever:
 
             if vector_start_offset is not None and keyword_start_offset is not None:
                 overlap = not (
-                    vector_end_offset < keyword_start_offset or keyword_end_offset < vector_start_offset
+                    vector_end_offset < keyword_start_offset
+                    or keyword_end_offset < vector_start_offset
                 )
                 logger.info(
                     "Hybrid concurrency: vector %.2f-%.2f ms, keyword %.2f-%.2f ms, overlap=%s, efficiency=%.2fx, gap=%.2f ms",

@@ -3,6 +3,9 @@ export interface User {
   email: string;
   full_name?: string;
   is_active: boolean;
+  is_verified?: boolean;
+  created_at?: string;
+  last_login_at?: string | null;
 }
 
 export interface Organization {
@@ -27,6 +30,9 @@ export interface KnowledgeBase {
   slug: string;
   description?: string;
   is_active: boolean;
+  created_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface ModelCapability {

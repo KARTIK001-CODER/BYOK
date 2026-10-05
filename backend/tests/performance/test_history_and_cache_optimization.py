@@ -6,8 +6,9 @@ Verifies:
 3. Embedding cache timing metrics, hits, and provider call counts propagate to performance summaries.
 """
 
-import pytest
 from unittest.mock import AsyncMock, patch
+
+import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.tracing import RequestTrace, trace_context
@@ -43,17 +44,19 @@ async def test_new_conversation_bypasses_history_query(
     )
 
     tr = RequestTrace(trace_id="test-new-conv-opt")
-    with trace_context(tr):
-        with patch(
+    with (
+        trace_context(tr),
+        patch(
             "app.services.rag.conversations.ConversationService.get_recent_messages",
             new_callable=AsyncMock,
-        ) as mock_get_history:
-            resp = await rag_service.generate(
-                session=db_session,
-                organization_id=org.id,
-                user_id=user.id,
-                request=req,
-            )
+        ) as mock_get_history,
+    ):
+        resp = await rag_service.generate(
+            session=db_session,
+            organization_id=org.id,
+            user_id=user.id,
+            request=req,
+        )
 
     # Redundant query must NOT be invoked on brand new conversation
     assert not mock_get_history.called
@@ -77,6 +80,7 @@ async def test_existing_conversation_loads_history(
     rag_service = RAGService()
 
     from app.services.rag.conversations import ConversationService
+
     conv = await ConversationService.create_conversation(
         session=db_session,
         organization_id=org.id,
@@ -95,18 +99,20 @@ async def test_existing_conversation_loads_history(
     )
 
     tr = RequestTrace(trace_id="test-turn-2")
-    with trace_context(tr):
-        with patch(
+    with (
+        trace_context(tr),
+        patch(
             "app.services.rag.conversations.ConversationService.get_recent_messages",
             new_callable=AsyncMock,
             return_value=[],
-        ) as mock_get_history:
-            resp = await rag_service.generate(
-                session=db_session,
-                organization_id=org.id,
-                user_id=user.id,
-                request=req,
-            )
+        ) as mock_get_history,
+    ):
+        resp = await rag_service.generate(
+            session=db_session,
+            organization_id=org.id,
+            user_id=user.id,
+            request=req,
+        )
 
     assert mock_get_history.called
     assert resp.conversation_id == conv.id

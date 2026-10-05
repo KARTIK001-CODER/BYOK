@@ -15,6 +15,12 @@ import {
 } from "lucide-react";
 import { DocumentsApi, DocumentResponse } from "../../api/documents";
 import { KnowledgeBasesApi, KnowledgeBaseStats } from "../../api/knowledgeBases";
+import {
+  formatBytes,
+  isDocumentProcessing,
+  statusColor,
+  statusLabel,
+} from "../../utils/documents";
 import { DocumentInspectorDrawer } from "./DocumentInspectorDrawer";
 
 interface Props {
@@ -22,45 +28,6 @@ interface Props {
   kbName?: string | null;
   userRole?: string | null;
 }
-
-const statusColor = (status: string) => {
-  switch (status?.toLowerCase()) {
-    case "ready":
-    case "completed":
-      return "#10b981"; // emerald
-    case "processing":
-    case "uploading":
-      return "#f59e0b"; // amber
-    case "failed":
-      return "#ef4444"; // red
-    case "uploaded":
-    case "pending":
-      return "#6366f1"; // indigo
-    default:
-      return "#94a3b8"; // slate
-  }
-};
-
-const statusLabel = (status?: string | null) => {
-  if (!status) return "Unknown";
-  return status.replaceAll("_", " ");
-};
-
-const formatBytes = (bytes: number): string => {
-  if (!bytes || bytes <= 0) return "0 B";
-  const k = 1024;
-  const sizes = ["B", "KB", "MB", "GB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
-};
-
-export const isDocumentProcessing = (d: DocumentResponse): boolean => {
-  const s = d.status?.toLowerCase();
-  const es = d.embedding_status?.toLowerCase();
-  if (s === "failed" || s === "archived") return false;
-  if (s === "ready" && es === "failed") return false;
-  return s === "processing" || s === "uploading" || es === "processing" || es === "pending";
-};
 
 export const DocumentPanel: React.FC<Props> = ({ kbId, kbName, userRole }) => {
   const [docs, setDocs] = useState<DocumentResponse[]>([]);
@@ -83,6 +50,7 @@ export const DocumentPanel: React.FC<Props> = ({ kbId, kbName, userRole }) => {
     setLoading(true);
     setStatsLoading(true);
     setStatsError(null);
+    setError(null);
     try {
       const [{ items }, kbStats] = await Promise.all([
         DocumentsApi.list(kbId),

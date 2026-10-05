@@ -14,7 +14,7 @@ Verifies:
 """
 
 import asyncio
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -34,7 +34,6 @@ from app.services.rag.service import RAGService
 from app.services.retrieval.errors import RetrievalErrorCode, RetrievalException
 from app.services.retrieval.hybrid import HybridRetriever
 from app.services.retrieval.schemas import (
-    RetrievalFilter,
     RetrievalRequest,
     SearchMode,
 )

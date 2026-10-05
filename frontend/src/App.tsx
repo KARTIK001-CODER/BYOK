@@ -21,6 +21,7 @@ import {
   CitationItem,
   RAGChatRequest,
 } from "./types";
+import { getPrimaryOrganization } from "./utils/documents";
 
 export const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -30,6 +31,7 @@ export const App: React.FC = () => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [conversationError, setConversationError] = useState<string | null>(null);
 
   const [knowledgeBases, setKnowledgeBases] = useState<KnowledgeBase[]>([]);
   const [selectedKbId, setSelectedKbId] = useState<string | null>(null);
@@ -98,11 +100,7 @@ export const App: React.FC = () => {
       setUser(u);
       const memberships = await AuthApi.getUserOrganizations();
       setUserRole(memberships[0]?.role || null);
-      const primaryOrg = memberships[0]?.organization || (memberships[0] ? {
-        id: memberships[0].organization_id,
-        name: "Workspace",
-        slug: "workspace",
-      } : null);
+      const primaryOrg = getPrimaryOrganization(memberships);
       setOrganization(primaryOrg);
       if (primaryOrg) {
         ApiClient.setOrganizationId(primaryOrg.id);
@@ -133,6 +131,7 @@ export const App: React.FC = () => {
   const handleSelectConversation = async (id: string) => {
     setActiveConversationId(id);
     setActiveView("chat");
+    setConversationError(null);
     try {
       const fullConv = await ConversationsApi.get(id);
       setMessages(fullConv.messages || []);
@@ -141,6 +140,7 @@ export const App: React.FC = () => {
       }
     } catch (err) {
       console.error("Failed to load conversation:", err);
+      setConversationError("Could not load this conversation. It may have been deleted.");
     }
   };
 
@@ -149,6 +149,7 @@ export const App: React.FC = () => {
     setMessages([]);
     setStreamingMessage(null);
     setDrawerOpen(false);
+    setConversationError(null);
     setActiveView("chat");
   };
 
@@ -162,6 +163,7 @@ export const App: React.FC = () => {
       }
     } catch (err) {
       console.error("Failed to delete conversation:", err);
+      setConversationError("Could not delete this conversation. Please try again.");
     }
   };
 
@@ -384,7 +386,12 @@ export const App: React.FC = () => {
   };
 
   const handleLogout = () => {
+    const refreshToken = ApiClient.getRefreshToken();
+    if (refreshToken) {
+      void AuthApi.logout(refreshToken).catch(() => {});
+    }
     ApiClient.setToken(null);
+    ApiClient.setRefreshToken(null);
     ApiClient.setOrganizationId(null);
     setUser(null);
     setOrganization(null);
@@ -449,6 +456,7 @@ export const App: React.FC = () => {
               onOpenSource={handleOpenSource}
               hasKnowledgeBase={!!selectedKbId || knowledgeBases.length > 0}
               kbName={selectedKb?.name ?? null}
+              bannerError={conversationError}
             />
           )}
 

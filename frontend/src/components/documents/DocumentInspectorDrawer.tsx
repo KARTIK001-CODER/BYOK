@@ -17,6 +17,13 @@ import {
   FileCode,
 } from "lucide-react";
 import { DocumentResponse, DocumentChunkResponse, DocumentsApi } from "../../api/documents";
+import {
+  formatBytes,
+  formatDate,
+  formatStatus,
+  isDocumentProcessing,
+  statusColor,
+} from "../../utils/documents";
 
 interface Props {
   isOpen: boolean;
@@ -26,46 +33,6 @@ interface Props {
   onProcess: (docId: string, actionType?: "full" | "embed") => Promise<void>;
   onDelete: (docId: string) => Promise<boolean | void>;
 }
-
-const statusColor = (status: string) => {
-  switch (status?.toLowerCase()) {
-    case "ready":
-    case "completed":
-      return "#10b981"; // emerald
-    case "processing":
-    case "uploading":
-      return "#f59e0b"; // amber
-    case "failed":
-      return "#ef4444"; // red
-    case "uploaded":
-    case "pending":
-      return "#6366f1"; // indigo
-    default:
-      return "#94a3b8"; // slate
-  }
-};
-
-const formatStatus = (s?: string | null) => {
-  if (!s) return "Not Started";
-  return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase().replace("_", " ");
-};
-
-const formatBytes = (bytes: number): string => {
-  if (!bytes || bytes <= 0) return "0 B";
-  const k = 1024;
-  const sizes = ["B", "KB", "MB", "GB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
-};
-
-const formatDate = (isoStr?: string | null): string => {
-  if (!isoStr) return "N/A";
-  try {
-    return new Date(isoStr).toLocaleString();
-  } catch {
-    return isoStr;
-  }
-};
 
 export const DocumentInspectorDrawer: React.FC<Props> = ({
   isOpen,
@@ -123,21 +90,43 @@ export const DocumentInspectorDrawer: React.FC<Props> = ({
 
   if (!isOpen || !doc) return null;
 
-  const isDocProcessing = (() => {
-    const s = doc.status?.toLowerCase();
-    const es = doc.embedding_status?.toLowerCase();
-    if (s === "failed" || s === "archived") return false;
-    if (s === "ready" && es === "failed") return false;
-    return s === "processing" || s === "uploading" || es === "processing" || es === "pending";
-  })();
+  const isDocProcessing = doc ? isDocumentProcessing(doc) : false;
 
   const canViewStorageKey = (userRole === "OWNER" || userRole === "ADMIN") && !!doc.storage_key;
 
   const handleCopyChecksum = () => {
     if (!doc.checksum) return;
-    void navigator.clipboard.writeText(doc.checksum);
-    setCopiedChecksum(true);
-    setTimeout(() => setCopiedChecksum(false), 2000);
+    try {
+      const done = () => {
+        setCopiedChecksum(true);
+        setTimeout(() => setCopiedChecksum(false), 2000);
+      };
+      const result = navigator.clipboard.writeText(doc.checksum);
+      if (result && typeof result.then === "function") {
+        result.then(done).catch(() => fallbackCopy(doc.checksum, done));
+      } else {
+        done();
+      }
+    } catch {
+      fallbackCopy(doc.checksum, () => {
+        setCopiedChecksum(true);
+        setTimeout(() => setCopiedChecksum(false), 2000);
+      });
+    }
+  };
+
+  const fallbackCopy = (text: string, done: () => void) => {
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+    } catch {
+      /* clipboard unavailable */
+    }
+    done();
   };
 
   const handleTriggerProcess = async (actionType: "full" | "embed" = "full") => {

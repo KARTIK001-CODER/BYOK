@@ -96,9 +96,7 @@ class RequestTrace:
         """Record database transaction flush and commit overhead in ms."""
         d_ms = round(float(duration_ms), 2)
         self.counters["db_commits"] = self.counters.get("db_commits", 0) + 1
-        self.counters["db_commit_ms"] = round(
-            self.counters.get("db_commit_ms", 0.0) + d_ms, 2
-        )
+        self.counters["db_commit_ms"] = round(self.counters.get("db_commit_ms", 0.0) + d_ms, 2)
         self.stages["db_commit_ms"] = self.counters["db_commit_ms"]
         self.stages["database_commit_ms"] = self.counters["db_commit_ms"]
 
@@ -374,7 +372,9 @@ class RequestTrace:
                 "database": {
                     "sql_statement_execution_ms": self.stages.get(
                         "sql_statement_execution_ms",
-                        self.counters.get("sql_statement_execution_ms", self.counters.get("db_total_time_ms", 0.0)),
+                        self.counters.get(
+                            "sql_statement_execution_ms", self.counters.get("db_total_time_ms", 0.0)
+                        ),
                     ),
                     "db_connection_acquisition_ms": self.stages.get(
                         "db_connection_acquisition_ms",
@@ -401,7 +401,9 @@ class RequestTrace:
                     ),
                     "db_commit_ms": self.stages.get(
                         "db_commit_ms",
-                        self.stages.get("database_commit_ms", self.stages.get("persistence_commit_ms", 0.0)),
+                        self.stages.get(
+                            "database_commit_ms", self.stages.get("persistence_commit_ms", 0.0)
+                        ),
                     ),
                     "total_ms": self.stages.get("persistence_total_ms", 0.0),
                 },
@@ -502,10 +504,19 @@ class RequestTrace:
         v_cands = int(self.counters.get("vector_candidates", 0))
         k_cands = int(self.counters.get("keyword_candidates", 0))
         retrieved_cands = int(self.counters.get("retrieved_candidates", v_cands + k_cands))
-        retained_cands = int(self.counters.get("retained_candidates", self.counters.get("retrieved_chunks", 0)))
-        context_chunks = int(self.counters.get("selected_chunks", self.counters.get("context_chunks_used", 0)))
+        retained_cands = int(
+            self.counters.get("retained_candidates", self.counters.get("retrieved_chunks", 0))
+        )
+        context_chunks = int(
+            self.counters.get("selected_chunks", self.counters.get("context_chunks_used", 0))
+        )
         queries_count = int(self.counters.get("retrieval_query_count", 1))
-        llm_calls = int(self.counters.get("llm_call_count", 1 if (llm_total_ms > 0 or self.stages.get("llm_request_ms", 0.0) > 0) else 0))
+        llm_calls = int(
+            self.counters.get(
+                "llm_call_count",
+                1 if (llm_total_ms > 0 or self.stages.get("llm_request_ms", 0.0) > 0) else 0,
+            )
+        )
 
         return {
             "trace_id": self.trace_id,
@@ -522,7 +533,9 @@ class RequestTrace:
                 "sql_statement_execution_ms": round(
                     self.stages.get(
                         "sql_statement_execution_ms",
-                        self.counters.get("sql_statement_execution_ms", self.counters.get("db_total_time_ms", 0.0)),
+                        self.counters.get(
+                            "sql_statement_execution_ms", self.counters.get("db_total_time_ms", 0.0)
+                        ),
                     ),
                     2,
                 ),
@@ -586,7 +599,9 @@ class RequestTrace:
             summary = self.to_performance_summary()
             if not self._summary_emitted:
                 self._summary_emitted = True
-                logger.info("RAG_PERFORMANCE_SUMMARY: %s", json.dumps(summary, separators=(",", ":")))
+                logger.info(
+                    "RAG_PERFORMANCE_SUMMARY: %s", json.dumps(summary, separators=(",", ":"))
+                )
             return summary
         except Exception as exc:
             logger.warning("Failed to emit RAG performance summary: %s", exc)
@@ -659,4 +674,3 @@ async def isolate_stream_trace(
     finally:
         with trace_context(trace):
             await gen.aclose()
-

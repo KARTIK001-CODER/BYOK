@@ -209,19 +209,21 @@ async def run_benchmark():
     p50_retr, p95_retr, _ = calculate_metrics(cold_retr)
     p50_emb, p95_emb, _ = calculate_metrics(cold_embed)
     c1_calls = cache.stats["misses"] - c1_calls_before
-    results_table.append({
-        "scenario": "1. Cold-Cache Requests",
-        "samples": len(cold_queries),
-        "hit_rate": "0.0%",
-        "calls": c1_calls,
-        "e2e_p50": p50_e2e,
-        "e2e_p95": p95_e2e,
-        "retr_p50": p50_retr,
-        "retr_p95": p95_retr,
-        "embed_p50": p50_emb,
-        "embed_p95": p95_emb,
-        "llm_p50": 0.5,
-    })
+    results_table.append(
+        {
+            "scenario": "1. Cold-Cache Requests",
+            "samples": len(cold_queries),
+            "hit_rate": "0.0%",
+            "calls": c1_calls,
+            "e2e_p50": p50_e2e,
+            "e2e_p95": p95_e2e,
+            "retr_p50": p50_retr,
+            "retr_p95": p95_retr,
+            "embed_p50": p50_emb,
+            "embed_p95": p95_emb,
+            "llm_p50": 0.5,
+        }
+    )
 
     # -------------------------------------------------------------
     # Scenario 2: Warm-Cache Requests (same 5 queries repeated with populated cache)
@@ -247,19 +249,21 @@ async def run_benchmark():
     p50_retr, p95_retr, _ = calculate_metrics(warm_retr)
     p50_emb, p95_emb, _ = calculate_metrics(warm_embed)
     c2_calls = cache.stats["misses"] - c2_calls_before
-    results_table.append({
-        "scenario": "2. Warm-Cache Requests",
-        "samples": len(cold_queries),
-        "hit_rate": "100.0%",
-        "calls": c2_calls,
-        "e2e_p50": p50_e2e,
-        "e2e_p95": p95_e2e,
-        "retr_p50": p50_retr,
-        "retr_p95": p95_retr,
-        "embed_p50": p50_emb,
-        "embed_p95": p95_emb,
-        "llm_p50": 0.5,
-    })
+    results_table.append(
+        {
+            "scenario": "2. Warm-Cache Requests",
+            "samples": len(cold_queries),
+            "hit_rate": "100.0%",
+            "calls": c2_calls,
+            "e2e_p50": p50_e2e,
+            "e2e_p95": p95_e2e,
+            "retr_p50": p50_retr,
+            "retr_p95": p95_retr,
+            "embed_p50": p50_emb,
+            "embed_p95": p95_emb,
+            "llm_p50": 0.5,
+        }
+    )
 
     # -------------------------------------------------------------
     # Scenario 3: Repeated Identical Queries (1 query repeated 20 times)
@@ -286,19 +290,21 @@ async def run_benchmark():
     p50_retr, p95_retr, _ = calculate_metrics(rep_retr)
     p50_emb, p95_emb, _ = calculate_metrics(rep_embed)
     c3_calls = cache.stats["misses"] - c3_calls_before
-    results_table.append({
-        "scenario": "3. Repeated Identical Queries",
-        "samples": 20,
-        "hit_rate": "100.0%",
-        "calls": c3_calls,
-        "e2e_p50": p50_e2e,
-        "e2e_p95": p95_e2e,
-        "retr_p50": p50_retr,
-        "retr_p95": p95_retr,
-        "embed_p50": p50_emb,
-        "embed_p95": p95_emb,
-        "llm_p50": 0.5,
-    })
+    results_table.append(
+        {
+            "scenario": "3. Repeated Identical Queries",
+            "samples": 20,
+            "hit_rate": "100.0%",
+            "calls": c3_calls,
+            "e2e_p50": p50_e2e,
+            "e2e_p95": p95_e2e,
+            "retr_p50": p50_retr,
+            "retr_p95": p95_retr,
+            "embed_p50": p50_emb,
+            "embed_p95": p95_emb,
+            "llm_p50": 0.5,
+        }
+    )
 
     # -------------------------------------------------------------
     # Scenario 4: Distinct Queries with No Cache Hits (20 unique queries)
@@ -326,19 +332,21 @@ async def run_benchmark():
     p50_retr, p95_retr, _ = calculate_metrics(dist_retr)
     p50_emb, p95_emb, _ = calculate_metrics(dist_embed)
     c4_calls = cache.stats["misses"] - c4_calls_before
-    results_table.append({
-        "scenario": "4. Distinct Queries (All Misses)",
-        "samples": 20,
-        "hit_rate": "0.0%",
-        "calls": c4_calls,
-        "e2e_p50": p50_e2e,
-        "e2e_p95": p95_e2e,
-        "retr_p50": p50_retr,
-        "retr_p95": p95_retr,
-        "embed_p50": p50_emb,
-        "embed_p95": p95_emb,
-        "llm_p50": 0.5,
-    })
+    results_table.append(
+        {
+            "scenario": "4. Distinct Queries (All Misses)",
+            "samples": 20,
+            "hit_rate": "0.0%",
+            "calls": c4_calls,
+            "e2e_p50": p50_e2e,
+            "e2e_p95": p95_e2e,
+            "retr_p50": p50_retr,
+            "retr_p95": p95_retr,
+            "embed_p50": p50_emb,
+            "embed_p95": p95_emb,
+            "llm_p50": 0.5,
+        }
+    )
 
     # -------------------------------------------------------------
     # Scenario 5: Concurrent Requests (10 concurrent requests, mixed queries)
@@ -356,7 +364,11 @@ async def run_benchmark():
         with trace_context(tr):
             async with factory() as s:
                 await rag_service.generate(s, org_id, user_id, req)
-        return tr.stages.get("total_ms", 0.0), tr.stages.get("retrieval_total_ms", 0.0), tr.stages.get("embedding_total_ms", 0.0)
+        return (
+            tr.stages.get("total_ms", 0.0),
+            tr.stages.get("retrieval_total_ms", 0.0),
+            tr.stages.get("embedding_total_ms", 0.0),
+        )
 
     c5_calls_before = cache.stats["misses"]
     conc_results = await asyncio.gather(*(worker(i) for i in range(10)))
@@ -367,19 +379,21 @@ async def run_benchmark():
     p50_retr, p95_retr, _ = calculate_metrics(conc_retr)
     p50_emb, p95_emb, _ = calculate_metrics(conc_embed)
     c5_calls = cache.stats["misses"] - c5_calls_before
-    results_table.append({
-        "scenario": "5. Concurrent Requests (10 workers)",
-        "samples": 10,
-        "hit_rate": "100.0%",
-        "calls": c5_calls,
-        "e2e_p50": p50_e2e,
-        "e2e_p95": p95_e2e,
-        "retr_p50": p50_retr,
-        "retr_p95": p95_retr,
-        "embed_p50": p50_emb,
-        "embed_p95": p95_emb,
-        "llm_p50": 0.5,
-    })
+    results_table.append(
+        {
+            "scenario": "5. Concurrent Requests (10 workers)",
+            "samples": 10,
+            "hit_rate": "100.0%",
+            "calls": c5_calls,
+            "e2e_p50": p50_e2e,
+            "e2e_p95": p95_e2e,
+            "retr_p50": p50_retr,
+            "retr_p95": p95_retr,
+            "embed_p50": p50_emb,
+            "embed_p95": p95_emb,
+            "llm_p50": 0.5,
+        }
+    )
 
     # -------------------------------------------------------------
     # Scenario 6: Retrieval-Only Latency (RetrievalService.search directly)
@@ -404,19 +418,21 @@ async def run_benchmark():
     p50_retr, p95_retr, _ = calculate_metrics(ro_latencies)
     p50_emb, p95_emb, _ = calculate_metrics(ro_embed)
     c6_calls = cache.stats["misses"] - c6_calls_before
-    results_table.append({
-        "scenario": "6. Retrieval-Only Latency",
-        "samples": 15,
-        "hit_rate": "100.0%",
-        "calls": c6_calls,
-        "e2e_p50": "-",
-        "e2e_p95": "-",
-        "retr_p50": p50_retr,
-        "retr_p95": p95_retr,
-        "embed_p50": p50_emb,
-        "embed_p95": p95_emb,
-        "llm_p50": "-",
-    })
+    results_table.append(
+        {
+            "scenario": "6. Retrieval-Only Latency",
+            "samples": 15,
+            "hit_rate": "100.0%",
+            "calls": c6_calls,
+            "e2e_p50": "-",
+            "e2e_p95": "-",
+            "retr_p50": p50_retr,
+            "retr_p95": p95_retr,
+            "embed_p50": p50_emb,
+            "embed_p95": p95_emb,
+            "llm_p50": "-",
+        }
+    )
 
     # -------------------------------------------------------------
     # Scenario 7: Full RAG Request Latency (End-to-end generate with all stages)
@@ -442,19 +458,21 @@ async def run_benchmark():
     p50_retr, p95_retr, _ = calculate_metrics(rag_retr)
     p50_emb, p95_emb, _ = calculate_metrics(rag_emb)
     c7_calls = cache.stats["misses"] - c7_calls_before
-    results_table.append({
-        "scenario": "7. Full RAG Request Latency",
-        "samples": 15,
-        "hit_rate": "100.0%",
-        "calls": c7_calls,
-        "e2e_p50": p50_e2e,
-        "e2e_p95": p95_e2e,
-        "retr_p50": p50_retr,
-        "retr_p95": p95_retr,
-        "embed_p50": p50_emb,
-        "embed_p95": p95_emb,
-        "llm_p50": 0.5,
-    })
+    results_table.append(
+        {
+            "scenario": "7. Full RAG Request Latency",
+            "samples": 15,
+            "hit_rate": "100.0%",
+            "calls": c7_calls,
+            "e2e_p50": p50_e2e,
+            "e2e_p95": p95_e2e,
+            "retr_p50": p50_retr,
+            "retr_p95": p95_retr,
+            "embed_p50": p50_emb,
+            "embed_p95": p95_emb,
+            "llm_p50": 0.5,
+        }
+    )
 
     print("\nBENCHMARK RESULTS SUMMARY:")
     print("-" * 125)
@@ -464,8 +482,8 @@ async def run_benchmark():
     for r in results_table:
         retr_str = f"{r['retr_p50']}/{r['retr_p95']}ms"
         emb_str = f"{r['embed_p50']}/{r['embed_p95']}ms"
-        e2e_str = f"{r['e2e_p50']}/{r['e2e_p95']}ms" if r['e2e_p50'] != "-" else "-"
-        llm_str = f"{r['llm_p50']}ms" if r['llm_p50'] != "-" else "-"
+        e2e_str = f"{r['e2e_p50']}/{r['e2e_p95']}ms" if r["e2e_p50"] != "-" else "-"
+        llm_str = f"{r['llm_p50']}ms" if r["llm_p50"] != "-" else "-"
         row = f"{r['scenario']:<34} | {r['samples']:<3} | {r['hit_rate']:<6} | {r['calls']:<5} | {retr_str:<16} | {emb_str:<14} | {llm_str:<8} | {e2e_str:<16}"
         print(row)
     print("-" * 125)

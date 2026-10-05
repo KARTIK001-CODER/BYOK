@@ -172,10 +172,14 @@ Phase 6 (Completed)
 Hybrid Retrieval (pgvector + PostgreSQL FTS + RRF)
         │
         ▼
-Phase 7 (Next)
+Phase 7 (Completed)
 RAG Generation (Prompt Construction, Context Synthesis, Citations & Grounding, Provider Integration)
         │
         ▼
-Phase 8
+Incident Foundation v0 (Completed)
+Tenant-scoped Incidents + Evidence Events + Deterministic Timeline (no causal inference)
+        │
+        ▼
+Phase 8 (Next)
 BYOK Vault & Master Encryption (AES-256-GCM Vault for Groq, OpenAI, Anthropic, Gemini)
 ```

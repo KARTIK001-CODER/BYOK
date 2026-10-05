@@ -164,7 +164,8 @@ async def query_plan(
         r2 = await session.execute(vec_idx)
         results["vector_hnsw_index"] = [{"name": row[0], "def": row[1]} for row in r2.all()]
     except Exception as e:
-        results["vector_hnsw_error"] = str(e)
+        logger.exception("Diagnostics vector HNSW index check failed: %s", e)
+        results["vector_hnsw_error"] = "DIAGNOSTICS_ERROR"
 
     # GIN index check
     try:
@@ -176,7 +177,8 @@ async def query_plan(
         r3 = await session.execute(gin_idx)
         results["keyword_gin_index"] = [{"name": row[0], "def": row[1]} for row in r3.all()]
     except Exception as e:
-        results["keyword_gin_error"] = str(e)
+        logger.exception("Diagnostics GIN index check failed: %s", e)
+        results["keyword_gin_error"] = "DIAGNOSTICS_ERROR"
 
     # Row counts
     try:
@@ -187,7 +189,8 @@ async def query_plan(
         )
         results["embedded_chunks"] = cnt_neon.scalar_one()
     except Exception as e:
-        results["count_error"] = str(e)
+        logger.exception("Diagnostics chunk count query failed: %s", e)
+        results["count_error"] = "DIAGNOSTICS_ERROR"
 
     # EXPLAIN (cost only, no ANALYZE to avoid heavy scan)
     try:
@@ -203,7 +206,8 @@ async def query_plan(
         )
         results["vector_explain"] = expl_vec.scalar_one()
     except Exception as e:
-        results["vector_explain_error"] = str(e)
+        logger.exception("Diagnostics vector EXPLAIN failed: %s", e)
+        results["vector_explain_error"] = "DIAGNOSTICS_ERROR"
 
     try:
         expl_kw = await session.execute(
@@ -216,6 +220,7 @@ async def query_plan(
         )
         results["keyword_explain"] = expl_kw.scalar_one()
     except Exception as e:
-        results["keyword_explain_error"] = str(e)
+        logger.exception("Diagnostics keyword EXPLAIN failed: %s", e)
+        results["keyword_explain_error"] = "DIAGNOSTICS_ERROR"
 
     return results

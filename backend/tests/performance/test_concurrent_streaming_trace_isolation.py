@@ -7,8 +7,7 @@ timings, database telemetry, or lifecycle counters.
 from __future__ import annotations
 
 import asyncio
-from typing import AsyncGenerator
-from unittest.mock import AsyncMock, patch
+from collections.abc import AsyncGenerator
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,8 +16,6 @@ from app.core.tracing import (
     RequestTrace,
     get_current_trace,
     isolate_stream_trace,
-    set_current_trace,
-    trace_context,
 )
 from app.models.knowledge_base import KnowledgeBase
 from app.models.organization import Organization
@@ -123,6 +120,7 @@ async def test_concurrent_interleaved_stream_chat_trace_isolation(
     org: Organization = test_user_and_org["org"]
 
     from app.db.session import _register_engine_listeners
+
     _register_engine_listeners(db_session.bind.sync_engine)
 
     mock_provider = MockStreamingLLMProvider(prefix="tok", token_count=3)
@@ -291,10 +289,11 @@ async def test_concurrent_http_streaming_trace_isolation(
     test_kb: KnowledgeBase,
 ):
     """Verify simultaneous HTTP requests to /api/v1/chat/stream preserve trace IDs without collision."""
+    from sqlalchemy.ext.asyncio import async_sessionmaker
+
     from app.core.security import create_access_token
     from app.db.session import get_db
     from app.main import app
-    from sqlalchemy.ext.asyncio import async_sessionmaker
 
     session_factory = async_sessionmaker(
         bind=db_session.bind,
@@ -363,4 +362,3 @@ async def test_concurrent_http_streaming_trace_isolation(
     assert "event: done" in body_a
     assert "event: start" in body_b
     assert "event: done" in body_b
-

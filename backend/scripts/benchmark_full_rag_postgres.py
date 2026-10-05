@@ -4,7 +4,6 @@ Measures cold vs warm requests and every stage of the request path.
 """
 
 import asyncio
-import json
 import statistics
 import sys
 import time
@@ -14,15 +13,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 if "pytest" in sys.modules:
     del sys.modules["pytest"]
 
-from sqlalchemy import select, text
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 from app.core.config import get_settings
 from app.core.tracing import RequestTrace, trace_context
 from app.db.session import get_session_factory
 from app.models.knowledge_base import KnowledgeBase
-from app.models.organization import Organization
-from app.models.user import User
 from app.services.llm.factory import LLMProviderFactory
 from app.services.llm.providers.mock import MockLLMProvider
 from app.services.rag.schemas import RAGChatRequest
@@ -93,21 +89,39 @@ async def main():
             )
     cold_total_ms = (time.perf_counter() - t0) * 1000.0
 
-    print(f"\n[COLD REQUEST - Cache Miss]")
+    print("\n[COLD REQUEST - Cache Miss]")
     print(f"  Total Wall-Clock Latency:       {cold_total_ms:.2f} ms")
-    print(f"  Conversation Lookup:            {tr_cold.stages.get('conversation_lookup_ms', 0):.2f} ms")
-    print(f"  User Message Persistence:       {tr_cold.stages.get('user_message_persist_ms', 0):.2f} ms")
+    print(
+        f"  Conversation Lookup:            {tr_cold.stages.get('conversation_lookup_ms', 0):.2f} ms"
+    )
+    print(
+        f"  User Message Persistence:       {tr_cold.stages.get('user_message_persist_ms', 0):.2f} ms"
+    )
     print(f"  KB Authorization:               {tr_cold.stages.get('retrieval_authz_ms', 0):.2f} ms")
     print(f"  Query Embedding (Inference):    {tr_cold.stages.get('query_embedding_ms', 0):.2f} ms")
-    print(f"  Vector SQL Execution:           {tr_cold.stages.get('vector_sql_execution_ms', 0):.2f} ms")
-    print(f"  Keyword SQL Execution:          {tr_cold.stages.get('keyword_sql_execution_ms', 0):.2f} ms")
-    print(f"  Fusion:                         {tr_cold.stages.get('retrieval_fusion_ms', 0):.2f} ms")
-    print(f"  Context Assembly:               {tr_cold.stages.get('context_assembly_ms', 0):.2f} ms")
-    print(f"  Prompt Construction:            {tr_cold.stages.get('prompt_construction_ms', 0):.2f} ms")
+    print(
+        f"  Vector SQL Execution:           {tr_cold.stages.get('vector_sql_execution_ms', 0):.2f} ms"
+    )
+    print(
+        f"  Keyword SQL Execution:          {tr_cold.stages.get('keyword_sql_execution_ms', 0):.2f} ms"
+    )
+    print(
+        f"  Fusion:                         {tr_cold.stages.get('retrieval_fusion_ms', 0):.2f} ms"
+    )
+    print(
+        f"  Context Assembly:               {tr_cold.stages.get('context_assembly_ms', 0):.2f} ms"
+    )
+    print(
+        f"  Prompt Construction:            {tr_cold.stages.get('prompt_construction_ms', 0):.2f} ms"
+    )
     print(f"  Pre-LLM Commit:                 {tr_cold.stages.get('pre_llm_commit_ms', 0):.2f} ms")
     print(f"  LLM Execution:                  {tr_cold.stages.get('llm_request_ms', 0):.2f} ms")
-    print(f"  Assistant Message Save:         {tr_cold.stages.get('assistant_message_save_ms', 0):.2f} ms")
-    print(f"  Post-LLM Commit:                {tr_cold.stages.get('persistence_commit_ms', 0):.2f} ms")
+    print(
+        f"  Assistant Message Save:         {tr_cold.stages.get('assistant_message_save_ms', 0):.2f} ms"
+    )
+    print(
+        f"  Post-LLM Commit:                {tr_cold.stages.get('persistence_commit_ms', 0):.2f} ms"
+    )
 
     # 2. Warm Requests (Cache Hits)
     warm_totals = []
@@ -174,8 +188,12 @@ async def main():
         print(f"{label:<35} | {st['p50']:<10.2f} | {st['p95']:<10.2f} | {pct:<9.1f}%")
 
     print("-" * 90)
-    print(f"{'TOTAL REQUEST LATENCY':<35} | {total_stats['p50']:<10.2f} | {total_stats['p95']:<10.2f} | 100.0%")
-    print(f"{'CUMULATIVE DATABASE ROUND-TRIPS':<35} | {db_sum:<10.2f} | {'-':<10} | {round(db_sum/tot_p50*100, 1)}%")
+    print(
+        f"{'TOTAL REQUEST LATENCY':<35} | {total_stats['p50']:<10.2f} | {total_stats['p95']:<10.2f} | 100.0%"
+    )
+    print(
+        f"{'CUMULATIVE DATABASE ROUND-TRIPS':<35} | {db_sum:<10.2f} | {'-':<10} | {round(db_sum / tot_p50 * 100, 1)}%"
+    )
     print("=" * 90)
 
 

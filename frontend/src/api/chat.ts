@@ -1,21 +1,12 @@
 import { ApiClient, ApiError } from "./client";
-import { ProviderInfo, RAGChatRequest } from "../types";
+import { CitationItem, ProviderInfo, RAGChatRequest } from "../types";
 
 export interface SyncChatResponse {
   conversation_id: string;
   message_id: string;
   user_message_id: string;
   answer: string;
-  citations: Array<{
-    id: number;
-    chunk_id: string;
-    document_id: string;
-    document_version_id: string;
-    document_name: string;
-    page_number?: number | null;
-    section_title?: string | null;
-    content_preview?: string | null;
-  }>;
+  citations: CitationItem[];
   retrieval: {
     search_mode: string;
     result_count: number;
@@ -49,16 +40,7 @@ export const ChatApi = {
       onStart?: (data: { conversation_id: string; user_message_id: string; provider: string; model: string }) => void;
       onRetrieval?: (data: { search_mode: string; result_count: number; latency_ms: number }) => void;
       onToken?: (data: { delta: string }) => void;
-      onCitation?: (data: {
-        id: number;
-        chunk_id: string;
-        document_id: string;
-        document_version_id: string;
-        document_name: string;
-        page_number?: number | null;
-        section_title?: string | null;
-        content_preview?: string | null;
-      }) => void;
+      onCitation?: (data: CitationItem) => void;
       onGroundedness?: (data: unknown) => void;
       onDone?: (data: {
         message_id: string;
@@ -80,7 +62,9 @@ export const ChatApi = {
       "/chat/stream",
       payload,
       (event, data) => {
-        switch (event) {
+        // Guard against malformed SSE payloads before casting to callback shapes.
+        if (data !== null && typeof data === "object") {
+          switch (event) {
           case "start":
             callbacks.onStart?.(data as Parameters<NonNullable<typeof callbacks.onStart>>[0]);
             break;
@@ -102,6 +86,7 @@ export const ChatApi = {
           case "error":
             callbacks.onError?.(data as ApiError);
             break;
+          }
         }
       },
       (error) => {
