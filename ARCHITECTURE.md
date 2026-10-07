@@ -69,6 +69,18 @@ Tenant-isolated SRE incident records (`incidents`, `evidence_events`; migration 
 - **Isolation**: every incident/evidence query filters by `organization_id`; cross-tenant access returns `404` (no existence leak); explicit `organization_id` outside membership returns `403`.
 - **Guarantee**: timeline provides chronological evidence only — no root-cause hypotheses (Milestone 2 scope).
 
+## 4b. TracePilot Investigation Engine (Milestone 2)
+
+Durable, evidence-grounded investigations (`investigation_jobs`, `root_cause_hypotheses`, `hypothesis_evidence_links`; migration `0010`):
+
+- **Endpoints**: `POST /api/v1/incidents/{id}/investigations` (idempotent via `idempotency_key`, duplicate signalled with `X-TracePilot-Duplicate`), `GET .../investigations` (list), `GET /api/v1/investigations/{job_id}` (poll for `stage`/`progress`), `POST .../cancel` (queued only), `GET .../hypotheses`, `GET /api/v1/hypotheses/{id}`. Polling is the supported progress mechanism (no SSE).
+- **Durability**: DB row is the source of truth; atomic conditional-UPDATE claiming; stale `running` jobs re-queued by `scripts/run_investigation_worker.py` (one pass or `--loop`). State machine: `queued -> running -> completed/failed`, `queued -> cancelled` only. Terminal transitions are conditional UPDATEs, so a stale read (cancel-after-claim, complete-after-cancel) yields 409 instead of an illegal transition; repeated cancel is also 409.
+- **Single active job**: at most one `queued`/`running` job per incident — enforced by partial unique index `uq_investigation_jobs_single_active` (migration `0011`) as the final backstop behind the application-level dedupe. Terminal jobs are unconstrained, so re-investigation after completion always works.
+- **Retries**: attempts increment on claim only (never on progress writes); stale jobs re-queue until `max_attempts`, then fail with a safe summary. Each attempt starts from a clean slate (prior hypotheses/links cleared) so retries never duplicate results. In-flight provider generation cannot be interrupted; if ownership is lost mid-run, results are discarded, never persisted.
+- **Output robustness**: oversized hypothesis arrays are truncated (noted in uncertainty) rather than failing the job; remediation-adjacent next steps are force-flagged `requires_human_approval`; persisted `error_summary` is pre-sanitized and capped at 500 chars.
+- **Retrieval**: incident evidence ranked lexically + RRF (no embedding column on `evidence_events` by design); runbooks reuse the existing `RetrievalService` pipeline (keyword default, hybrid opt-in via `INVESTIGATION_RUNBOOK_HYBRID`). Org filter applied before ranking on every path.
+- **Safety**: evidence quoted as untrusted data; citations validated server-side (unknown/cross-incident/cross-tenant IDs rejected, hypotheses persisted as `rejected`); confidence labels flagged uncalibrated; failures carry safe `error_category` summaries only; correlation disclaimer on every result.
+
 ---
 
 ---
