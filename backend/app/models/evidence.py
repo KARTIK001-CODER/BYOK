@@ -2,6 +2,7 @@ import enum
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     JSON,
     DateTime,
@@ -38,6 +39,13 @@ class EvidenceEvent(Base, UUIDPrimaryKeyMixin, TimestampMixin):
         Index("ix_evidence_events_incident_time", "incident_id", "event_timestamp"),
         Index("ix_evidence_events_org_incident", "organization_id", "incident_id"),
         Index("ix_evidence_events_source_type", "incident_id", "source_type"),
+        Index(
+            "ix_evidence_events_embedding_hnsw",
+            "embedding",
+            postgresql_using="hnsw",
+            postgresql_with={"m": 16, "ef_construction": 64},
+            postgresql_ops={"embedding": "vector_cosine_ops"},
+        ),
         # Idempotency guard: one row per (incident, deduplication_key).
         # NULL keys never conflict (PostgreSQL and SQLite both treat NULLs
         # as distinct in unique constraints), so key-less events are unaffected.
@@ -47,6 +55,7 @@ class EvidenceEvent(Base, UUIDPrimaryKeyMixin, TimestampMixin):
             name="uq_evidence_events_incident_dedup",
         ),
     )
+
 
     incident_id: Mapped[str] = mapped_column(
         String(36),
@@ -99,6 +108,20 @@ class EvidenceEvent(Base, UUIDPrimaryKeyMixin, TimestampMixin):
         index=True,
         nullable=True,
         default=None,
+    )
+
+    # Vector Embedding Columns (Milestone 3A)
+    embedding: Mapped[list[float] | None] = mapped_column(
+        Vector(384),
+        nullable=True,
+    )
+    embedding_model: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True,
+    )
+    embedded_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
     )
 
     # Relationships

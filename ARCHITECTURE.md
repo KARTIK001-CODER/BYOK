@@ -77,11 +77,18 @@ Durable, evidence-grounded investigations (`investigation_jobs`, `root_cause_hyp
 - **Durability**: DB row is the source of truth; atomic conditional-UPDATE claiming; stale `running` jobs re-queued by `scripts/run_investigation_worker.py` (one pass or `--loop`). State machine: `queued -> running -> completed/failed`, `queued -> cancelled` only. Terminal transitions are conditional UPDATEs, so a stale read (cancel-after-claim, complete-after-cancel) yields 409 instead of an illegal transition; repeated cancel is also 409.
 - **Single active job**: at most one `queued`/`running` job per incident — enforced by partial unique index `uq_investigation_jobs_single_active` (migration `0011`) as the final backstop behind the application-level dedupe. Terminal jobs are unconstrained, so re-investigation after completion always works.
 - **Retries**: attempts increment on claim only (never on progress writes); stale jobs re-queue until `max_attempts`, then fail with a safe summary. Each attempt starts from a clean slate (prior hypotheses/links cleared) so retries never duplicate results. In-flight provider generation cannot be interrupted; if ownership is lost mid-run, results are discarded, never persisted.
-- **Output robustness**: oversized hypothesis arrays are truncated (noted in uncertainty) rather than failing the job; remediation-adjacent next steps are force-flagged `requires_human_approval`; persisted `error_summary` is pre-sanitized and capped at 500 chars.
-- **Retrieval**: incident evidence ranked lexically + RRF (no embedding column on `evidence_events` by design); runbooks reuse the existing `RetrievalService` pipeline (keyword default, hybrid opt-in via `INVESTIGATION_RUNBOOK_HYBRID`). Org filter applied before ranking on every path.
+- **Retrieval (Milestone 3A — Evidence Hybrid Retrieval)**:
+  - Incident evidence carried in `evidence_events` is embedded using FastEmbed `BAAI/bge-small-en-v1.5` (384-dimensional vector, HNSW cosine distance index) added via forward-only migration `0012_evidence_embeddings`.
+  - Deterministic text representations are sanitized during embedding to prevent leaking secrets, credentials, auth tokens, or oversized payloads into vector space.
+  - Safe ingestion: evidence events are persisted first; embedding generation runs as a non-blocking step where provider failures or timeouts never roll back or corrupt the evidence record.
+  - Operational backfill (`scripts/backfill_evidence_embeddings.py`): idempotent, resumable, tenant-scoped batch backfill tool with dry-run and error isolation.
+  - Multi-channel hybrid retrieval combines lexical term overlap, dense semantic vector similarity, and recency ranking fused via Reciprocal Rank Fusion (RRF) with deterministic tie-breaking.
+  - Strict tenant and incident isolation is enforced inside SQL queries before ranking: `organization_id == caller_org AND incident_id == requested_incident`.
+  - Fail-safe degradation: provider timeouts or dimension mismatches automatically fall back to lexical+recency retrieval without failing investigation jobs.
 - **Safety**: evidence quoted as untrusted data; citations validated server-side (unknown/cross-incident/cross-tenant IDs rejected, hypotheses persisted as `rejected`); confidence labels flagged uncalibrated; failures carry safe `error_category` summaries only; correlation disclaimer on every result.
 
 ---
+
 
 ---
 

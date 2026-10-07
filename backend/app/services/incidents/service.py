@@ -4,6 +4,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.core.exceptions import ConflictException, NotFoundException
 from app.models.evidence import EvidenceEvent
 from app.models.incident import Incident, IncidentSeverity, IncidentStatus
@@ -229,7 +230,52 @@ class IncidentService:
             evidence.source_type,
             evidence.event_type,
         )
+
+        # Milestone 3A: Safe evidence embedding generation
+        settings = get_settings()
+        if settings.EVIDENCE_EMBEDDING_ENABLED:
+            try:
+                from datetime import UTC, datetime
+
+                from app.services.embeddings.providers import get_embedding_provider
+                from app.services.investigations.evidence_embedding import (
+                    build_evidence_embedding_text,
+                    generate_evidence_embedding,
+                )
+
+                embed_text = build_evidence_embedding_text(
+                    source_type=evidence.source_type,
+                    event_type=evidence.event_type,
+                    summary=evidence.summary,
+                    normalized_payload=evidence.normalized_payload,
+                    source_reference=evidence.source_reference,
+                )
+                provider = get_embedding_provider()
+                vec = await generate_evidence_embedding(embed_text, provider=provider)
+                if vec is not None:
+                    evidence.embedding = vec
+                    evidence.embedding_model = provider.model_name
+                    evidence.embedded_at = datetime.now(UTC)
+                    await session.commit()
+                    await session.refresh(evidence)
+            except Exception as exc:
+                # An embedding failure must never corrupt or duplicate the evidence event.
+                # The evidence record itself remains usable through lexical retrieval.
+                logger.warning(
+                    "Evidence embedding generation failed for event %s (continuing with lexical-only): %s",
+                    evidence.id,
+                    type(exc).__name__,
+                )
+                try:
+                    await session.rollback()
+                    reloaded = await session.get(EvidenceEvent, evidence.id)
+                    if reloaded is not None:
+                        evidence = reloaded
+                except Exception:
+                    pass
+
         return evidence, True
+
 
     @staticmethod
     async def list_evidence(

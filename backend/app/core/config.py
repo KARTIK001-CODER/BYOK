@@ -170,6 +170,15 @@ class Settings(BaseSettings):
     INVESTIGATION_MAX_HYPOTHESES: int = 5
     INVESTIGATION_EVIDENCE_FETCH_CAP: int = 1000
 
+    # TracePilot Evidence Intelligence — Milestone 3A (evidence embeddings & hybrid retrieval)
+    EVIDENCE_EMBEDDING_ENABLED: bool = True
+    EVIDENCE_RETRIEVAL_TOP_K: int = 20
+    EVIDENCE_SEMANTIC_TOP_K: int = 50
+    EVIDENCE_LEXICAL_TOP_K: int = 50
+    EVIDENCE_RECENCY_TOP_K: int = 50
+    EVIDENCE_RECENCY_WINDOW_HOURS: int = 72
+
+
     # BYOK Master Encryption Key Placeholder (Deferred to Future Phases)
     API_KEY_ENCRYPTION_KEY: str = Field(
         default="change-this-to-a-32-byte-hex-key-for-byok-encryption-vault"

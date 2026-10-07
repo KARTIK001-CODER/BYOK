@@ -429,10 +429,12 @@ def _build_result_summary(
                 "summary": r.event.summary,
                 "source_reference": r.event.source_reference,
                 "retrieval_method": r.retrieval_method,
+                "retrieval_sources": getattr(r, "retrieval_sources", [r.retrieval_method]),
                 "score": r.score,
                 "rank": r.rank,
             }
             for r in retrieved
         ],
+
         "runbooks_used": runbooks,
     }
