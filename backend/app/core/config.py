@@ -162,6 +162,14 @@ class Settings(BaseSettings):
     MAX_TOTAL_CANDIDATES: int = 50
     MAX_PARALLEL_RETRIEVAL_QUERIES: int = 3
 
+    # TracePilot Investigation Engine — Milestone 2 (durable jobs, evidence-grounded hypotheses)
+    INVESTIGATION_DEFAULT_RESULT_LIMIT: int = 20
+    INVESTIGATION_RUNBOOK_TOP_K: int = 5
+    INVESTIGATION_RUNBOOK_HYBRID: bool = False
+    INVESTIGATION_STALE_RUNNING_SECONDS: int = 600
+    INVESTIGATION_MAX_HYPOTHESES: int = 5
+    INVESTIGATION_EVIDENCE_FETCH_CAP: int = 1000
+
     # BYOK Master Encryption Key Placeholder (Deferred to Future Phases)
     API_KEY_ENCRYPTION_KEY: str = Field(
         default="change-this-to-a-32-byte-hex-key-for-byok-encryption-vault"

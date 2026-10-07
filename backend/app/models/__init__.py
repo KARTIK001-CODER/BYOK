@@ -7,6 +7,16 @@ from app.models.embedding_job import EmbeddingJob, EmbeddingJobStatus
 from app.models.evidence import EvidenceEvent, EvidenceSourceType
 from app.models.incident import Incident, IncidentSeverity, IncidentStatus
 from app.models.ingestion_job import IngestionJob, IngestionJobStatus
+from app.models.investigation import (
+    EvidenceLinkType,
+    HypothesisConfidence,
+    HypothesisEvidenceLink,
+    HypothesisStatus,
+    InvestigationErrorCategory,
+    InvestigationJob,
+    InvestigationStatus,
+    RootCauseHypothesis,
+)
 from app.models.knowledge_base import KnowledgeBase
 from app.models.membership import OrganizationMembership, OrganizationRole
 from app.models.message import Message, MessageRole
@@ -26,12 +36,19 @@ __all__ = [
     "EmbeddingJobStatus",
     "EmbeddingStatus",
     "EvidenceEvent",
+    "EvidenceLinkType",
     "EvidenceSourceType",
+    "HypothesisConfidence",
+    "HypothesisEvidenceLink",
+    "HypothesisStatus",
     "Incident",
     "IncidentSeverity",
     "IncidentStatus",
     "IngestionJob",
     "IngestionJobStatus",
+    "InvestigationErrorCategory",
+    "InvestigationJob",
+    "InvestigationStatus",
     "KnowledgeBase",
     "Message",
     "MessageRole",
@@ -40,5 +57,6 @@ __all__ = [
     "OrganizationRole",
     "ProviderCredential",
     "RefreshToken",
+    "RootCauseHypothesis",
     "User",
 ]

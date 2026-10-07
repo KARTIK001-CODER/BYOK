@@ -16,6 +16,7 @@ from app.models.document import Document
 from app.models.embedding_job import EmbeddingJob
 from app.models.incident import Incident
 from app.models.ingestion_job import IngestionJob
+from app.models.investigation import InvestigationJob, RootCauseHypothesis
 from app.models.knowledge_base import KnowledgeBase
 from app.models.membership import OrganizationMembership, OrganizationRole
 from app.models.user import User
@@ -203,6 +204,39 @@ async def get_embedding_job_or_404(
     if membership is None:
         raise NotFoundException(message="Embedding job not found.")
     return job, membership
+
+
+async def get_investigation_job_or_404(
+    job_id: str,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> tuple[InvestigationJob, OrganizationMembership]:
+    """Retrieve InvestigationJob and verify caller has organization access."""
+    from app.services.investigations.service import InvestigationService
+
+    # Tenant-scoped lookup: try each of the caller's orgs without leaking existence.
+    memberships = await OrganizationService.get_user_memberships(session, current_user.id)
+    for ms in memberships:
+        job = await InvestigationService.get_job(session, job_id, ms.organization_id)
+        if job is not None:
+            return job, ms
+    raise NotFoundException(message="Investigation not found.")
+
+
+async def get_hypothesis_or_404(
+    hypothesis_id: str,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> tuple[RootCauseHypothesis, OrganizationMembership]:
+    """Retrieve RootCauseHypothesis and verify caller has organization access."""
+    from app.services.investigations.service import InvestigationService
+
+    memberships = await OrganizationService.get_user_memberships(session, current_user.id)
+    for ms in memberships:
+        hyp = await InvestigationService.get_hypothesis(session, hypothesis_id, ms.organization_id)
+        if hyp is not None:
+            return hyp, ms
+    raise NotFoundException(message="Hypothesis not found.")
 
 
 async def get_incident_or_404(
