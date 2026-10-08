@@ -217,4 +217,116 @@ export class ApiClient {
       });
     }
   }
+
+  static async streamGet(
+    endpoint: string,
+    onEvent: (event: string, data: unknown) => void,
+    onError: (error: ApiError) => void,
+    onComplete: () => void,
+    opts?: { signal?: AbortSignal }
+  ): Promise<void> {
+    const url = `${API_BASE_URL}${endpoint}`;
+    const headers: Record<string, string> = {
+      Accept: "text/event-stream",
+      "Cache-Control": "no-cache",
+    };
+
+    if (this.token) {
+      headers["Authorization"] = `Bearer ${this.token}`;
+    }
+    if (this.organizationId) {
+      headers["X-Organization-ID"] = this.organizationId;
+    }
+
+    try {
+      const response = await fetch(url, {
+        method: "GET",
+        headers,
+        signal: opts?.signal,
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        const err: ApiError = data.error || {
+          code: `HTTP_${response.status}`,
+          message: data.detail || response.statusText || "Streaming connection failed.",
+        };
+        onError(err);
+        return;
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        onError({ code: "STREAM_ERROR", message: "Response body reader unavailable." });
+        return;
+      }
+
+      try {
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n\n");
+          buffer = lines.pop() || "";
+
+          for (const block of lines) {
+            if (!block.trim()) continue;
+
+            let eventType = "message";
+            let dataStr = "";
+
+            for (const rawLine of block.split("\n")) {
+              const line = rawLine.trim();
+              if (line.startsWith(":")) {
+                // SSE comment (heartbeat keepalive) - ignore
+                continue;
+              }
+              if (line.startsWith("event:")) {
+                eventType = line.replace("event:", "").trim();
+              } else if (line.startsWith("data:")) {
+                const piece = line.replace("data:", "").trim();
+                dataStr = dataStr ? `${dataStr}\n${piece}` : piece;
+              }
+            }
+
+            if (dataStr) {
+              try {
+                const parsed = JSON.parse(dataStr);
+                onEvent(eventType, parsed);
+              } catch {
+                onEvent(eventType, dataStr);
+              }
+            }
+          }
+        }
+
+        onComplete();
+      } catch (readErr: unknown) {
+        if (opts?.signal?.aborted || (readErr instanceof DOMException && readErr.name === "AbortError")) {
+          try {
+            await reader.cancel();
+          } catch {
+            /* reader already closed */
+          }
+          onComplete();
+          return;
+        }
+        throw readErr;
+      }
+    } catch (err: unknown) {
+      if (opts?.signal?.aborted || (err instanceof DOMException && err.name === "AbortError")) {
+        onComplete();
+        return;
+      }
+      onError({
+        code: "NETWORK_ERROR",
+        message: err instanceof Error ? err.message : "Network error during streaming.",
+      });
+    }
+  }
 }
+

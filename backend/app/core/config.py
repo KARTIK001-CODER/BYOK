@@ -178,6 +178,10 @@ class Settings(BaseSettings):
     EVIDENCE_RECENCY_TOP_K: int = 50
     EVIDENCE_RECENCY_WINDOW_HOURS: int = 72
 
+    # TracePilot Real-Time Investigation Streaming — Milestone 3B (SSE)
+    INVESTIGATION_SSE_POLL_INTERVAL: float = 0.5
+    INVESTIGATION_SSE_HEARTBEAT_INTERVAL: float = 15.0
+    INVESTIGATION_SSE_TIMEOUT_SECONDS: float = 300.0
 
     # BYOK Master Encryption Key Placeholder (Deferred to Future Phases)
     API_KEY_ENCRYPTION_KEY: str = Field(

@@ -1,7 +1,8 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, Response, status
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, Depends, Query, Request, Response, status
+from fastapi.responses import StreamingResponse
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.api.deps import (
     get_hypothesis_or_404,
@@ -9,7 +10,7 @@ from app.api.deps import (
     get_investigation_job_or_404,
 )
 from app.core.config import get_settings
-from app.db.session import get_db
+from app.db.session import get_db, get_session_factory
 from app.models.incident import Incident
 from app.models.investigation import InvestigationJob, RootCauseHypothesis
 from app.models.membership import OrganizationMembership
@@ -22,6 +23,7 @@ from app.schemas.investigations import (
 )
 from app.services.investigations.engine import execute_claimed_job
 from app.services.investigations.service import InvestigationService
+from app.services.investigations.streaming import stream_investigation_events
 
 router = APIRouter(tags=["Investigations & Root-Cause Hypotheses"])
 
@@ -120,6 +122,41 @@ async def get_investigation(
 ) -> InvestigationJobResponse:
     job, _ = job_data
     return InvestigationJobResponse.model_validate(job)
+
+
+@router.get(
+    "/investigations/{job_id}/stream",
+    summary="Stream Investigation Progress (SSE)",
+    description=(
+        "Streams real-time progress events for a durable investigation job via Server-Sent Events (SSE). "
+        "Emits investigation.connected, investigation.snapshot, investigation.progress, and terminal events "
+        "(investigation.completed, investigation.failed, investigation.cancelled). "
+        "Closes cleanly on terminal state. If client disconnects, the investigation continues undisturbed in PostgreSQL."
+    ),
+)
+async def stream_investigation(
+    request: Request,
+    job_data: Annotated[
+        tuple[InvestigationJob, OrganizationMembership], Depends(get_investigation_job_or_404)
+    ],
+    session_factory: Annotated[async_sessionmaker[AsyncSession], Depends(get_session_factory)],
+) -> StreamingResponse:
+    job, membership = job_data
+    event_generator = stream_investigation_events(
+        request=request,
+        job_id=job.id,
+        organization_id=membership.organization_id,
+        session_factory=session_factory,
+    )
+    return StreamingResponse(
+        event_generator,
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @router.post(

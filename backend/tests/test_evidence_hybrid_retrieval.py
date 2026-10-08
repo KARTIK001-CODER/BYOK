@@ -219,7 +219,9 @@ async def test_hybrid_retrieval_recall_and_mrr(
                 target_rank = r.rank
                 break
 
-        assert target_rank is not None, f"Expected target in {expected_ids} not in top 5 for '{query}'"
+        assert target_rank is not None, (
+            f"Expected target in {expected_ids} not in top 5 for '{query}'"
+        )
         assert target_rank <= max_acceptable_rank, (
             f"Expected rank <= {max_acceptable_rank}, got {target_rank} for '{query}'"
         )
@@ -227,7 +229,6 @@ async def test_hybrid_retrieval_recall_and_mrr(
         reciprocal_ranks.append(1.0 / target_rank)
         if target_rank <= 3:
             top3_hits += 1
-
 
     # Metrics computation
     recall_at_3 = top3_hits / len(test_cases)
@@ -400,8 +401,6 @@ async def test_compare_lexical_semantic_and_hybrid(
     # In hybrid search, the fused ranking prioritizes both deployment and alert
     hybrid_ids = [r.event.id for r in hybrid_results[:5]]
     assert evs["ev_deploy"].id in hybrid_ids or evs["ev_alert"].id in hybrid_ids
-
-
 
 
 @pytest.mark.asyncio

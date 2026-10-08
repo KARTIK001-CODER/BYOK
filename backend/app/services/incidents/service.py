@@ -276,7 +276,6 @@ class IncidentService:
 
         return evidence, True
 
-
     @staticmethod
     async def list_evidence(
         session: AsyncSession,

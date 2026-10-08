@@ -9,9 +9,14 @@ from app.services.investigations.evidence_embedding import (
 )
 from app.services.investigations.retrieval import InvestigationRetrievalService, RetrievedEvidence
 from app.services.investigations.service import InvestigationService
+from app.services.investigations.streaming import (
+    InvestigationEventType,
+    stream_investigation_events,
+)
 
 __all__ = [
     "EvidenceEmbeddingBackfillService",
+    "InvestigationEventType",
     "InvestigationService",
     "InvestigationRetrievalService",
     "RetrievedEvidence",
@@ -19,5 +24,5 @@ __all__ = [
     "execute_claimed_job",
     "generate_evidence_embedding",
     "generate_query_embedding",
+    "stream_investigation_events",
 ]
-
