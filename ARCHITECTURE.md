@@ -89,6 +89,37 @@ Durable, evidence-grounded investigations (`investigation_jobs`, `root_cause_hyp
 
 ---
 
+## 4c. TracePilot Real-Time Investigation Streaming (Milestone 3B)
+
+Real-time investigation progress streaming via Server-Sent Events (SSE):
+
+- **Architecture Principle**: **SSE is a delivery mechanism only. InvestigationJob state remains persisted in PostgreSQL.** PostgreSQL is the sole authoritative source of truth. Investigation jobs execute asynchronously on workers independently of active SSE streams.
+- **Endpoint**:
+  `GET /api/v1/investigations/{job_id}/stream`
+  - Requires standard JWT authentication (`Authorization: Bearer <token>`) and organization header (`X-Organization-ID: <org_id>`).
+  - Strict tenant isolation: checks organization membership and returns a 404 with no state leak for non-existent or cross-tenant jobs.
+- **Event Contract**:
+  - `investigation.connected`: Emitted immediately upon connection handshake.
+  - `investigation.snapshot`: Initial authoritative state payload reconstructed directly from PostgreSQL.
+  - `investigation.progress`: Emitted whenever meaningful status, stage, or progress changes occur.
+  - `investigation.completed`: Terminal event emitted when the job succeeds; includes sanitized `result_summary`. Stream terminates immediately.
+  - `investigation.failed`: Terminal event emitted when the job fails; includes sanitized `error_summary` and `error_category`. Stream terminates immediately.
+  - `investigation.cancelled`: Terminal event emitted when the job is cancelled. Stream terminates immediately.
+- **Keepalive Heartbeats**:
+  - Server emits periodic SSE comments (`: heartbeat\n\n`) at configurable intervals (`INVESTIGATION_SSE_HEARTBEAT_INTERVAL`, default 15s) to prevent intermediate proxies or clients from timing out idle connections. Heartbeats do not trigger client state transitions.
+- **Database Session Lifecycle**:
+  - The SSE endpoint does NOT hold open a long-lived database transaction or connection.
+  - Each change-detection poll uses a dedicated short-lived async session that is immediately closed before sleeping (`INVESTIGATION_SSE_POLL_INTERVAL`, default 0.5s). This prevents database connection pool starvation under concurrent streams.
+- **Client Disconnect & Failure Handling**:
+  - Client disconnects (closing tab, network loss) cleanly exit the server streaming loop without logging application errors.
+  - **Client disconnect never cancels, fails, or mutates the underlying `InvestigationJob`**; the job continues executing in PostgreSQL.
+- **Frontend Integration (`useInvestigationStream`)**:
+  - Reusable React hook exposing `status`, `stage`, `progress`, `resultSummary`, `errorSummary`, `connected`, `isTerminal`, and `refresh`.
+  - Automatic reconnection with bounded exponential backoff.
+  - Fail-safe REST polling fallback: If SSE connection attempts exceed the retry threshold (`maxReconnectAttempts`), the hook seamlessly degrades to polling `GET /api/v1/investigations/{job_id}` without interrupting the UI.
+- **Known Limitations**:
+  - Event delivery relies on short-interval database polling rather than Redis pub/sub or PostgreSQL LISTEN/NOTIFY, which is intentionally chosen to preserve zero-external-broker simplicity for this milestone.
+  - High numbers of concurrent streams scale with database query throughput; connection pooling and short sessions prevent pool exhaustion.
 
 ---
 

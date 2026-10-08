@@ -249,9 +249,7 @@ class InvestigationRetrievalService:
                     # Filter events that have an embedding vector
                     events_with_embedding = [ev for ev in events if ev.embedding is not None]
                     if events_with_embedding:
-                        dialect_name = (
-                            session.bind.dialect.name if session.bind else "postgresql"
-                        )
+                        dialect_name = session.bind.dialect.name if session.bind else "postgresql"
                         semantic_scored: list[tuple[str, float]] = []
 
                         if dialect_name == "postgresql":
@@ -291,8 +289,7 @@ class InvestigationRetrievalService:
                             )
 
                         semantic_ranking = [
-                            eid
-                            for eid, _ in semantic_scored[: settings.EVIDENCE_SEMANTIC_TOP_K]
+                            eid for eid, _ in semantic_scored[: settings.EVIDENCE_SEMANTIC_TOP_K]
                         ]
             except Exception as exc:
                 logger.warning(

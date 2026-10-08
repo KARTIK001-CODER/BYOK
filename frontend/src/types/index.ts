@@ -121,3 +121,5 @@ export interface RAGChatRequest {
   search_mode?: "vector" | "keyword" | "hybrid";
   temperature?: number;
 }
+
+export * from "./investigation";

@@ -435,6 +435,5 @@ def _build_result_summary(
             }
             for r in retrieved
         ],
-
         "runbooks_used": runbooks,
     }

@@ -56,7 +56,6 @@ class EvidenceEvent(Base, UUIDPrimaryKeyMixin, TimestampMixin):
         ),
     )
 
-
     incident_id: Mapped[str] = mapped_column(
         String(36),
         ForeignKey("incidents.id", ondelete="CASCADE"),
