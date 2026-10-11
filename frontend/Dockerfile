@@ -1,4 +1,4 @@
-# Frontend multi-stage build for RAGForge
+# Frontend multi-stage build for TracePilot
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY package.json package-lock.json ./

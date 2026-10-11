@@ -65,7 +65,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
           <div className="assistant-avatar">
             <Bot size={16} />
           </div>
-          <span className="assistant-name">RAGForge</span>
+          <span className="assistant-name">TracePilot</span>
           {meta?.groundedness !== undefined && meta?.groundedness !== null && (
             <span className="grounded-badge" title="Answer verified against retrieved sources">
               <ShieldCheck size={12} /> Grounded

@@ -10,15 +10,19 @@ export interface ApiError {
 }
 
 export class ApiClient {
-  private static token: string | null = localStorage.getItem("ragforge_token");
-  private static refreshToken: string | null = localStorage.getItem("ragforge_refresh_token");
-  private static organizationId: string | null = localStorage.getItem("ragforge_org_id");
+  private static token: string | null =
+    localStorage.getItem("tracepilot_token") || localStorage.getItem("ragforge_token");
+  private static refreshToken: string | null =
+    localStorage.getItem("tracepilot_refresh_token") || localStorage.getItem("ragforge_refresh_token");
+  private static organizationId: string | null =
+    localStorage.getItem("tracepilot_org_id") || localStorage.getItem("ragforge_org_id");
 
   static setToken(token: string | null) {
     this.token = token;
     if (token) {
-      localStorage.setItem("ragforge_token", token);
+      localStorage.setItem("tracepilot_token", token);
     } else {
+      localStorage.removeItem("tracepilot_token");
       localStorage.removeItem("ragforge_token");
     }
   }
@@ -30,8 +34,9 @@ export class ApiClient {
   static setRefreshToken(token: string | null) {
     this.refreshToken = token;
     if (token) {
-      localStorage.setItem("ragforge_refresh_token", token);
+      localStorage.setItem("tracepilot_refresh_token", token);
     } else {
+      localStorage.removeItem("tracepilot_refresh_token");
       localStorage.removeItem("ragforge_refresh_token");
     }
   }
@@ -43,8 +48,9 @@ export class ApiClient {
   static setOrganizationId(orgId: string | null) {
     this.organizationId = orgId;
     if (orgId) {
-      localStorage.setItem("ragforge_org_id", orgId);
+      localStorage.setItem("tracepilot_org_id", orgId);
     } else {
+      localStorage.removeItem("tracepilot_org_id");
       localStorage.removeItem("ragforge_org_id");
     }
   }

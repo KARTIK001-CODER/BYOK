@@ -1,15 +1,15 @@
-# BYOK (Bring Your Own Knowledge) Architecture
+# TracePilot Platform Architecture
 
-This document provides a high-level overview of the BYOK platform's architecture, including the technologies used and the core flow of data across the system. 
+This document provides a high-level overview of the TracePilot platform's architecture, including the technologies used and the core flow of data across the system.
 
 ## 1. System Overview
 
-BYOK is a Retrieval-Augmented Generation (RAG) platform. It allows users to upload documents, converts those documents into embeddings (vector representations), stores them, and then uses a Large Language Model (LLM) to answer user questions based on the retrieved context from those documents.
+TracePilot is an AI-powered SRE incident investigation and root-cause analysis platform. It enables engineering teams to triage incidents, reconstruct deterministic timelines from multi-source telemetry, evaluate evidence-grounded hypotheses, discover operational runbooks, and govern remediation proposals with human-in-the-loop approvals.
 
 The project is structured as a full-stack application with a clear separation of concerns:
-- **Frontend (Client)**: A modern web interface for users to upload knowledge, manage settings, and chat with their knowledge base.
-- **Backend (API Layer & Business Logic)**: A robust REST API that handles data processing, authentication, integration with vector and relational databases, and orchestration of RAG operations.
-- **Data Persistence**: A single PostgreSQL 16 + pgvector database (structured tables + `Vector(384)` HNSW + `TSVECTOR` GIN FTS on `document_chunks`) plus local filesystem object storage. No separate vector DB.
+- **Frontend (Client)**: A modern SRE investigation workspace built with React 19, TypeScript, and Vite for incident triage, timeline exploration, investigation monitoring, and remediation review.
+- **Backend (API Layer & Business Logic)**: A robust asynchronous FastAPI application handling multi-tenant isolation, telemetry ingestion, hybrid retrieval (pgvector + FTS), asynchronous investigation workers, deterministic groundedness scoring, and remediation governance.
+- **Data Persistence**: A single PostgreSQL 16 + pgvector database (structured tables + `Vector(384)` HNSW + `TSVECTOR` GIN FTS) plus local filesystem object storage. No separate vector DB.
 
 ---
 
@@ -120,6 +120,147 @@ Real-time investigation progress streaming via Server-Sent Events (SSE):
 - **Known Limitations**:
   - Event delivery relies on short-interval database polling rather than Redis pub/sub or PostgreSQL LISTEN/NOTIFY, which is intentionally chosen to preserve zero-external-broker simplicity for this milestone.
   - High numbers of concurrent streams scale with database query throughput; connection pooling and short sessions prevent pool exhaustion.
+
+---
+
+## 4d. TracePilot Hypothesis Groundedness Assessment & Calibration (Milestone 4)
+
+Deterministic, explainable evidence-groundedness evaluation and confidence calibration (`root_cause_hypotheses` columns; migration `0013_hypothesis_groundedness_assessment`):
+
+- **Core Architectural Principles**:
+  - **LLM confidence is untrusted**: Provider-reported confidence scores are subjective self-assessments. System confidence is computed deterministically from empirical evidence quality.
+  - **Evidence-quality scoring, not probability**: System confidence represents evidence support strength, not statistical probability.
+  - **Zero credit for invalid citations**: Foreign, invalid, or cross-tenant evidence citations receive zero grounding credit and cannot validate hypotheses.
+  - **Temporal correlation is not causality**: Temporal sequence compatibility represents consistency, never absolute proof of causality.
+  - **Contradictions are never suppressed**: Contradictory evidence monotonically discounts groundedness and system confidence scores.
+- **Evaluator Components (`GroundednessEvaluator`)**:
+  - **Citation Validity**: Strict boundary check against retrieved evidence for the specific incident and tenant.
+  - **Evidence Diversity & Duplicate Damping**: Rewards corroboration across independent source types (`metric`, `log`, `alert`, `trace`, `deployment`); damps score inflation from repeated/identical log events.
+  - **Temporal Sequence Compatibility**: Verifies that alleged causal triggers preceded initial symptom telemetry.
+  - **Contradiction Penalty**: Applies monotonic penalties for cited counter-evidence.
+  - **Unsupported Claim Detection**: Cross-checks failure mechanism assertions (e.g., connection pool exhaustion, memory leak, CPU throttling) against corroborating terms in cited evidence.
+- **Persistence & API**:
+  - Persisted directly on `root_cause_hypotheses`: `groundedness_score`, `system_confidence_score`, `system_confidence` (`low`/`medium`/`high`), `groundedness_status` (`well_supported`/`partially_supported`/`weakly_supported`/`contested`/`rejected`), `assessment_version`, and full `assessment_details` (JSONB).
+  - Endpoint: `GET /api/v1/hypotheses/{id}/assessment`.
+- **Evaluation Suite**:
+  - Benchmark dataset: `backend/evaluation/groundedness/datasets/milestone4_groundedness_cases.json`.
+  - Runner: `backend/evaluation/groundedness/evaluate.py`.
+  - Verified benchmark results: 100% determinism, 100% unsupported claim detection rate, 100% contradiction detection rate, 100% invalid citation protection.
+
+---
+
+## 4e. TracePilot Remediation Proposals & Risk Assessment (Milestone 5A)
+
+Structured, risk-assessed remediation proposals linked to verified hypotheses (`remediation_proposals`; migration `0014_remediation_proposals`):
+
+- **Core Architectural Principles**:
+  - **Non-executable advisory restrictions**: TracePilot remediation proposals are strictly advisory specifications and are non-executable (`is_executable = False`). The system prohibits automated or unattended execution in this phase.
+  - **Mandatory human approval**: Mutating and high-impact operational steps (e.g., restarts, rollbacks, configuration changes, scale operations) strictly enforce `requires_human_approval = True`.
+  - **Tenant isolation**: All proposals and action evaluations are strictly filtered by `organization_id`; cross-tenant lookups return 404 with zero existence leak.
+- **Risk Assessment Engine (`RiskEvaluator`)**:
+  - Evaluates action types, destructive keywords (`drop`, `delete`, `truncate`, `rm -rf`), reversibility, and blast radius (critical infrastructure like database, ingress, gateway vs. isolated services).
+  - **Groundedness alignment**: Connects remediation risk to hypothesis grounding. Weakly grounded, contested, or low-confidence hypotheses trigger elevated risk ratings and explicit warnings.
+  - Outputs overall risk level (`low`, `medium`, `high`, `critical`), composite risk score (0.0 to 1.0), and explainable risk factors.
+- **Lifecycle State Machine**:
+  - Valid transitions: `draft -> proposed -> reviewed -> rejected / superseded / cancelled`.
+  - Terminal states (`rejected`, `superseded`, `cancelled`) cannot transition further.
+  - Illegal transitions are rejected with HTTP 409 Conflict.
+- **Endpoints (`/api/v1`)**:
+  - `POST /incidents/{incident_id}/remediations`: Manually create a structured remediation proposal.
+  - `POST /incidents/{incident_id}/remediations/generate`: Synthesize a tailored proposal from root-cause hypotheses.
+  - `GET /incidents/{incident_id}/remediations`: List proposals with optional status filtering.
+  - `GET /remediations/{remediation_id}`: Retrieve detailed proposal and action steps.
+  - `PATCH /remediations/{remediation_id}/status`: Transition proposal lifecycle state.
+  - `POST /remediations/{remediation_id}/risk-assessment`: Recalculate explainable risk assessment.
+  - `POST /remediations/{remediation_id}/execute`: Always returns HTTP 403 Forbidden with security restriction notice.
+
+---
+
+## 4f. TracePilot Human Approval, Policy Enforcement & Audit Trail (Milestone 5B)
+
+Production-minded human approval lifecycle, policy enforcement, and append-only audit trail (`remediation_approvals`, `remediation_audit_events`, `remediation_proposals` approval columns; migration `0015_remediation_approval_and_audit`):
+
+- **Approval Policy & Deterministic Rules (`ApprovalPolicyService`)**:
+  - **Tiered Role Authorization**:
+    - **Low & Medium Risk**: Requires an authorized human reviewer (`MEMBER`, `ADMIN`, or `OWNER`).
+    - **High & Critical Risk**: Requires an authorized `ADMIN` or `OWNER`. `MEMBER` approval attempts are strictly rejected (HTTP 403).
+  - **Separation of Duties**: The proposal creator cannot approve their own proposal (`creator_self_approval_disallowed`, HTTP 403).
+  - **Tenant Isolation**: Reviewer must belong to the proposal's organization. Cross-tenant lookups strictly return HTTP 404 (zero existence leakage).
+  - **Terminal Proposal Protection**: Proposals in terminal states (`rejected`, `superseded`, `cancelled`, or `expired`) cannot be approved (HTTP 409 Conflict).
+  - **Risk Assessment Freshness**: Approval requires a valid, completed risk assessment. Missing or stale assessments fail evaluation.
+  - **Mutation Invalidation**: Any post-approval mutation to the proposal (such as risk recalculation or status adjustment) invalidates prior approval, increments proposal `version`, resets approval metadata, and emits an `approval_invalidated` audit event.
+- **Durable Approval Records & Append-Only Audit Trail**:
+  - **Durable Approval Records (`RemediationApproval`)**: Persists decision (`approved` or `rejected`), rationale, risk level at decision time, reviewer identity, policy version (`1.0.0`), proposal snapshot (`proposal_version`), and groundedness/evidence references. Database unique constraint `UNIQUE(proposal_id, proposal_version)` prevents duplicate decisions for the same proposal revision.
+  - **Append-Only Audit Log (`RemediationAuditEvent`)**: Immutable chronological event stream tracking all lifecycle actions (`proposal_created`, `proposal_generated`, `risk_assessed`, `proposal_submitted`, `proposal_approved`, `proposal_rejected`, `approval_invalidated`, `status_changed`).
+  - **Privacy & Safety**: Audit payloads sanitize tokens, secrets, credentials, and unrestricted raw prompts. Telemetry snapshots record only existing persisted incident metadata.
+  - **Concurrency Safety**: Atomic `SELECT ... FOR UPDATE` row locks guard against concurrent approve/reject race conditions.
+- **Safe Policy-Validation Dry-Run Design (`/dry-run`)**:
+  - **Local Validation Only**: Evaluates proposal schema, evidence references, risk freshness, and reviewer role eligibility.
+  - **No Infrastructure Contact**: Never runs shell commands, accesses Kubernetes/cloud/database APIs, or applies infrastructure changes. Output is explicitly labelled as local policy verification.
+- **Execution Safety Boundary**:
+  - **Forbidden Remediation Execution**: `POST /api/v1/remediations/{id}/execute` remains strictly disabled and unconditionally returns HTTP 403 Forbidden. Approval certifies policy compliance only; it never authorizes or triggers automated execution.
+- **Endpoints (`/api/v1`)**:
+  - `GET /remediations`: List remediation proposals across incidents with optional status and incident filters.
+  - `POST /remediations/{remediation_id}/approve`: Submit human approval with mandatory rationale.
+  - `POST /remediations/{remediation_id}/reject`: Submit rejection with rationale.
+  - `GET /remediations/{remediation_id}/approvals`: Retrieve append-only approval and rejection decision history.
+  - `GET /remediations/{remediation_id}/audit`: Retrieve comprehensive lifecycle audit trail.
+  - `POST /remediations/{remediation_id}/dry-run`: Execute local policy validation dry-run without mutating state.
+
+---
+
+## 4g. TracePilot Remediation Review UX & Policy Visibility (Milestone 5C)
+
+Production-minded SRE investigation frontend for human approval lifecycle, policy visibility, and audit trail inspection (`RemediationReviewCenter`, `ProposalDetailView`, `RiskAssessmentView`, `ActionStepsList`, `EvidenceProvenanceView`, `PolicyExplanationCard`, `ApprovalWorkflowModal`, `AuditTrailTimeline`, `DryRunModal`):
+
+- **Remediation Review Center & Navigation**:
+  - **First-Class SRE Navigation**: Integrated `"remediations"` view in `Navbar` and `Sidebar` with incident context switching.
+  - **Master-Detail Workspace**: Filterable master list (status, risk level, keyword search) and comprehensive proposal detail pane.
+- **Explainable Risk & Policy Visibility**:
+  - **Deterministic Risk Breakdown**: Visual hierarchy for risk levels (`low`, `medium`, `high`, `critical`), composite risk meters, blast radius, reversibility, and heuristic safety disclaimers.
+  - **Policy Explanation & Separation of Duties**: Explains authorization rules directly in the UI (creator self-approval prohibited, role tier requirements for high/critical risks, terminal state constraints, and risk freshness).
+- **Authorized Approval & Rejection Workflow**:
+  - **Interactive Decision Modals**: Confirmation dialogs enforcing required rationales (with validation).
+  - **Concurrency & Stale State Handling**: Safe handling of HTTP 409 conflict errors that automatically refresh authoritative server state without discarding user input. Duplicate submissions prevented while requests are in flight.
+- **Evidence Provenance & Telemetry Grounding**:
+  - Distinguishes observed empirical incident telemetry from inferred hypotheses and advisory recommendations.
+- **Local Policy Dry-Run Visibility**:
+  - Interactive "Validate Proposal" action displaying local simulation results with explicit disclaimers confirming zero infrastructure APIs were contacted.
+- **Execution Safety Guarantee**:
+  - Persistent Safe Execution Barrier banners throughout the UI; all proposed commands labeled read-only advisory. Remediation execution actions remain completely disabled.
+
+---
+
+## 4h. TracePilot Operational Readiness, Sandbox Validation & Audit Export (Milestone 6)
+
+Hardening operational reliability, structured observability, local sandbox simulation, and exportable audit trails:
+
+- **Operational Health and Readiness Probes**:
+  - **Liveness Probes (`/health`, `/health/live`, `/api/v1/health`)**: Ultra-lightweight process checks verifying FastAPI web server execution without database roundtrips.
+  - **Readiness Probes (`/ready`, `/health/ready`)**: Evaluates essential dependencies (PostgreSQL database probe via `SELECT 1` bounded by 2.0s timeout, pgvector extension check on PostgreSQL dialects) and background worker operational state. Returns HTTP 200 with `status: "ready"` (or `"degraded"` if optional components are absent) and HTTP 503 with `status: "unhealthy"` if database connectivity fails.
+  - **Worker Status Probes (`/health/worker`, `/api/v1/health/worker`)**: Tracks worker operational liveness, heartbeat timestamps, and backlog metrics.
+- **Durable Worker Heartbeats & Investigation Reliability**:
+  - **Worker Heartbeat Tracking (`WorkerHeartbeat`, migration `0016_worker_heartbeats`)**: Worker processes periodically persist heartbeats (`last_heartbeat_at`, `status`, `completed_jobs_count`, `worker_metadata`). Heartbeats within 120s are classified as `active`, older heartbeats as `stale`, and zero heartbeats with no running jobs as `idle`.
+  - **Stale Job Reclamation (`InvestigationService.requeue_stale_running`)**: Recovers abandoned running jobs if worker crashes or terminates. Jobs exceeding `max_attempts` transition to `failed` with safe error summaries; otherwise safely re-queued.
+  - **Terminal Protection & Concurrency**: Atomic conditional updates prevent duplicate execution or invalid state transitions (e.g. attempting to cancel or complete an already terminal job yields HTTP 409).
+- **Deterministic Sandbox Simulation (`TracePilotSandboxSimulator`)**:
+  - **Local Deterministic Scenarios (`/api/v1/remediations/sandbox/scenarios`, `/api/v1/remediations/sandbox/simulate`)**: Predefined synthetic scenarios validating the complete remediation governance lifecycle without external infrastructure mutations:
+    - `SCENARIO-HEALTHY-01`: Low-risk proposal on healthy service evaluated by authorized SRE.
+    - `SCENARIO-DEGRADED-02`: Degraded telemetry and stale evidence triggering risk escalation.
+    - `SCENARIO-ELEVATED-RISK-03`: High-blast-radius irreversible proposal requiring admin credentials.
+    - `SCENARIO-UNAUTHORIZED-REVIEWER-04`: Standard member rejected for high-risk action approval.
+    - `SCENARIO-CREATOR-SELF-APPROVAL-05`: Separation of duties enforcement preventing self-approval.
+    - `SCENARIO-EXPIRED-PROPOSAL-06`: Expired proposal rejected by lifecycle transition rules.
+    - `SCENARIO-CONFLICTING-APPROVAL-07`: Conflicting decisions on terminal proposals rejected.
+    - `SCENARIO-INVESTIGATION-RECOVERY-08`: Worker crash recovery with bounded retry backoff.
+  - **Strict Non-Execution Boundary**: Every simulation clearly distinguishes observed fixture data, simulated conditions, policy results, expected outcome, and actual outcome. Explicitly verified `execution_performed: false` with zero shell or cloud commands executed.
+- **Exportable Audit Reports (`GET /api/v1/remediations/{remediation_id}/export`)**:
+  - **Stable JSON Audit Schema (`1.0.0`)**: Exports comprehensive proposal provenance including incident identifiers, proposal version, risk assessment version, policy version (`v1`), chronological approval/rejection decisions with reviewer identities and rationales, append-only audit events, linked root cause hypothesis and citation reference IDs, groundedness scores, and local dry-run validation results.
+  - **Tenant Isolation**: Cross-tenant export requests return HTTP 404 with no data leak. Sensitive secrets, tokens, and raw credentials are sanitized from export payloads.
+- **Execution Safety Boundary**:
+  - Automated remediation execution remains strictly prohibited (`POST /api/v1/remediations/{id}/execute` unconditionally returns HTTP 403 Forbidden).
+- **Configuration & Deployment Hardening**:
+  - Settings validator ensures production mode (`APP_ENV="production"`) rejects `DEFAULT_LLM_PROVIDER="mock"`, rejects `DEBUG=True`, and rejects default `JWT_SECRET_KEY` and `API_KEY_ENCRYPTION_KEY`.
 
 ---
 

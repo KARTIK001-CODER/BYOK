@@ -1,4 +1,4 @@
--- Initialize PostgreSQL database for RAGForge
+-- Initialize PostgreSQL database for TracePilot
 -- Enable the pgvector extension for dense and hybrid vector search operations
 
 CREATE EXTENSION IF NOT EXISTS vector;

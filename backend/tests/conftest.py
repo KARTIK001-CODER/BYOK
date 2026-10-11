@@ -26,7 +26,7 @@ def override_settings(tmp_path: Path) -> None:
 
     test_settings = Settings(
         APP_ENV="test",
-        APP_NAME="RAGForge-Test",
+        APP_NAME="TracePilot-Test",
         DEBUG=True,
         LOG_LEVEL="DEBUG",
         DATABASE_URL="sqlite+aiosqlite:///:memory:",

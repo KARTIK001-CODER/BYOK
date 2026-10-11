@@ -1,7 +1,7 @@
 services:
-  # RAGForge Backend - FastAPI Web Service
+  # TracePilot Backend - FastAPI Web Service
   - type: web
-    name: ragforge-backend
+    name: tracepilot-backend
     env: docker
     dockerfilePath: ./backend/Dockerfile
     region: ohio
@@ -15,16 +15,16 @@ services:
       - key: PORT
         value: 8000
       - key: CORS_ORIGINS
-        # Vercel domain and local domains
+        # Production and local domains
         value: '["https://byok-livid.vercel.app","http://localhost:5173","http://localhost:3000"]'
       - key: DATABASE_URL
         fromDatabase:
-          name: ragforge-db
+          name: tracepilot-db
           property: connectionString
-      - key: JWT_SECRET_KEY
+      - key: SECRET_KEY
         generateValue: true
       - key: EMBEDDING_PROVIDER
-        value: local
+        value: fastembed
       - key: DEFAULT_LLM_PROVIDER
         value: groq
       - key: GROQ_API_KEY
@@ -32,8 +32,8 @@ services:
 
 databases:
   # PostgreSQL 16 database with pgvector extension enabled by default on Render
-  - name: ragforge-db
-    databaseName: ragforge
+  - name: tracepilot-db
+    databaseName: tracepilot
     user: postgres
     plan: starter
     region: ohio
