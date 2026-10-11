@@ -3,14 +3,14 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "ragforge"
-version = "0.6.0"
-description = "RAGForge - Production-oriented modular RAG platform backend"
+name = "tracepilot"
+version = "0.7.0"
+description = "TracePilot - AI-Powered Incident Investigation & Root-Cause Analysis Platform"
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }
 authors = [
-    { name = "RAGForge Engineering Team" }
+    { name = "TracePilot Engineering Team" }
 ]
 dependencies = [
     "fastapi>=0.115.0",

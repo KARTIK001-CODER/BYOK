@@ -18,10 +18,10 @@ class Settings(BaseSettings):
     )
 
     # App Info
-    APP_NAME: str = "RAGForge"
+    APP_NAME: str = "TracePilot"
     APP_ENV: Literal["development", "staging", "production", "test"] = "development"
     DEBUG: bool = False
-    VERSION: str = "0.6.0"
+    VERSION: str = "0.7.0"
 
     # Server Settings
     HOST: str = "0.0.0.0"
@@ -38,7 +38,7 @@ class Settings(BaseSettings):
 
     # Database Settings (Neon PostgreSQL / Local Postgres)
     DATABASE_URL: str = Field(
-        default="postgresql+asyncpg://postgres:postgres@localhost:5432/ragforge"
+        default="postgresql+asyncpg://postgres:postgres@localhost:5432/tracepilot"
     )
     DB_POOL_SIZE: int = 10
     DB_MAX_OVERFLOW: int = 20
@@ -188,6 +188,11 @@ class Settings(BaseSettings):
     GROUNDING_VERSION: str = "v1"
     CONFIDENCE_MODEL_VERSION: str = "v1"
 
+    # TracePilot Remediation & Risk Assessment — Milestone 5A
+    REMEDIATION_ENABLED: bool = True
+    REMEDIATION_ALLOW_EXECUTION: bool = False  # Safety restriction: execution strictly disabled
+    REMEDIATION_MAX_ACTIONS_PER_PROPOSAL: int = 20
+
     # BYOK Master Encryption Key Placeholder (Deferred to Future Phases)
     API_KEY_ENCRYPTION_KEY: str = Field(
         default="change-this-to-a-32-byte-hex-key-for-byok-encryption-vault"
@@ -253,6 +258,10 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def validate_production_secrets(self) -> "Settings":
         if self.APP_ENV == "production":
+            if self.DEBUG:
+                raise ValueError("DEBUG must be False in production")
+            if self.DEFAULT_LLM_PROVIDER == "mock":
+                raise ValueError("DEFAULT_LLM_PROVIDER cannot be 'mock' in production")
             if self.JWT_SECRET_KEY.startswith("change-this"):
                 raise ValueError("JWT_SECRET_KEY must be overridden in production")
             if self.API_KEY_ENCRYPTION_KEY.startswith("change-this"):

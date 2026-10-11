@@ -12,10 +12,10 @@ interface AuthModalProps {
 
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onSuccess }) => {
   const [isLogin, setIsLogin] = useState(true);
-  const [email, setEmail] = useState("researcher@ragforge.ai");
-  const [password, setPassword] = useState("ProductionRAG2026!");
-  const [fullName, setFullName] = useState("AI Researcher");
-  const [orgName, setOrgName] = useState("RAGForge Labs");
+  const [email, setEmail] = useState("sre@tracepilot.internal");
+  const [password, setPassword] = useState("ProductionSRE2026!");
+  const [fullName, setFullName] = useState("SRE Lead");
+  const [orgName, setOrgName] = useState("TracePilot Ops");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -67,10 +67,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onSuccess }) => {
           </div>
           <div>
             <h2 style={{ fontSize: "1.15rem", fontWeight: 700 }}>
-              {isLogin ? "Welcome to RAGForge" : "Create RAGForge Account"}
+              {isLogin ? "Welcome to TracePilot" : "Create TracePilot Account"}
             </h2>
             <p style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
-              {isLogin ? "Sign in to access your knowledge bases" : "Get started with grounded AI research"}
+              {isLogin ? "Sign in to access your incident workspace" : "Get started with AI incident investigation"}
             </p>
           </div>
         </div>

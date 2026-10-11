@@ -1,3 +1,3 @@
 """
-RAGForge test suite package.
+TracePilot test suite package.
 """

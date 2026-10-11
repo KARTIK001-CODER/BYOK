@@ -1,19 +1,36 @@
-# RAGForge
+# TracePilot — AI-Powered Incident Investigation Platform
 
-RAGForge is a production-oriented, multi-tenant Retrieval-Augmented Generation (RAG) platform built with **FastAPI**, **PostgreSQL + pgvector / Neon PostgreSQL**, and a modular, provider-agnostic AI pipeline.
+TracePilot is a production-oriented, multi-tenant SRE incident investigation and root-cause analysis platform. Built with **FastAPI**, **PostgreSQL 16 + pgvector**, and modern web tooling, TracePilot helps engineering teams triage operational incidents, correlate cross-source operational evidence, reconstruct deterministic timelines, generate and evaluate grounded root-cause hypotheses, and safely review remediation recommendations.
 
 ---
 
-## Current Architecture Roadmap
+## Primary SRE Workflow
 
-- [x] **Phase 1: Project Foundation** (FastAPI, PostgreSQL 16 + pgvector, Async SQLAlchemy 2.0, Alembic, Docker, Structured Logging, Health Probes)
-- [x] **Phase 2: Auth, Multi-Tenancy & BYOK Schema** (Argon2id, JWT + Refresh Token Rotation, Organizations, RBAC `OWNER > ADMIN > MEMBER`, BYOK Schema)
-- [x] **Phase 3: Knowledge Bases & Document Management** (Knowledge Bases, Document Lifecycle `UPLOADED ➔ PROCESSING ➔ READY ➔ FAILED ➔ ARCHIVED`, Storage Abstraction, Magic Byte Inspection, Duplicate Detection)
-- [x] **Phase 4: Document Ingestion & Processing Pipeline** (Multi-Format Extraction [PDF, TXT, MD, DOCX], Text Normalization, Recursive Chunking, Ingestion Jobs, Provenance Chunks)
-- [x] **Phase 5: Embeddings & Vector Storage** (Embedding Provider Abstraction, FastEmbed `BAAI/bge-small-en-v1.5`, Native `pgvector` Vector Storage, HNSW Cosine Index, Resumable Batching)
-- [x] **Phase 6: Retrieval Engine & Hybrid Search** (Dense Vector pgvector `<=>` Search, PostgreSQL Full-Text Search `tsvector` + GIN + `ts_rank_cd`, Reciprocal Rank Fusion `RRF(d)`, Tenant Isolation, IR Evaluation Framework)
-- [x] **Phase 7: RAG Generation & LLM Orchestration** (Prompt Engineering, Context Synthesis, Grounding & Citations, SSE Streaming, Conversations) — implemented in `backend/app/services/rag/` + `backend/app/api/v1/chat.py`, verified by `tests/test_rag_*.py` + `tests/test_chat_api.py`
-- [ ] **Phase 8: BYOK Vault & Provider Integrations** (AES-256-GCM Key Vault — schema only in `provider_credentials`; provider pattern done for Groq/OpenAI/Gemini/Mock via `backend/app/services/llm/`, server-key fallback; Anthropic pending)
+```text
+[1. Incident Intake] ➔ [2. Evidence Collection] ➔ [3. Timeline Reconstruction] ➔ [4. Investigation Engine] ➔ [5. Grounded Hypotheses] ➔ [6. Remediation & Approvals] ➔ [7. Audit Trail]
+```
+1. **Incident Intake**: Engineers record outages, impacted services, environment, and severity level (`critical`, `high`, `medium`, `low`, `info`).
+2. **Evidence Collection**: Multi-source operational telemetry (logs, metrics, alerts, deployment commits) ingested with cryptographic deduplication.
+3. **Timeline Reconstruction**: Deterministic chronological sequencing of operational events (`event_timestamp ASC`, tie-breaker `id ASC`).
+4. **Investigation Engine & Groundedness**: Background worker triggers hybrid evidence retrieval, synthesizing candidate root-cause hypotheses with citation verification and confidence scoring.
+5. **Remediation & Human Approvals**: Deterministic blast radius and risk heuristics rating proposed actions (`LOW` to `CRITICAL`), with human multi-signature approval and immutable audit history. Real execution remains strictly non-executable and disabled.
+
+### Transformation Roadmap
+- [x] **Stage A: Product Identity & Information Architecture** (Incidents default landing experience, incident creation intake, incident-first navigation, TracePilot branding, operational test suites)
+- [ ] **Stage B: Core Incident Investigation Experience** (Interactive timeline visualizer, real-time SSE investigation stream, interactive root-cause hypothesis cards & cited evidence graph)
+- [ ] **Stage C: Remediation Review & Human Workflow Integration** (Embedded incident-level proposals, sandbox dry-run verification, policy enforcement)
+- [ ] **Stage D: Evidence Ingestion & Service Context** (Runbook indexing, bulk telemetry ingestion)
+- [ ] **Stage E: Operational Readiness & Hardening** (Production benchmarks, worker recovery probes, audit export)
+
+---
+
+## Supporting Infrastructure & Retrieval Engine
+The platform preserves the high-performance retrieval and vector infrastructure originally developed in RAGForge:
+- **FastAPI** web framework with structured logging and OpenAPI specifications
+- **PostgreSQL 16 + pgvector** for unified relational data and vector similarity search
+- **Hybrid Retrieval** (FastEmbed BAAI/bge-small-en-v1.5 dense search + PostgreSQL full-text search with Reciprocal Rank Fusion)
+- **Multi-Tenant Isolation & RBAC** (`OWNER > ADMIN > MEMBER`)
+- **LLM Multi-Provider Gateway** (Groq, OpenAI, Gemini)
 
 ---
 
@@ -239,14 +256,44 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ### 5. Running Tests & Linters
 ```bash
 cd backend
+pytest tests/test_milestone6_readiness_and_export.py -v
 pytest -v
 ruff check app
 ruff format --check app
 
 cd ../frontend
-npm ci
+npm test
 npm run build
 ```
 
-See `Makefile` for shortcuts: `make test`, `make lint`, `make format`, `make frontend`, `make ci`.
+---
 
+## TracePilot Milestone 6: Operational Readiness, Sandbox & Audit Export
+
+### 1. Operational Health Probes
+- **`/health` & `/health/live`**: Ultra-lightweight liveness probes verifying web process execution (zero external queries).
+- **`/ready` & `/health/ready`**: Bounded readiness probes evaluating PostgreSQL (`SELECT 1` bounded by 2.0s timeout), pgvector extension, and worker heartbeats. Returns HTTP 200 with `status: "ready"` (or `"degraded"`) and HTTP 503 (`status: "unhealthy"`) if the database is unreachable.
+- **`/health/worker`**: Reports investigation worker heartbeat, status (`active`, `idle`, `stale`), and job queues.
+
+### 2. Investigation Worker & Heartbeats
+Start the background investigation worker:
+```bash
+cd backend
+python -m scripts.run_investigation_worker --loop --interval 2.0
+```
+- Tracks worker heartbeats in `worker_heartbeats` table (migration `0016_worker_heartbeats`).
+- Reclaims abandoned running jobs if a worker terminates (`INVESTIGATION_STALE_RUNNING_SECONDS`).
+- Automatically transitions jobs to `failed` once retry budget (`max_attempts`) is exhausted.
+
+### 3. Deterministic Local Sandbox Simulation
+Run local synthetic scenarios without contacting external infrastructure:
+- **`GET /api/v1/remediations/sandbox/scenarios`**: Lists 8 deterministic scenarios (Healthy, Degraded, Stale Evidence, Elevated Risk, Unauthorized Reviewer, Creator Self-Approval, Expired Proposal, Worker Recovery).
+- **`POST /api/v1/remediations/sandbox/simulate`**: Runs deterministic scenarios in-memory. Strictly non-executing (`execution_performed: false`).
+
+### 4. Exportable Audit Reports
+- **`GET /api/v1/remediations/{remediation_id}/export`**: Exports stable JSON audit payload (schema version `1.0.0`) containing incident IDs, proposal revision, risk assessment, chronological approval/rejection decisions, reviewer identities, rationales, append-only audit events, linked hypotheses, citation references, and groundedness metadata. Enforces tenant isolation (HTTP 404 for cross-tenant requests).
+
+### 5. Strict Execution Prohibition
+- **`POST /api/v1/remediations/{remediation_id}/execute`**: Automated execution remains strictly disabled (unconditionally returns HTTP 403 Forbidden). TracePilot proposals remain advisory human-approved specifications only.
+
+See `Makefile` for shortcuts: `make test`, `make lint`, `make format`, `make frontend`, `make ci`.

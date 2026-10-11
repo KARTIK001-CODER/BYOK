@@ -1,7 +1,7 @@
 .PHONY: help up down dev test lint format migrate evaluate-retrieval frontend frontend-build ci clean
 
 help:
-	@echo "RAGForge Management Commands:"
+	@echo "TracePilot Management Commands:"
 	@echo "  make up                 - Start Docker Compose containers"
 	@echo "  make down               - Stop Docker Compose containers"
 	@echo "  make dev                - Start local Uvicorn dev server"
