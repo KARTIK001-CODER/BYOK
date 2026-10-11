@@ -8,7 +8,15 @@ from app.core.config import get_settings
 from app.core.exceptions import ConflictException, NotFoundException
 from app.models.evidence import EvidenceEvent
 from app.models.incident import Incident, IncidentSeverity, IncidentStatus
-from app.schemas.incidents import EvidenceEventCreate, IncidentCreate, IncidentUpdate
+from app.schemas.incidents import (
+    BatchEvidenceItemResult,
+    BatchItemStatus,
+    EvidenceBatchCreate,
+    EvidenceBatchResponse,
+    EvidenceEventCreate,
+    IncidentCreate,
+    IncidentUpdate,
+)
 
 logger = logging.getLogger("app.services.incidents")
 
@@ -275,6 +283,111 @@ class IncidentService:
                     pass
 
         return evidence, True
+
+    @staticmethod
+    async def ingest_evidence_batch(
+        session: AsyncSession,
+        incident_id: str,
+        organization_id: str,
+        payload: EvidenceBatchCreate,
+    ) -> EvidenceBatchResponse:
+        """
+        Batch ingest operational evidence events with per-item validation,
+        idempotent deduplication, and atomic per-item safety.
+        """
+        incident = await IncidentService.get_incident(session, incident_id, organization_id)
+        if incident is None:
+            raise NotFoundException(message="Incident not found.")
+
+        results: list[BatchEvidenceItemResult] = []
+        accepted_count = 0
+        duplicate_count = 0
+        rejected_count = 0
+        failed_count = 0
+
+        for idx, item in enumerate(payload.items):
+            try:
+                evidence, is_new = await IncidentService.create_evidence_event(
+                    session=session,
+                    incident_id=incident_id,
+                    organization_id=organization_id,
+                    payload=item,
+                )
+                if is_new:
+                    accepted_count += 1
+                    results.append(
+                        BatchEvidenceItemResult(
+                            index=idx,
+                            status=BatchItemStatus.ACCEPTED,
+                            evidence_id=evidence.id,
+                            deduplication_key=item.deduplication_key,
+                            event_type=item.event_type,
+                            summary=item.summary,
+                        )
+                    )
+                else:
+                    duplicate_count += 1
+                    results.append(
+                        BatchEvidenceItemResult(
+                            index=idx,
+                            status=BatchItemStatus.DUPLICATE,
+                            evidence_id=evidence.id,
+                            deduplication_key=item.deduplication_key,
+                            event_type=item.event_type,
+                            summary=item.summary,
+                        )
+                    )
+            except ConflictException as exc:
+                duplicate_count += 1
+                results.append(
+                    BatchEvidenceItemResult(
+                        index=idx,
+                        status=BatchItemStatus.DUPLICATE,
+                        deduplication_key=item.deduplication_key,
+                        event_type=item.event_type,
+                        summary=item.summary,
+                        error_message=str(exc.message),
+                    )
+                )
+            except Exception as exc:
+                failed_count += 1
+                logger.error(
+                    "Error processing batch evidence item %d for incident %s: %s",
+                    idx,
+                    incident_id,
+                    exc,
+                    exc_info=True,
+                )
+                results.append(
+                    BatchEvidenceItemResult(
+                        index=idx,
+                        status=BatchItemStatus.FAILED,
+                        deduplication_key=item.deduplication_key,
+                        event_type=item.event_type,
+                        summary=item.summary,
+                        error_message=f"Persistence error: {type(exc).__name__}",
+                    )
+                )
+
+        logger.info(
+            "Batch evidence ingestion completed for incident %s: submitted=%d, accepted=%d, duplicate=%d, rejected=%d, failed=%d",
+            incident_id,
+            len(payload.items),
+            accepted_count,
+            duplicate_count,
+            rejected_count,
+            failed_count,
+        )
+
+        return EvidenceBatchResponse(
+            incident_id=incident_id,
+            total_submitted=len(payload.items),
+            accepted_count=accepted_count,
+            duplicate_count=duplicate_count,
+            rejected_count=rejected_count,
+            failed_count=failed_count,
+            results=results,
+        )
 
     @staticmethod
     async def list_evidence(

@@ -14,6 +14,8 @@ from app.models.membership import OrganizationMembership
 from app.models.user import User
 from app.schemas.common import PaginatedResponse
 from app.schemas.incidents import (
+    EvidenceBatchCreate,
+    EvidenceBatchResponse,
     EvidenceEventCreate,
     EvidenceEventResponse,
     IncidentCreate,
@@ -159,6 +161,32 @@ async def ingest_evidence(
         response.headers["X-TracePilot-Duplicate"] = "true"
 
     return EvidenceEventResponse.model_validate(evidence)
+
+
+@router.post(
+    "/{incident_id}/evidence/batch",
+    response_model=EvidenceBatchResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Bulk Ingest Evidence Events",
+    description=(
+        "Batch ingest operational evidence events (alerts, logs, metrics, deployments, git, traces). "
+        "Enforces per-item validation, idempotent deduplication, and tenant isolation. "
+        "Returns aggregated outcome with per-item status (accepted, duplicate, rejected, failed)."
+    ),
+)
+async def ingest_evidence_batch(
+    incident_id: str,
+    payload: EvidenceBatchCreate,
+    incident_data: Annotated[tuple[Incident, OrganizationMembership], Depends(get_incident_or_404)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> EvidenceBatchResponse:
+    _incident, membership = incident_data
+    return await IncidentService.ingest_evidence_batch(
+        session=session,
+        incident_id=incident_id,
+        organization_id=membership.organization_id,
+        payload=payload,
+    )
 
 
 @router.get(

@@ -6,6 +6,8 @@ import { SourcePreviewDrawer } from "./components/chat/SourcePreviewDrawer";
 import { AuthModal } from "./components/auth/AuthModal";
 import { KnowledgeBaseModal } from "./components/knowledge-base/KnowledgeBaseModal";
 import { DocumentPanel } from "./components/documents/DocumentPanel";
+import { RemediationReviewCenter } from "./components/remediation/RemediationReviewCenter";
+import { IncidentDashboard } from "./components/incidents/IncidentDashboard";
 import { AuthApi } from "./api/auth";
 import { ChatApi } from "./api/chat";
 import { ConversationsApi } from "./api/conversations";
@@ -37,7 +39,7 @@ export const App: React.FC = () => {
   const [selectedKbId, setSelectedKbId] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [showKbModal, setShowKbModal] = useState(false);
-  const [activeView, setActiveView] = useState<"chat" | "knowledge">("chat");
+  const [activeView, setActiveView] = useState<"incidents" | "remediations" | "knowledge" | "chat">("incidents");
 
   const [providers, setProviders] = useState<ProviderInfo[]>([]);
   const [selectedProvider, setSelectedProvider] = useState<string>("groq");
@@ -439,10 +441,20 @@ export const App: React.FC = () => {
         />
 
         <div style={{ flex: 1, display: "flex", height: "calc(100% - 56px)", overflow: "hidden" }}>
-          {activeView === "knowledge" ? (
+          {activeView === "incidents" ? (
+            <IncidentDashboard
+              onNavigateRemediations={() => setActiveView("remediations")}
+            />
+          ) : activeView === "knowledge" ? (
             <div style={{ flex: 1, display: "flex", flexDirection: "column", background: "var(--bg-primary)", overflow: "hidden" }}>
               <DocumentPanel kbId={selectedKbId} kbName={selectedKb?.name} userRole={userRole} />
             </div>
+          ) : activeView === "remediations" ? (
+            <RemediationReviewCenter
+              currentUser={user}
+              currentUserRole={userRole}
+              organization={organization}
+            />
           ) : (
             <ChatWindow
               messages={messages}

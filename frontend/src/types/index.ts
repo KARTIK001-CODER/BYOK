@@ -123,3 +123,5 @@ export interface RAGChatRequest {
 }
 
 export * from "./investigation";
+export * from "./remediation";
+export * from "./incident";

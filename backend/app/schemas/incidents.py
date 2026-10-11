@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+import enum
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -144,3 +145,45 @@ class TimelineResponse(BaseModel):
 # Type aliases for paginated responses
 IncidentListResponse = PaginatedResponse[IncidentResponse]
 EvidenceListResponse = PaginatedResponse[EvidenceEventResponse]
+
+
+class BatchItemStatus(enum.StrEnum):
+    ACCEPTED = "accepted"
+    DUPLICATE = "duplicate"
+    REJECTED = "rejected"
+    FAILED = "failed"
+
+
+class BatchEvidenceItemResult(BaseModel):
+    """Result of an individual item in a batch evidence ingestion."""
+
+    index: int
+    status: BatchItemStatus
+    evidence_id: str | None = None
+    deduplication_key: str | None = None
+    event_type: str | None = None
+    summary: str | None = None
+    error_message: str | None = None
+
+
+class EvidenceBatchCreate(BaseModel):
+    """Payload to ingest a batch of operational evidence items."""
+
+    items: list[EvidenceEventCreate] = Field(
+        ...,
+        min_length=1,
+        max_length=100,
+        description="Batch list of operational evidence items (1 to 100 items).",
+    )
+
+
+class EvidenceBatchResponse(BaseModel):
+    """Aggregated outcome of a batch operational evidence ingestion."""
+
+    incident_id: str
+    total_submitted: int
+    accepted_count: int
+    duplicate_count: int
+    rejected_count: int
+    failed_count: int
+    results: list[BatchEvidenceItemResult]

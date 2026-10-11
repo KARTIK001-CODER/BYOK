@@ -20,6 +20,32 @@ export interface StreamInvestigationCallbacks {
 
 export const InvestigationsApi = {
   /**
+   * Request/trigger an investigation job for an incident.
+   */
+  async trigger(
+    incidentId: string,
+    payload?: { idempotency_key?: string; result_limit?: number }
+  ): Promise<InvestigationJob> {
+    return ApiClient.request<InvestigationJob>(`/incidents/${incidentId}/investigations`, {
+      method: "POST",
+      body: JSON.stringify(payload || {}),
+    });
+  },
+
+  /**
+   * List investigation jobs attached to an incident.
+   */
+  async listForIncident(
+    incidentId: string,
+    limit: number = 50,
+    offset: number = 0
+  ): Promise<{ items: InvestigationJob[]; total: number; limit: number; offset: number }> {
+    return ApiClient.request<{ items: InvestigationJob[]; total: number; limit: number; offset: number }>(
+      `/incidents/${incidentId}/investigations?limit=${limit}&offset=${offset}`
+    );
+  },
+
+  /**
    * Fetch the authoritative investigation job state from PostgreSQL.
    */
   async get(jobId: string): Promise<InvestigationJob> {

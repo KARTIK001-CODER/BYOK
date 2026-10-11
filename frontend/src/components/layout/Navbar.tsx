@@ -1,5 +1,5 @@
 import React from "react";
-import { Sparkles, Layers, LogOut, Database, MessageSquare } from "lucide-react";
+import { AlertOctagon, Layers, LogOut, Database, MessageSquare, ShieldAlert } from "lucide-react";
 import { User, Organization } from "../../types";
 
 interface NavbarProps {
@@ -9,8 +9,8 @@ interface NavbarProps {
   selectedModel: string;
   onLogout: () => void;
   onManageKnowledgeBases?: () => void;
-  activeView?: "chat" | "knowledge";
-  onViewChange?: (v: "chat" | "knowledge") => void;
+  activeView?: "incidents" | "remediations" | "knowledge" | "chat";
+  onViewChange?: (v: "incidents" | "remediations" | "knowledge" | "chat") => void;
   knowledgeBaseName?: string | null;
 }
 
@@ -21,23 +21,51 @@ export const Navbar: React.FC<NavbarProps> = ({
   selectedModel,
   onLogout,
   onManageKnowledgeBases,
-  activeView,
+  activeView = "incidents",
   onViewChange,
   knowledgeBaseName,
 }) => {
   return (
     <header className="chat-header">
       <div className="chat-header-title">
-        <Sparkles size={18} className="text-accent" />
-        <span>{activeView === "knowledge" ? "Knowledge Base" : "RAGForge Assistant"}</span>
-        {knowledgeBaseName && <span style={{ fontWeight: 400, color: "var(--text-muted)", fontSize: "0.85rem" }}>· {knowledgeBaseName}</span>}
+        {activeView === "remediations" ? (
+          <ShieldAlert size={18} className="text-accent" />
+        ) : activeView === "knowledge" ? (
+          <Database size={18} className="text-accent" />
+        ) : activeView === "chat" ? (
+          <MessageSquare size={18} className="text-accent" />
+        ) : (
+          <AlertOctagon size={18} className="text-accent" />
+        )}
+        <span>
+          {activeView === "incidents"
+            ? "TracePilot — Incident Management"
+            : activeView === "remediations"
+            ? "TracePilot — Remediation Review"
+            : activeView === "knowledge"
+            ? "TracePilot — Runbooks & Knowledge"
+            : "TracePilot — Operational Assistant"}
+        </span>
+        {knowledgeBaseName && activeView === "knowledge" && (
+          <span style={{ fontWeight: 400, color: "var(--text-muted)", fontSize: "0.85rem" }}>
+            · {knowledgeBaseName}
+          </span>
+        )}
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
         {onViewChange && (
-          <div style={{ display: "flex", background: "var(--bg-surface)", borderRadius: "var(--radius-full)", padding: "2px", border: "1px solid var(--border-subtle)" }}>
+          <div
+            style={{
+              display: "flex",
+              background: "var(--bg-surface)",
+              borderRadius: "var(--radius-full)",
+              padding: "2px",
+              border: "1px solid var(--border-subtle)",
+            }}
+          >
             <button
-              onClick={() => onViewChange("chat")}
+              onClick={() => onViewChange("incidents")}
               style={{
                 padding: "4px 12px",
                 borderRadius: "999px",
@@ -45,11 +73,32 @@ export const Navbar: React.FC<NavbarProps> = ({
                 fontSize: "0.8rem",
                 fontWeight: 600,
                 cursor: "pointer",
-                background: activeView === "chat" ? "var(--accent-primary)" : "transparent",
-                color: activeView === "chat" ? "white" : "var(--text-muted)",
+                background: activeView === "incidents" ? "var(--accent-primary)" : "transparent",
+                color: activeView === "incidents" ? "white" : "var(--text-muted)",
               }}
+              data-testid="navbar-incidents-button"
             >
-              <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}><MessageSquare size={12} /> Chat</span>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                <AlertOctagon size={12} /> Incidents
+              </span>
+            </button>
+            <button
+              onClick={() => onViewChange("remediations")}
+              style={{
+                padding: "4px 12px",
+                borderRadius: "999px",
+                border: "none",
+                fontSize: "0.8rem",
+                fontWeight: 600,
+                cursor: "pointer",
+                background: activeView === "remediations" ? "var(--accent-primary)" : "transparent",
+                color: activeView === "remediations" ? "white" : "var(--text-muted)",
+              }}
+              data-testid="navbar-remediations-button"
+            >
+              <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                <ShieldAlert size={12} /> Remediations
+              </span>
             </button>
             <button
               onClick={() => onViewChange("knowledge")}
@@ -63,8 +112,29 @@ export const Navbar: React.FC<NavbarProps> = ({
                 background: activeView === "knowledge" ? "var(--accent-primary)" : "transparent",
                 color: activeView === "knowledge" ? "white" : "var(--text-muted)",
               }}
+              data-testid="navbar-knowledge-button"
             >
-              <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}><Database size={12} /> Knowledge</span>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                <Database size={12} /> Runbooks
+              </span>
+            </button>
+            <button
+              onClick={() => onViewChange("chat")}
+              style={{
+                padding: "4px 12px",
+                borderRadius: "999px",
+                border: "none",
+                fontSize: "0.8rem",
+                fontWeight: 600,
+                cursor: "pointer",
+                background: activeView === "chat" ? "var(--accent-primary)" : "transparent",
+                color: activeView === "chat" ? "white" : "var(--text-muted)",
+              }}
+              data-testid="navbar-chat-button"
+            >
+              <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                <MessageSquare size={12} /> Assistant
+              </span>
             </button>
           </div>
         )}
