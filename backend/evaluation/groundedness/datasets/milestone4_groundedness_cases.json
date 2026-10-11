@@ -1,0 +1,384 @@
+{
+  "version": "1.0",
+  "description": "TracePilot Milestone 4 Groundedness & Confidence Calibration Benchmark Dataset",
+  "cases": [
+    {
+      "id": "case_1_strongly_supported",
+      "title": "Case 1 — Strongly Supported",
+      "incident_id": "inc-001",
+      "organization_id": "org-001",
+      "claim": "Deployment v2.4.1 caused payment-api degradation by exhausting the database connection pool.",
+      "rationale": "Deploy at 14:00 was followed by 502 error spike at 14:01 and database connection pool exhaustion at 14:02.",
+      "status": "supported",
+      "evidence": [
+        {
+          "id": "ev-101",
+          "incident_id": "inc-001",
+          "organization_id": "org-001",
+          "source_type": "deployment",
+          "event_type": "deployment.completed",
+          "event_timestamp": "2026-10-08T14:00:00Z",
+          "summary": "Deployment v2.4.1 completed for payment-api",
+          "score": 0.92
+        },
+        {
+          "id": "ev-102",
+          "incident_id": "inc-001",
+          "organization_id": "org-001",
+          "source_type": "alert",
+          "event_type": "alert.firing",
+          "event_timestamp": "2026-10-08T14:01:00Z",
+          "summary": "HTTP 502 error spike on payment-api exceeded 10%",
+          "score": 0.88
+        },
+        {
+          "id": "ev-103",
+          "incident_id": "inc-001",
+          "organization_id": "org-001",
+          "source_type": "metric",
+          "event_type": "database.connection_pool",
+          "event_timestamp": "2026-10-08T14:02:00Z",
+          "summary": "Database connection pool exhausted at 100/100 connections for payment db",
+          "score": 0.85
+        }
+      ],
+      "links": [
+        {"evidence_event_id": "ev-101", "link_type": "supports"},
+        {"evidence_event_id": "ev-102", "link_type": "supports"},
+        {"evidence_event_id": "ev-103", "link_type": "supports"}
+      ],
+      "expected_grounded": true,
+      "expected_status": "well_supported",
+      "expected_confidence_level": "high",
+      "min_groundedness_score": 0.75
+    },
+    {
+      "id": "case_2_weak_correlation",
+      "title": "Case 2 — Weak Correlation / Unsupported Mechanism",
+      "incident_id": "inc-002",
+      "organization_id": "org-001",
+      "claim": "Deployment v2.4.1 caused the outage by introducing a database connection pool leak.",
+      "rationale": "Deployment occurred shortly before error spike.",
+      "status": "supported",
+      "evidence": [
+        {
+          "id": "ev-201",
+          "incident_id": "inc-002",
+          "organization_id": "org-001",
+          "source_type": "deployment",
+          "event_type": "deployment.completed",
+          "event_timestamp": "2026-10-08T14:00:00Z",
+          "summary": "Deployment v2.4.1 completed for payment-api",
+          "score": 0.90
+        },
+        {
+          "id": "ev-202",
+          "incident_id": "inc-002",
+          "organization_id": "org-001",
+          "source_type": "alert",
+          "event_type": "alert.firing",
+          "event_timestamp": "2026-10-08T14:03:00Z",
+          "summary": "HTTP 502 error spike on payment-api exceeded 5%",
+          "score": 0.82
+        }
+      ],
+      "links": [
+        {"evidence_event_id": "ev-201", "link_type": "supports"},
+        {"evidence_event_id": "ev-202", "link_type": "supports"}
+      ],
+      "expected_grounded": false,
+      "expected_status": "partially_supported",
+      "expected_confidence_level": "medium",
+      "max_groundedness_score": 0.74,
+      "expected_unsupported_claim": true
+    },
+    {
+      "id": "case_3_contradicted",
+      "title": "Case 3 — Meaningful Contradiction",
+      "incident_id": "inc-003",
+      "organization_id": "org-001",
+      "claim": "Deployment v2.4.1 caused payment-api degradation.",
+      "rationale": "Deploy preceded alert, but third-party upstream gateway reported global outage.",
+      "status": "supported",
+      "evidence": [
+        {
+          "id": "ev-301",
+          "incident_id": "inc-003",
+          "organization_id": "org-001",
+          "source_type": "deployment",
+          "event_type": "deployment.completed",
+          "event_timestamp": "2026-10-08T14:00:00Z",
+          "summary": "Deployment v2.4.1 completed for payment-api",
+          "score": 0.85
+        },
+        {
+          "id": "ev-302",
+          "incident_id": "inc-003",
+          "organization_id": "org-001",
+          "source_type": "alert",
+          "event_type": "alert.firing",
+          "event_timestamp": "2026-10-08T14:01:00Z",
+          "summary": "External Stripe payment gateway returned 504 Gateway Timeout across all regions",
+          "score": 0.94
+        }
+      ],
+      "links": [
+        {"evidence_event_id": "ev-301", "link_type": "supports"},
+        {"evidence_event_id": "ev-302", "link_type": "contradicts"}
+      ],
+      "expected_grounded": false,
+      "expected_status": "contested",
+      "expected_confidence_level": "low",
+      "max_system_confidence_score": 0.35
+    },
+    {
+      "id": "case_4_invalid_citation",
+      "title": "Case 4 — Invalid Citation / Nonexistent Evidence",
+      "incident_id": "inc-004",
+      "organization_id": "org-001",
+      "claim": "Memory leak caused container crash.",
+      "rationale": "Cites nonexistent event id.",
+      "status": "rejected",
+      "evidence": [],
+      "links": [
+        {"evidence_event_id": "nonexistent-ev-999", "link_type": "supports"}
+      ],
+      "expected_grounded": false,
+      "expected_status": "rejected",
+      "expected_confidence_level": "low",
+      "expected_groundedness_score": 0.0,
+      "expected_system_confidence_score": 0.0
+    },
+    {
+      "id": "case_5_cross_incident_citation",
+      "title": "Case 5 — Cross-Incident Citation Attempt",
+      "incident_id": "inc-005",
+      "organization_id": "org-001",
+      "claim": "Database disk exhaustion caused write errors.",
+      "rationale": "Cites evidence from a different incident.",
+      "status": "supported",
+      "evidence": [
+        {
+          "id": "ev-from-other-inc",
+          "incident_id": "inc-FOREIGN",
+          "organization_id": "org-001",
+          "source_type": "metric",
+          "event_type": "disk.exhaustion",
+          "event_timestamp": "2026-10-08T14:00:00Z",
+          "summary": "Disk utilization at 100% on foreign incident",
+          "score": 0.80
+        }
+      ],
+      "links": [
+        {"evidence_event_id": "ev-from-other-inc", "link_type": "supports"}
+      ],
+      "expected_grounded": false,
+      "expected_status": "rejected",
+      "expected_confidence_level": "low",
+      "expected_groundedness_score": 0.0,
+      "expected_system_confidence_score": 0.0
+    },
+    {
+      "id": "case_6_cross_tenant_citation",
+      "title": "Case 6 — Cross-Tenant Citation Attempt",
+      "incident_id": "inc-006",
+      "organization_id": "org-001",
+      "claim": "Network saturation caused packet loss.",
+      "rationale": "Cites evidence belonging to another tenant organization.",
+      "status": "supported",
+      "evidence": [
+        {
+          "id": "ev-from-other-org",
+          "incident_id": "inc-006",
+          "organization_id": "org-FOREIGN-TENANT",
+          "source_type": "metric",
+          "event_type": "network.saturation",
+          "event_timestamp": "2026-10-08T14:00:00Z",
+          "summary": "Network switch saturated",
+          "score": 0.85
+        }
+      ],
+      "links": [
+        {"evidence_event_id": "ev-from-other-org", "link_type": "supports"}
+      ],
+      "expected_grounded": false,
+      "expected_status": "rejected",
+      "expected_confidence_level": "low",
+      "expected_groundedness_score": 0.0,
+      "expected_system_confidence_score": 0.0
+    },
+    {
+      "id": "case_7_duplicate_evidence_inflation",
+      "title": "Case 7 — Duplicate Evidence Inflation",
+      "incident_id": "inc-007",
+      "organization_id": "org-001",
+      "claim": "Log errors indicate application instability.",
+      "rationale": "10 identical log lines cited to inflate support count.",
+      "status": "supported",
+      "evidence": [
+        {
+          "id": "ev-701",
+          "incident_id": "inc-007",
+          "organization_id": "org-001",
+          "source_type": "log",
+          "event_type": "app.error",
+          "event_timestamp": "2026-10-08T14:00:01Z",
+          "summary": "Connection timeout to redis",
+          "score": 0.70
+        },
+        {
+          "id": "ev-702",
+          "incident_id": "inc-007",
+          "organization_id": "org-001",
+          "source_type": "log",
+          "event_type": "app.error",
+          "event_timestamp": "2026-10-08T14:00:02Z",
+          "summary": "Connection timeout to redis",
+          "score": 0.70
+        },
+        {
+          "id": "ev-703",
+          "incident_id": "inc-007",
+          "organization_id": "org-001",
+          "source_type": "log",
+          "event_type": "app.error",
+          "event_timestamp": "2026-10-08T14:00:03Z",
+          "summary": "Connection timeout to redis",
+          "score": 0.70
+        },
+        {
+          "id": "ev-704",
+          "incident_id": "inc-007",
+          "organization_id": "org-001",
+          "source_type": "log",
+          "event_type": "app.error",
+          "event_timestamp": "2026-10-08T14:00:04Z",
+          "summary": "Connection timeout to redis",
+          "score": 0.70
+        },
+        {
+          "id": "ev-705",
+          "incident_id": "inc-007",
+          "organization_id": "org-001",
+          "source_type": "log",
+          "event_type": "app.error",
+          "event_timestamp": "2026-10-08T14:00:05Z",
+          "summary": "Connection timeout to redis",
+          "score": 0.70
+        }
+      ],
+      "links": [
+        {"evidence_event_id": "ev-701", "link_type": "supports"},
+        {"evidence_event_id": "ev-702", "link_type": "supports"},
+        {"evidence_event_id": "ev-703", "link_type": "supports"},
+        {"evidence_event_id": "ev-704", "link_type": "supports"},
+        {"evidence_event_id": "ev-705", "link_type": "supports"}
+      ],
+      "expected_grounded": false,
+      "expected_status": "weakly_supported",
+      "expected_confidence_level": "low",
+      "max_groundedness_score": 0.45
+    },
+    {
+      "id": "case_8_temporal_inconsistency",
+      "title": "Case 8 — Temporal Inconsistency",
+      "incident_id": "inc-008",
+      "organization_id": "org-001",
+      "claim": "Deployment v2.4.2 caused the payment outage.",
+      "rationale": "Deployment occurred at 15:00, but outage errors peaked at 14:00.",
+      "status": "supported",
+      "evidence": [
+        {
+          "id": "ev-801",
+          "incident_id": "inc-008",
+          "organization_id": "org-001",
+          "source_type": "deployment",
+          "event_type": "deployment.completed",
+          "event_timestamp": "2026-10-08T15:00:00Z",
+          "summary": "Deployment v2.4.2 completed for payment-api",
+          "score": 0.85
+        },
+        {
+          "id": "ev-802",
+          "incident_id": "inc-008",
+          "organization_id": "org-001",
+          "source_type": "alert",
+          "event_type": "alert.firing",
+          "event_timestamp": "2026-10-08T14:00:00Z",
+          "summary": "HTTP 502 error spike on payment-api exceeded 25%",
+          "score": 0.90
+        }
+      ],
+      "links": [
+        {"evidence_event_id": "ev-801", "link_type": "supports"},
+        {"evidence_event_id": "ev-802", "link_type": "supports"}
+      ],
+      "expected_grounded": false,
+      "expected_status": "partially_supported",
+      "expected_confidence_level": "medium",
+      "max_groundedness_score": 0.55,
+      "expected_temporal_inconsistent": true
+    },
+    {
+      "id": "case_9_diverse_evidence",
+      "title": "Case 9 — Diverse Multi-Source Evidence",
+      "incident_id": "inc-009",
+      "organization_id": "org-001",
+      "claim": "Config change caused authentication service degradation.",
+      "rationale": "Deployment, alert, metric, and log corroborate the authentication failure sequence.",
+      "status": "supported",
+      "evidence": [
+        {
+          "id": "ev-901",
+          "incident_id": "inc-009",
+          "organization_id": "org-001",
+          "source_type": "deployment",
+          "event_type": "config.update",
+          "event_timestamp": "2026-10-08T10:00:00Z",
+          "summary": "Auth config updated with strict JWT expiration",
+          "score": 0.91
+        },
+        {
+          "id": "ev-902",
+          "incident_id": "inc-009",
+          "organization_id": "org-001",
+          "source_type": "alert",
+          "event_type": "alert.firing",
+          "event_timestamp": "2026-10-08T10:01:00Z",
+          "summary": "401 Unauthorized rate exceeded 15% on auth-service",
+          "score": 0.89
+        },
+        {
+          "id": "ev-903",
+          "incident_id": "inc-009",
+          "organization_id": "org-001",
+          "source_type": "metric",
+          "event_type": "auth.rejections",
+          "event_timestamp": "2026-10-08T10:02:00Z",
+          "summary": "JWT validation rejection metric spiked 500/sec",
+          "score": 0.86
+        },
+        {
+          "id": "ev-904",
+          "incident_id": "inc-009",
+          "organization_id": "org-001",
+          "source_type": "log",
+          "event_type": "auth.log",
+          "event_timestamp": "2026-10-08T10:02:30Z",
+          "summary": "TokenExpiredError: jwt expired at verify token handler",
+          "score": 0.84
+        }
+      ],
+      "links": [
+        {"evidence_event_id": "ev-901", "link_type": "supports"},
+        {"evidence_event_id": "ev-902", "link_type": "supports"},
+        {"evidence_event_id": "ev-903", "link_type": "supports"},
+        {"evidence_event_id": "ev-904", "link_type": "supports"}
+      ],
+      "expected_grounded": true,
+      "expected_status": "well_supported",
+      "expected_confidence_level": "high",
+      "min_groundedness_score": 0.80
+    }
+  ]
+}

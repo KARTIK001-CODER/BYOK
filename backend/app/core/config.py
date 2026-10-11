@@ -183,6 +183,11 @@ class Settings(BaseSettings):
     INVESTIGATION_SSE_HEARTBEAT_INTERVAL: float = 15.0
     INVESTIGATION_SSE_TIMEOUT_SECONDS: float = 300.0
 
+    # TracePilot Groundedness & Confidence Calibration — Milestone 4
+    GROUNDING_ENABLED: bool = True
+    GROUNDING_VERSION: str = "v1"
+    CONFIDENCE_MODEL_VERSION: str = "v1"
+
     # BYOK Master Encryption Key Placeholder (Deferred to Future Phases)
     API_KEY_ENCRYPTION_KEY: str = Field(
         default="change-this-to-a-32-byte-hex-key-for-byok-encryption-vault"

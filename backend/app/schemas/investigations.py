@@ -108,6 +108,16 @@ class HypothesisResponse(BaseModel):
     supporting_evidence: list[EvidenceLinkResponse] = Field(default_factory=list)
     contradicting_evidence: list[EvidenceLinkResponse] = Field(default_factory=list)
 
+    # System-calibrated confidence & groundedness evaluation (Milestone 4)
+    model_confidence: HypothesisConfidence | None = None
+    model_confidence_score: float | None = None
+    groundedness_score: float | None = None
+    system_confidence: str | None = None
+    system_confidence_score: float | None = None
+    groundedness_status: str | None = None
+    assessment_version: str | None = None
+    assessment_details: dict[str, Any] | None = None
+
 
 HypothesisListResponse = PaginatedResponse[HypothesisResponse]
 
