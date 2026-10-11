@@ -9,6 +9,7 @@ from app.models.incident import Incident, IncidentSeverity, IncidentStatus
 from app.models.ingestion_job import IngestionJob, IngestionJobStatus
 from app.models.investigation import (
     EvidenceLinkType,
+    GroundednessStatus,
     HypothesisConfidence,
     HypothesisEvidenceLink,
     HypothesisStatus,
@@ -16,6 +17,7 @@ from app.models.investigation import (
     InvestigationJob,
     InvestigationStatus,
     RootCauseHypothesis,
+    SystemConfidenceLevel,
 )
 from app.models.knowledge_base import KnowledgeBase
 from app.models.membership import OrganizationMembership, OrganizationRole
@@ -38,6 +40,7 @@ __all__ = [
     "EvidenceEvent",
     "EvidenceLinkType",
     "EvidenceSourceType",
+    "GroundednessStatus",
     "HypothesisConfidence",
     "HypothesisEvidenceLink",
     "HypothesisStatus",
@@ -58,5 +61,6 @@ __all__ = [
     "ProviderCredential",
     "RefreshToken",
     "RootCauseHypothesis",
+    "SystemConfidenceLevel",
     "User",
 ]

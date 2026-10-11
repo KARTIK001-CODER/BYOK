@@ -12,7 +12,11 @@ from app.api.deps import (
 from app.core.config import get_settings
 from app.db.session import get_db, get_session_factory
 from app.models.incident import Incident
-from app.models.investigation import InvestigationJob, RootCauseHypothesis
+from app.models.investigation import (
+    HypothesisConfidence,
+    InvestigationJob,
+    RootCauseHypothesis,
+)
 from app.models.membership import OrganizationMembership
 from app.schemas.common import PaginatedResponse
 from app.schemas.investigations import (
@@ -42,6 +46,16 @@ def _hypothesis_to_response(hyp: RootCauseHypothesis) -> HypothesisResponse:
     resp = HypothesisResponse.model_validate(hyp)
     resp.supporting_evidence = supporting
     resp.contradicting_evidence = contradicting
+    resp.model_confidence = HypothesisConfidence(hyp.confidence) if hyp.confidence else None
+    resp.model_confidence_score = hyp.confidence_score
+    resp.groundedness_score = hyp.groundedness_score
+    resp.system_confidence = hyp.system_confidence
+    resp.system_confidence_score = hyp.system_confidence_score
+    resp.groundedness_status = hyp.groundedness_status
+    resp.assessment_version = hyp.assessment_version
+    resp.assessment_details = hyp.assessment_details
+    if hyp.assessment_details and "confidence_note" in hyp.assessment_details:
+        resp.confidence_note = hyp.assessment_details["confidence_note"]
     return resp
 
 

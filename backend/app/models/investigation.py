@@ -60,6 +60,23 @@ class EvidenceLinkType(enum.StrEnum):
     CONTRADICTS = "contradicts"
 
 
+class GroundednessStatus(enum.StrEnum):
+    WELL_SUPPORTED = "well_supported"
+    PARTIALLY_SUPPORTED = "partially_supported"
+    WEAKLY_SUPPORTED = "weakly_supported"
+    UNSUPPORTED = "unsupported"
+    CONTESTED = "contested"
+    REJECTED = "rejected"
+    EVALUATION_FAILED = "evaluation_failed"
+
+
+class SystemConfidenceLevel(enum.StrEnum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    UNKNOWN = "unknown"
+
+
 class InvestigationJob(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     """Durable, tenant-scoped investigation job. Database row is the source of truth."""
 
@@ -247,6 +264,34 @@ class RootCauseHypothesis(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     )
     model: Mapped[str | None] = mapped_column(
         String(200),
+        nullable=True,
+        default=None,
+    )
+    groundedness_score: Mapped[float | None] = mapped_column(
+        nullable=True,
+        default=None,
+    )
+    system_confidence_score: Mapped[float | None] = mapped_column(
+        nullable=True,
+        default=None,
+    )
+    system_confidence: Mapped[str | None] = mapped_column(
+        String(20),
+        nullable=True,
+        default=None,
+    )
+    groundedness_status: Mapped[str | None] = mapped_column(
+        String(50),
+        nullable=True,
+        default=None,
+    )
+    assessment_version: Mapped[str | None] = mapped_column(
+        String(20),
+        nullable=True,
+        default=None,
+    )
+    assessment_details: Mapped[dict[str, Any] | None] = mapped_column(
+        GenericJSON().with_variant(JSONB, "postgresql"),
         nullable=True,
         default=None,
     )

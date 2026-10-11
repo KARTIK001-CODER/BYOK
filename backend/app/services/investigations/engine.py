@@ -8,6 +8,7 @@ logged server-side only and never persisted to client-visible fields.
 import json
 import logging
 import re
+from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,6 +22,7 @@ from app.models.investigation import (
 )
 from app.schemas.investigations import LLMInvestigationOutput, LLMNextStep
 from app.services.incidents.service import IncidentService
+from app.services.investigations.groundedness import GroundednessService
 from app.services.investigations.prompts import (
     build_investigation_prompt,
     build_user_query,
@@ -214,12 +216,26 @@ async def execute_claimed_job(session: AsyncSession, job: InvestigationJob) -> I
         allowed_ids = {r.event.id for r in retrieved}  # scoped to incident+org by retrieval
         drafts = _validate_and_build_drafts(output, allowed_ids)
 
-        await InvestigationService.update_progress(session, job, "persisting", 90)
+        await InvestigationService.update_progress(session, job, "persisting", 85)
         await InvestigationService.persist_hypotheses(
             session, job, drafts, provider_name, model_name
         )
 
+        # ── 4. Evaluate groundedness & system confidence (Milestone 4) ─
+        assessments = []
+        if settings.GROUNDING_ENABLED:
+            await InvestigationService.update_progress(session, job, "evaluating_groundedness", 92)
+            assessments = await GroundednessService.evaluate_and_persist_job_hypotheses(
+                session=session,
+                job=job,
+                retrieved=retrieved,
+            )
+
         uncertainty = list(output.uncertainty_notes) or _default_uncertainty(drafts)
+        if any(a.groundedness_status == "weakly_supported" for a in assessments):
+            uncertainty.append(
+                "One or more hypotheses have weak evidence coverage; treat them with lower confidence."
+            )
         if truncated_count:
             uncertainty.append(
                 f"The model returned {truncated_count} hypotheses; only the first "
@@ -233,6 +249,7 @@ async def execute_claimed_job(session: AsyncSession, job: InvestigationJob) -> I
             next_steps=[ns.model_dump() for ns in next_steps],
             retrieved=retrieved,
             runbooks=runbooks,
+            groundedness_assessments=assessments,
         )
         return await InvestigationService.complete_job(session, job, summary)
 
@@ -403,6 +420,36 @@ def _default_uncertainty(drafts: list[dict]) -> list[str]:
     return notes
 
 
+def _summarize_groundedness(assessments: list | None) -> dict[str, Any] | None:
+    if not assessments:
+        return None
+    counts = {
+        "well_supported": sum(1 for a in assessments if a.groundedness_status == "well_supported"),
+        "partially_supported": sum(
+            1 for a in assessments if a.groundedness_status == "partially_supported"
+        ),
+        "weakly_supported": sum(
+            1 for a in assessments if a.groundedness_status == "weakly_supported"
+        ),
+        "contested": sum(1 for a in assessments if a.groundedness_status == "contested"),
+        "rejected": sum(1 for a in assessments if a.groundedness_status == "rejected"),
+        "total_evaluated": len(assessments),
+    }
+    scores = [a.groundedness_score for a in assessments]
+    conf_scores = [
+        a.system_confidence_score for a in assessments if a.system_confidence_score is not None
+    ]
+    return {
+        **counts,
+        "average_groundedness_score": round(sum(scores) / len(scores), 2) if scores else 0.0,
+        "average_system_confidence_score": round(sum(conf_scores) / len(conf_scores), 2)
+        if conf_scores
+        else 0.0,
+        "calibration_status": "insufficient_evaluation_data",
+        "confidence_disclaimer": "System confidence is an evidence-quality score, not a calibrated probability.",
+    }
+
+
 def _build_result_summary(
     incident_title: str,
     observed_facts: list[str],
@@ -410,6 +457,7 @@ def _build_result_summary(
     next_steps: list[dict],
     retrieved: list,
     runbooks: list[dict],
+    groundedness_assessments: list | None = None,
 ) -> dict:
     return {
         "incident_title": incident_title,
@@ -436,4 +484,5 @@ def _build_result_summary(
             for r in retrieved
         ],
         "runbooks_used": runbooks,
+        "groundedness_summary": _summarize_groundedness(groundedness_assessments),
     }

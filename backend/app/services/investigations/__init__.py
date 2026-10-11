@@ -7,6 +7,11 @@ from app.services.investigations.evidence_embedding import (
     generate_evidence_embedding,
     generate_query_embedding,
 )
+from app.services.investigations.groundedness import (
+    GroundednessAssessment,
+    GroundednessEvaluator,
+    GroundednessService,
+)
 from app.services.investigations.retrieval import InvestigationRetrievalService, RetrievedEvidence
 from app.services.investigations.service import InvestigationService
 from app.services.investigations.streaming import (
@@ -16,6 +21,9 @@ from app.services.investigations.streaming import (
 
 __all__ = [
     "EvidenceEmbeddingBackfillService",
+    "GroundednessAssessment",
+    "GroundednessEvaluator",
+    "GroundednessService",
     "InvestigationEventType",
     "InvestigationService",
     "InvestigationRetrievalService",

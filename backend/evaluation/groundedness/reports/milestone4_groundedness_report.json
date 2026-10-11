@@ -1,0 +1,203 @@
+{
+  "benchmark_version": "1.0",
+  "benchmark_timestamp": "2026-10-08T05:00:16.188847+00:00",
+  "total_cases": 9,
+  "citation_precision": 0.8571,
+  "citation_recall": 1.0,
+  "unsupported_claim_detection_rate": 1.0,
+  "contradiction_detection_rate": 1.0,
+  "invalid_evidence_protection_rate": 1.0,
+  "determinism_consistency": 1.0,
+  "calibration": {
+    "calibration_status": "insufficient_evaluation_data",
+    "calibration_note": "Benchmark size (N=9) demonstrates evidence-quality discrimination but is insufficient for statistical probability calibration. System confidence scores must NOT be marketed as empirical probabilities.",
+    "brier_score": 0.1119,
+    "expected_calibration_error": 0.6111,
+    "bucket_reliability": {
+      "low": {
+        "count": 5,
+        "accuracy": 1.0
+      },
+      "medium": {
+        "count": 2,
+        "accuracy": 0.0
+      },
+      "high": {
+        "count": 2,
+        "accuracy": 1.0
+      }
+    }
+  },
+  "case_results": [
+    {
+      "case_id": "case_1_strongly_supported",
+      "title": "Case 1 \u2014 Strongly Supported",
+      "groundedness_score": 0.98,
+      "system_confidence_score": 0.98,
+      "system_confidence": "high",
+      "groundedness_status": "well_supported",
+      "expected_grounded": true,
+      "expected_status": "well_supported",
+      "valid_supporting": 3,
+      "valid_contradicting": 0,
+      "invalid_citations": 0,
+      "reasons": [
+        "3 valid supporting evidence events cited across 3 distinct source type(s) (alert, deployment, metric).",
+        "Temporal sequence is compatible: alleged trigger preceded observed symptoms.",
+        "No contradicting evidence cited.",
+        "Temporal correlation alone does not establish causation; sequence is not causal proof."
+      ]
+    },
+    {
+      "case_id": "case_2_weak_correlation",
+      "title": "Case 2 \u2014 Weak Correlation / Unsupported Mechanism",
+      "groundedness_score": 0.7,
+      "system_confidence_score": 0.7,
+      "system_confidence": "medium",
+      "groundedness_status": "partially_supported",
+      "expected_grounded": false,
+      "expected_status": "partially_supported",
+      "valid_supporting": 2,
+      "valid_contradicting": 0,
+      "invalid_citations": 0,
+      "reasons": [
+        "2 valid supporting evidence events cited across 2 distinct source type(s) (alert, deployment).",
+        "Temporal sequence is compatible: alleged trigger preceded observed symptoms.",
+        "No contradicting evidence cited.",
+        "Asserts failure mechanism (database_connection_pool) without corroborating evidence in cited telemetry.",
+        "Temporal correlation alone does not establish causation; sequence is not causal proof."
+      ]
+    },
+    {
+      "case_id": "case_3_contradicted",
+      "title": "Case 3 \u2014 Meaningful Contradiction",
+      "groundedness_score": 0.28,
+      "system_confidence_score": 0.11,
+      "system_confidence": "low",
+      "groundedness_status": "contested",
+      "expected_grounded": false,
+      "expected_status": "contested",
+      "valid_supporting": 1,
+      "valid_contradicting": 1,
+      "invalid_citations": 0,
+      "reasons": [
+        "1 valid supporting evidence events cited across 1 distinct source type(s) (deployment).",
+        "Temporal order is chronologically compatible with recorded evidence.",
+        "1 contradicting evidence event(s) cited against this hypothesis.",
+        "Temporal correlation alone does not establish causation; sequence is not causal proof."
+      ]
+    },
+    {
+      "case_id": "case_4_invalid_citation",
+      "title": "Case 4 \u2014 Invalid Citation / Nonexistent Evidence",
+      "groundedness_score": 0.0,
+      "system_confidence_score": 0.0,
+      "system_confidence": "low",
+      "groundedness_status": "rejected",
+      "expected_grounded": false,
+      "expected_status": "rejected",
+      "valid_supporting": 0,
+      "valid_contradicting": 0,
+      "invalid_citations": 1,
+      "reasons": [
+        "Hypothesis cited zero valid supporting evidence events for this incident.",
+        "Cited 1 reference(s) that could not be resolved to valid incident evidence.",
+        "Invalid or ungrounded citations receive zero grounding credit."
+      ]
+    },
+    {
+      "case_id": "case_5_cross_incident_citation",
+      "title": "Case 5 \u2014 Cross-Incident Citation Attempt",
+      "groundedness_score": 0.0,
+      "system_confidence_score": 0.0,
+      "system_confidence": "low",
+      "groundedness_status": "rejected",
+      "expected_grounded": false,
+      "expected_status": "rejected",
+      "valid_supporting": 0,
+      "valid_contradicting": 0,
+      "invalid_citations": 1,
+      "reasons": [
+        "Hypothesis cited zero valid supporting evidence events for this incident.",
+        "Cited 1 reference(s) that could not be resolved to valid incident evidence.",
+        "Invalid or ungrounded citations receive zero grounding credit."
+      ]
+    },
+    {
+      "case_id": "case_6_cross_tenant_citation",
+      "title": "Case 6 \u2014 Cross-Tenant Citation Attempt",
+      "groundedness_score": 0.0,
+      "system_confidence_score": 0.0,
+      "system_confidence": "low",
+      "groundedness_status": "rejected",
+      "expected_grounded": false,
+      "expected_status": "rejected",
+      "valid_supporting": 0,
+      "valid_contradicting": 0,
+      "invalid_citations": 1,
+      "reasons": [
+        "Hypothesis cited zero valid supporting evidence events for this incident.",
+        "Cited 1 reference(s) that could not be resolved to valid incident evidence.",
+        "Invalid or ungrounded citations receive zero grounding credit."
+      ]
+    },
+    {
+      "case_id": "case_7_duplicate_evidence_inflation",
+      "title": "Case 7 \u2014 Duplicate Evidence Inflation",
+      "groundedness_score": 0.38,
+      "system_confidence_score": 0.38,
+      "system_confidence": "low",
+      "groundedness_status": "weakly_supported",
+      "expected_grounded": false,
+      "expected_status": "weakly_supported",
+      "valid_supporting": 5,
+      "valid_contradicting": 0,
+      "invalid_citations": 0,
+      "reasons": [
+        "5 valid supporting evidence events cited across 1 distinct source type(s) (log).",
+        "Single-source duplicated events cannot establish temporal progression.",
+        "No contradicting evidence cited.",
+        "Contains 4 duplicated or near-identical evidence event(s); confidence inflation was dampened.",
+        "Temporal correlation alone does not establish causation; sequence is not causal proof."
+      ]
+    },
+    {
+      "case_id": "case_8_temporal_inconsistency",
+      "title": "Case 8 \u2014 Temporal Inconsistency",
+      "groundedness_score": 0.6,
+      "system_confidence_score": 0.6,
+      "system_confidence": "medium",
+      "groundedness_status": "partially_supported",
+      "expected_grounded": false,
+      "expected_status": "partially_supported",
+      "valid_supporting": 2,
+      "valid_contradicting": 0,
+      "invalid_citations": 0,
+      "reasons": [
+        "2 valid supporting evidence events cited across 2 distinct source type(s) (alert, deployment).",
+        "Temporal inconsistency: alleged trigger occurred after initial symptoms were observed.",
+        "No contradicting evidence cited.",
+        "Temporal correlation alone does not establish causation; sequence is not causal proof."
+      ]
+    },
+    {
+      "case_id": "case_9_diverse_evidence",
+      "title": "Case 9 \u2014 Diverse Multi-Source Evidence",
+      "groundedness_score": 0.98,
+      "system_confidence_score": 0.98,
+      "system_confidence": "high",
+      "groundedness_status": "well_supported",
+      "expected_grounded": true,
+      "expected_status": "well_supported",
+      "valid_supporting": 4,
+      "valid_contradicting": 0,
+      "invalid_citations": 0,
+      "reasons": [
+        "4 valid supporting evidence events cited across 4 distinct source type(s) (alert, deployment, log, metric).",
+        "Temporal sequence is compatible: alleged trigger preceded observed symptoms.",
+        "No contradicting evidence cited.",
+        "Temporal correlation alone does not establish causation; sequence is not causal proof."
+      ]
+    }
+  ]
+}
