@@ -43,8 +43,21 @@ async def run_once(organization_id: str | None = None) -> int:
     """Reclaim stale jobs, claim and execute queued jobs. Returns jobs completed."""
     settings = get_settings()
     factory = get_session_factory()
-    done = 0
+    worker_id = f"worker_{organization_id or 'global'}"
     async with factory() as session:
+        try:
+            from app.services.health import HealthService
+
+            await HealthService.record_worker_heartbeat(
+                session=session,
+                worker_id=worker_id,
+                worker_type="investigation_worker",
+                status="active",
+                completed_jobs_delta=0,
+            )
+        except Exception as e:
+            logger.debug("Heartbeat recording skipped: %s", e)
+
         await InvestigationService.requeue_stale_running(
             session, settings.INVESTIGATION_STALE_RUNNING_SECONDS, organization_id
         )
@@ -71,6 +84,22 @@ async def run_once(organization_id: str | None = None) -> int:
                 break
             logger.info("Job %s finished with status=%s", job_id, finished.status)
             done += 1
+
+    if done > 0:
+        async with factory() as session:
+            try:
+                from app.services.health import HealthService
+
+                await HealthService.record_worker_heartbeat(
+                    session=session,
+                    worker_id=worker_id,
+                    worker_type="investigation_worker",
+                    status="active",
+                    completed_jobs_delta=done,
+                )
+            except Exception as e:
+                logger.debug("Heartbeat update skipped: %s", e)
+
     return done
 
 
@@ -91,7 +120,7 @@ def main() -> None:
         "--loop", action="store_true", help="Poll continuously instead of one pass."
     )
     parser.add_argument(
-        "--interval", type=int, default=10, help="Poll interval seconds for --loop."
+        "--interval", type=float, default=5.0, help="Poll interval seconds for --loop."
     )
     parser.add_argument("--organization-id", default=None, help="Restrict to one organization.")
     args = parser.parse_args()

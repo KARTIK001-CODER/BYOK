@@ -20,7 +20,7 @@ from app.core.logging import (
 )
 from app.core.tracing import RequestTrace, _current_trace_ctx, set_current_trace
 from app.db.session import close_db_engine, get_db
-from app.schemas.health import HealthResponse, ReadinessResponse
+from app.schemas.health import HealthResponse, ReadinessResponse, WorkerStatus
 from app.services.health import HealthService
 
 logger = logging.getLogger("app.main")
@@ -204,6 +204,13 @@ def create_application() -> FastAPI:
         summary="Root Liveness Probe",
         description="Lightweight liveness probe that verifies if the web process is running.",
     )
+    @app.get(
+        "/health/live",
+        response_model=HealthResponse,
+        tags=["Health & Readiness"],
+        summary="Root Liveness Probe (Kubernetes standard)",
+        description="Lightweight liveness probe that verifies if the web process is running.",
+    )
     async def root_liveness() -> HealthResponse:
         return HealthResponse(status="ok")
 
@@ -212,25 +219,35 @@ def create_application() -> FastAPI:
         response_model=ReadinessResponse,
         tags=["Health & Readiness"],
         summary="Root Readiness Probe",
-        description="Verifies infrastructure dependencies (PostgreSQL and pgvector).",
+        description="Verifies infrastructure dependencies (PostgreSQL and pgvector) with bounded timeouts.",
+    )
+    @app.get(
+        "/health/ready",
+        response_model=ReadinessResponse,
+        tags=["Health & Readiness"],
+        summary="Root Readiness Probe (Kubernetes standard)",
+        description="Verifies infrastructure dependencies (PostgreSQL and pgvector) with bounded timeouts.",
     )
     async def root_readiness(
         response: Response,
         session: AsyncSession = Depends(get_db),
     ) -> ReadinessResponse:
-        is_ready, db_status, vector_status = await HealthService.check_infrastructure(session)
-        if not is_ready:
+        readiness = await HealthService.check_full_readiness(session)
+        if readiness.status == "unhealthy":
             response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
-            return ReadinessResponse(
-                status="unhealthy",
-                database=db_status,
-                vector_store=vector_status,
-            )
-        return ReadinessResponse(
-            status="ready",
-            database=db_status,
-            vector_store=vector_status,
-        )
+        return readiness
+
+    @app.get(
+        "/health/worker",
+        response_model=WorkerStatus,
+        tags=["Health & Readiness"],
+        summary="Root Worker Status Probe",
+        description="Inspects background investigation worker heartbeat and queue state.",
+    )
+    async def root_worker_status(
+        session: AsyncSession = Depends(get_db),
+    ) -> WorkerStatus:
+        return await HealthService.check_worker_status(session)
 
     # 5. Register API Versioned Routers
     app.include_router(api_router, prefix=settings.API_V1_STR)

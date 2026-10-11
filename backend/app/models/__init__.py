@@ -25,9 +25,21 @@ from app.models.message import Message, MessageRole
 from app.models.organization import Organization
 from app.models.provider_credential import ProviderCredential
 from app.models.refresh_token import RefreshToken
+from app.models.remediation import (
+    ApprovalDecision,
+    RemediationActionType,
+    RemediationApproval,
+    RemediationAuditEvent,
+    RemediationAuditEventType,
+    RemediationProposal,
+    RemediationRiskLevel,
+    RemediationStatus,
+)
 from app.models.user import User
+from app.models.worker import WorkerHeartbeat
 
 __all__ = [
+    "ApprovalDecision",
     "Base",
     "Conversation",
     "Document",
@@ -60,7 +72,15 @@ __all__ = [
     "OrganizationRole",
     "ProviderCredential",
     "RefreshToken",
+    "RemediationActionType",
+    "RemediationApproval",
+    "RemediationAuditEvent",
+    "RemediationAuditEventType",
+    "RemediationProposal",
+    "RemediationRiskLevel",
+    "RemediationStatus",
     "RootCauseHypothesis",
     "SystemConfidenceLevel",
     "User",
+    "WorkerHeartbeat",
 ]
