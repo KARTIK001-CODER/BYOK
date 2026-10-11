@@ -12,6 +12,7 @@ from app.api.v1.ingestion import router as ingestion_v1_router
 from app.api.v1.investigations import router as investigations_v1_router
 from app.api.v1.knowledge_bases import router as knowledge_bases_v1_router
 from app.api.v1.organizations import router as organizations_v1_router
+from app.api.v1.remediations import router as remediations_v1_router
 from app.api.v1.retrieval import router as retrieval_v1_router
 
 api_router = APIRouter()
@@ -23,6 +24,9 @@ api_router.include_router(organizations_v1_router, prefix="", tags=["Multi-Tenan
 api_router.include_router(incidents_v1_router, prefix="", tags=["Incidents & SRE Investigation"])
 api_router.include_router(
     investigations_v1_router, prefix="", tags=["Investigations & Root-Cause Hypotheses"]
+)
+api_router.include_router(
+    remediations_v1_router, prefix="", tags=["Remediation & Risk Assessment"]
 )
 api_router.include_router(knowledge_bases_v1_router, prefix="", tags=["Knowledge Bases"])
 api_router.include_router(documents_v1_router, prefix="", tags=["Documents"])

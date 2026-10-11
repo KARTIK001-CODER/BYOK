@@ -273,18 +273,14 @@ async def test_stream_emits_progress_and_completion_transitions(
     client: AsyncClient,
     test_user_and_org: dict,
     db_session: AsyncSession,
-    monkeypatch,
+    db_engine,
 ):
-    """Stream observes state transitions in DB and emits progress events."""
-    from app.core.config import get_settings
+    """Stream observes state transitions in DB and emits progress events deterministically."""
     from app.services.investigations.service import InvestigationService
+    from app.services.investigations.streaming import stream_investigation_events
+    from unittest.mock import AsyncMock, MagicMock
+    from sqlalchemy.ext.asyncio import async_sessionmaker
 
-    # Fast polling for test determinism
-    settings = get_settings()
-    monkeypatch.setattr(settings, "INVESTIGATION_SSE_POLL_INTERVAL", 0.05)
-    monkeypatch.setattr(settings, "INVESTIGATION_SSE_HEARTBEAT_INTERVAL", 5.0)
-
-    h = _auth_headers(test_user_and_org["user"])
     job = await _create_test_job(
         db_session,
         test_user_and_org["org"].id,
@@ -293,40 +289,57 @@ async def test_stream_emits_progress_and_completion_transitions(
         progress=15,
     )
 
-    async def update_job_concurrently():
-        await asyncio.sleep(0.08)
-        # Advance to validating
-        await InvestigationService.update_progress(db_session, job, "validating_citations", 75)
-        await asyncio.sleep(0.08)
-        # Complete job
+    session_maker = async_sessionmaker(bind=db_engine, class_=AsyncSession, expire_on_commit=False)
+    mock_req = MagicMock()
+    mock_req.is_disconnected = AsyncMock(return_value=False)
+
+    gen = stream_investigation_events(
+        request=mock_req,
+        job_id=job.id,
+        organization_id=test_user_and_org["org"].id,
+        session_factory=session_maker,
+        poll_interval=0.001,
+        heartbeat_interval=10.0,
+        timeout_seconds=5.0,
+    )
+
+    # 1. Connected
+    raw_connected = await anext(gen)
+    events_conn = parse_sse_events(raw_connected)
+    assert events_conn[0][0] == "investigation.connected"
+
+    # 2. Initial Snapshot
+    raw_snapshot = await anext(gen)
+    events_snap = parse_sse_events(raw_snapshot)
+    assert events_snap[0][0] == "investigation.snapshot"
+
+    # 3. Step DB to progress transition
+    async with session_maker() as s1:
+        j1 = await InvestigationService.get_job(s1, job.id, test_user_and_org["org"].id)
+        await InvestigationService.update_progress(s1, j1, "validating_citations", 75)
+
+    raw_prog = await anext(gen)
+    events_prog = parse_sse_events(raw_prog)
+    assert events_prog[0][0] == "investigation.progress"
+    assert events_prog[0][1]["stage"] == "validating_citations"
+    assert events_prog[0][1]["progress"] == 75
+
+    # 4. Step DB to completion transition
+    async with session_maker() as s2:
+        j2 = await InvestigationService.get_job(s2, job.id, test_user_and_org["org"].id)
         await InvestigationService.complete_job(
-            db_session, job, {"observed_facts": ["Payment timeout confirmed"]}
+            s2, j2, {"observed_facts": ["Payment timeout confirmed"]}
         )
 
-    # Launch DB updater task concurrently
-    update_task = asyncio.create_task(update_job_concurrently())
+    raw_comp = await anext(gen)
+    events_comp = parse_sse_events(raw_comp)
+    assert events_comp[0][0] == "investigation.completed"
+    assert events_comp[0][1]["status"] == "completed"
+    assert events_comp[0][1]["result_summary"] == {"observed_facts": ["Payment timeout confirmed"]}
 
-    resp = await client.get(f"/api/v1/investigations/{job.id}/stream", headers=h)
-    await update_task
-    assert resp.status_code == 200
-
-    events = parse_sse_events(resp.text)
-    event_names = [e[0] for e in events]
-
-    assert "investigation.connected" in event_names
-    assert "investigation.snapshot" in event_names
-    assert "investigation.progress" in event_names
-    assert "investigation.completed" in event_names
-
-    # Check progress update event
-    prog_event = next(e[1] for e in events if e[0] == "investigation.progress")
-    assert prog_event["stage"] == "validating_citations"
-    assert prog_event["progress"] == 75
-
-    # Check completion event
-    comp_event = next(e[1] for e in events if e[0] == "investigation.completed")
-    assert comp_event["status"] == "completed"
-    assert comp_event["result_summary"] == {"observed_facts": ["Payment timeout confirmed"]}
+    # 5. Generator closes cleanly on terminal state
+    with pytest.raises(StopAsyncIteration):
+        await anext(gen)
 
 
 @pytest.mark.asyncio
@@ -412,12 +425,40 @@ async def test_disconnect_does_not_mutate_or_fail_job(
         progress=55,
     )
 
-    # Launch streaming request as an asyncio task, then cancel it to simulate client aborting/disconnecting
-    req_task = asyncio.create_task(client.get(f"/api/v1/investigations/{job.id}/stream", headers=h))
-    await asyncio.sleep(0.08)
-    req_task.cancel()
-    with pytest.raises(asyncio.CancelledError):
-        await req_task
+    from unittest.mock import MagicMock
+    from app.services.investigations.streaming import stream_investigation_events
+
+    mock_request = MagicMock()
+    disconnect_counter = 0
+
+    async def mock_is_disconnected():
+        nonlocal disconnect_counter
+        disconnect_counter += 1
+        return disconnect_counter > 1
+
+    mock_request.is_disconnected = mock_is_disconnected
+
+    class MockSessionFactory:
+        def __call__(self):
+            class SessionCtx:
+                async def __aenter__(self):
+                    return db_session
+                async def __aexit__(self, exc_type, exc_val, exc_tb):
+                    pass
+            return SessionCtx()
+
+    events = [
+        e async for e in stream_investigation_events(
+            request=mock_request,
+            job_id=job.id,
+            organization_id=test_user_and_org["org"].id,
+            session_factory=MockSessionFactory(),
+            poll_interval=0.01,
+            heartbeat_interval=1.0,
+            timeout_seconds=5.0,
+        )
+    ]
+    assert len(events) >= 2
 
     # Verify job state in database is completely intact and still running
     await db_session.refresh(job)

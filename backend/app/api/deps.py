@@ -19,6 +19,7 @@ from app.models.ingestion_job import IngestionJob
 from app.models.investigation import InvestigationJob, RootCauseHypothesis
 from app.models.knowledge_base import KnowledgeBase
 from app.models.membership import OrganizationMembership, OrganizationRole
+from app.models.remediation import RemediationProposal
 from app.models.user import User
 from app.services.documents.service import DocumentService
 from app.services.embeddings.service import EmbeddingService
@@ -262,3 +263,19 @@ async def get_incident_or_404(
     if membership is None:
         raise NotFoundException(message="Incident not found.")
     return incident, membership
+
+
+async def get_remediation_proposal_or_404(
+    remediation_id: str,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> tuple[RemediationProposal, OrganizationMembership]:
+    """Retrieve RemediationProposal and verify caller has organization access."""
+    from app.services.remediation.service import RemediationService
+
+    memberships = await OrganizationService.get_user_memberships(session, current_user.id)
+    for ms in memberships:
+        proposal = await RemediationService.get_proposal(session, remediation_id, ms.organization_id)
+        if proposal is not None:
+            return proposal, ms
+    raise NotFoundException(message="Remediation proposal not found.")

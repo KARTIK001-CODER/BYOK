@@ -1,3 +1,6 @@
+@import "./remediations.css";
+@import "./incidents.css";
+
 :root {
   --bg-primary: #ffffff;
   --bg-secondary: #f8fafc;
