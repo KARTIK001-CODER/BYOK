@@ -184,18 +184,18 @@ class InvestigationService:
         organization_id: str | None = None,
     ) -> InvestigationJob | None:
         """Claim the oldest queued (or stale-running, re-queued) job. Worker entry point."""
-        stmt = select(InvestigationJob.id).where(
+        stmt = select(InvestigationJob.id, InvestigationJob.organization_id).where(
             InvestigationJob.status == InvestigationStatus.QUEUED.value,
         )
         if organization_id:
             stmt = stmt.where(InvestigationJob.organization_id == organization_id)
-        stmt = stmt.order_by(InvestigationJob.requested_at.asc()).limit(1)
-        job_id = (await session.execute(stmt)).scalar_one_or_none()
-        if job_id is None:
-            return None
-        org_stmt = select(InvestigationJob.organization_id).where(InvestigationJob.id == job_id)
-        org_id = (await session.execute(org_stmt)).scalar_one()
-        return await InvestigationService.claim_job(session, job_id, org_id)
+        stmt = stmt.order_by(InvestigationJob.requested_at.asc()).limit(10)
+        candidates = (await session.execute(stmt)).all()
+        for job_id, org_id in candidates:
+            claimed = await InvestigationService.claim_job(session, job_id, org_id)
+            if claimed is not None:
+                return claimed
+        return None
 
     @staticmethod
     async def requeue_stale_running(

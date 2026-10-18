@@ -241,10 +241,13 @@ async def test_stage_e_full_end_to_end_lifecycle(
         "model": "mock-sre",
     }
     resp_job = await client.post(f"/api/v1/incidents/{incident_id}/investigations", headers=h_creator, json=job_payload)
-    assert resp_job.status_code == status.HTTP_201_CREATED
+    assert resp_job.status_code == status.HTTP_202_ACCEPTED
     job_data = resp_job.json()
     job_id = job_data["id"]
-    assert job_data["status"] == "completed"
+    assert job_data["status"] == "queued"
+
+    from scripts.run_investigation_worker import run_once
+    assert await run_once() == 1
 
     resp_job_status = await client.get(f"/api/v1/investigations/{job_id}", headers=h_creator)
     assert resp_job_status.status_code == status.HTTP_200_OK

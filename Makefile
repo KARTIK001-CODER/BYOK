@@ -1,10 +1,11 @@
-.PHONY: help up down dev test lint format migrate evaluate-retrieval frontend frontend-build ci clean
+.PHONY: help up down dev worker test lint format migrate evaluate-retrieval frontend frontend-build ci clean
 
 help:
 	@echo "TracePilot Management Commands:"
 	@echo "  make up                 - Start Docker Compose containers"
 	@echo "  make down               - Stop Docker Compose containers"
 	@echo "  make dev                - Start local Uvicorn dev server"
+	@echo "  make worker             - Start local investigation background worker"
 	@echo "  make test               - Run pytest suite"
 	@echo "  make lint               - Run Ruff linter"
 	@echo "  make format             - Run Ruff formatter"
@@ -23,6 +24,9 @@ down:
 
 dev:
 	cd backend && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+worker:
+	cd backend && python -m scripts.run_investigation_worker --loop --interval 2.0
 
 test:
 	cd backend && pytest -v

@@ -22,6 +22,7 @@ from app.services.investigations.service import InvestigationService
 from app.services.llm.errors import LLMErrorCode
 from app.services.llm.factory import LLMProviderFactory
 from app.services.llm.providers.mock import MockLLMProvider
+from scripts.run_investigation_worker import run_once
 
 
 @pytest.fixture
@@ -190,8 +191,19 @@ async def test_full_investigation_happy_path(
     use_mock_llm._custom_responder = lambda _req: _good_output(ev)  # noqa: SLF001
 
     resp = await client.post(f"/api/v1/incidents/{incident_id}/investigations", headers=h, json={})
-    assert resp.status_code == status.HTTP_201_CREATED
-    job = resp.json()
+    assert resp.status_code == status.HTTP_202_ACCEPTED
+    queued_job = resp.json()
+    assert queued_job["status"] == "queued"
+    assert queued_job["stage"] == "queued"
+    assert queued_job["progress"] == 0
+
+    # Worker executes the queued job
+    completed_count = await run_once()
+    assert completed_count == 1
+
+    poll = await client.get(f"/api/v1/investigations/{queued_job['id']}", headers=h)
+    assert poll.status_code == 200
+    job = poll.json()
     assert job["status"] == "completed"
     assert job["progress"] == 100 and job["stage"] == "completed"
     assert job["error_category"] == "none" and job["error_summary"] is None
@@ -255,13 +267,14 @@ async def test_duplicate_investigation_idempotent(
         headers=h,
         json={"idempotency_key": "inv-key-1"},
     )
-    assert first.status_code == 201
+    assert first.status_code == status.HTTP_202_ACCEPTED
+    assert first.json()["status"] == "queued"
     second = await client.post(
         f"/api/v1/incidents/{incident_id}/investigations",
         headers=h,
         json={"idempotency_key": "inv-key-1"},
     )
-    assert second.status_code == 200
+    assert second.status_code == status.HTTP_200_OK
     assert second.headers.get("X-TracePilot-Duplicate") == "true"
     assert second.json()["id"] == first.json()["id"]
 
@@ -300,8 +313,14 @@ async def test_empty_evidence_completes_honestly(
     use_mock_llm._custom_responder = lambda _req: _good_output({})  # must never be called
 
     resp = await client.post(f"/api/v1/incidents/{incident_id}/investigations", headers=h, json={})
-    assert resp.status_code == 201
-    job = resp.json()
+    assert resp.status_code == status.HTTP_202_ACCEPTED
+    job_id = resp.json()["id"]
+    assert resp.json()["status"] == "queued"
+
+    assert await run_once() == 1
+
+    poll = await client.get(f"/api/v1/investigations/{job_id}", headers=h)
+    job = poll.json()
     assert job["status"] == "completed"  # honest completion, not fabricated
     assert job["result_summary"]["evidence_used"] == []
     assert any("No evidence" in n for n in job["result_summary"]["uncertainty_notes"])
@@ -322,7 +341,14 @@ async def test_invalid_provider_output_fails_safely(
     use_mock_llm._custom_responder = lambda _req: "this is not json {oops"
 
     resp = await client.post(f"/api/v1/incidents/{incident_id}/investigations", headers=h, json={})
-    job = resp.json()
+    assert resp.status_code == status.HTTP_202_ACCEPTED
+    job_id = resp.json()["id"]
+    assert resp.json()["status"] == "queued"
+
+    assert await run_once() == 1
+
+    poll = await client.get(f"/api/v1/investigations/{job_id}", headers=h)
+    job = poll.json()
     assert job["status"] == "failed"
     assert job["error_category"] == "invalid_provider_output"
     assert "Traceback" not in (job["error_summary"] or "")
@@ -339,23 +365,27 @@ async def test_provider_timeout_and_rate_limit(
     incident_id, _ = await _seed_payment_incident(client, h)
 
     use_mock_llm.set_error(LLMErrorCode.LLM_TIMEOUT)
-    job = (
-        await client.post(
-            f"/api/v1/incidents/{incident_id}/investigations",
-            headers=h,
-            json={"idempotency_key": "k-timeout"},
-        )
-    ).json()
+    resp = await client.post(
+        f"/api/v1/incidents/{incident_id}/investigations",
+        headers=h,
+        json={"idempotency_key": "k-timeout"},
+    )
+    assert resp.status_code == status.HTTP_202_ACCEPTED
+    job_id = resp.json()["id"]
+    assert await run_once() == 1
+    job = (await client.get(f"/api/v1/investigations/{job_id}", headers=h)).json()
     assert job["status"] == "failed" and job["error_category"] == "provider_timeout"
 
     use_mock_llm.set_error(LLMErrorCode.LLM_RATE_LIMITED)
-    job = (
-        await client.post(
-            f"/api/v1/incidents/{incident_id}/investigations",
-            headers=h,
-            json={"idempotency_key": "k-ratelimit"},
-        )
-    ).json()
+    resp = await client.post(
+        f"/api/v1/incidents/{incident_id}/investigations",
+        headers=h,
+        json={"idempotency_key": "k-ratelimit"},
+    )
+    assert resp.status_code == status.HTTP_202_ACCEPTED
+    job_id = resp.json()["id"]
+    assert await run_once() == 1
+    job = (await client.get(f"/api/v1/investigations/{job_id}", headers=h)).json()
     assert job["status"] == "failed" and job["error_category"] == "provider_rate_limited"
     assert "traceback" not in (job["error_summary"] or "").lower()
     use_mock_llm.set_error(None)
@@ -373,9 +403,11 @@ async def test_internal_error_never_leaks_secrets(
 
     use_mock_llm._custom_responder = _boom  # noqa: SLF001
 
-    job = (
-        await client.post(f"/api/v1/incidents/{incident_id}/investigations", headers=h, json={})
-    ).json()
+    resp = await client.post(f"/api/v1/incidents/{incident_id}/investigations", headers=h, json={})
+    assert resp.status_code == status.HTTP_202_ACCEPTED
+    job_id = resp.json()["id"]
+    assert await run_once() == 1
+    job = (await client.get(f"/api/v1/investigations/{job_id}", headers=h)).json()
     assert job["status"] == "failed"
     assert job["error_category"] == "internal_error"
     assert job["error_summary"] == "Investigation failed due to an internal error."
@@ -423,9 +455,13 @@ async def test_citation_validation_rejects_foreign_ids(
     use_mock_llm._custom_responder = _responder  # noqa: SLF001
 
     resp = await client.post(f"/api/v1/incidents/{incident_id}/investigations", headers=h, json={})
-    assert resp.json()["status"] == "completed"
+    assert resp.status_code == status.HTTP_202_ACCEPTED
+    job_id = resp.json()["id"]
+    assert await run_once() == 1
+    job = (await client.get(f"/api/v1/investigations/{job_id}", headers=h)).json()
+    assert job["status"] == "completed"
     hyps = (
-        await client.get(f"/api/v1/investigations/{resp.json()['id']}/hypotheses", headers=h)
+        await client.get(f"/api/v1/investigations/{job_id}/hypotheses", headers=h)
     ).json()["items"]
     assert len(hyps) == 2
     rejected = next(x for x in hyps if x["claim"] == "Fabricated link hypothesis")
@@ -466,9 +502,10 @@ async def test_cross_tenant_investigation_hidden(
     h2 = _headers(other_tenant["user"])
     incident_id, ev = await _seed_payment_incident(client, h1)
     use_mock_llm._custom_responder = lambda _req: _good_output(ev)  # noqa: SLF001
-    job_id = (
-        await client.post(f"/api/v1/incidents/{incident_id}/investigations", headers=h1, json={})
-    ).json()["id"]
+    resp = await client.post(f"/api/v1/incidents/{incident_id}/investigations", headers=h1, json={})
+    assert resp.status_code == status.HTTP_202_ACCEPTED
+    job_id = resp.json()["id"]
+    assert await run_once() == 1
     hyp_id = (await client.get(f"/api/v1/investigations/{job_id}/hypotheses", headers=h1)).json()[
         "items"
     ][0]["id"]
@@ -670,9 +707,11 @@ async def test_malicious_log_does_not_alter_behavior(
 
     use_mock_llm._custom_responder = _responder  # noqa: SLF001
 
-    job = (
-        await client.post(f"/api/v1/incidents/{incident_id}/investigations", headers=h, json={})
-    ).json()
+    resp = await client.post(f"/api/v1/incidents/{incident_id}/investigations", headers=h, json={})
+    assert resp.status_code == status.HTTP_202_ACCEPTED
+    job_id = resp.json()["id"]
+    assert await run_once() == 1
+    job = (await client.get(f"/api/v1/investigations/{job_id}", headers=h)).json()
     assert job["status"] == "completed"
     hyps = (await client.get(f"/api/v1/investigations/{job['id']}/hypotheses", headers=h)).json()[
         "items"

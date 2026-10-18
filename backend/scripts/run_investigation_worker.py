@@ -39,11 +39,15 @@ from app.services.investigations.service import InvestigationService  # noqa: E4
 logger = logging.getLogger("investigation_worker")
 
 
-async def run_once(organization_id: str | None = None) -> int:
+async def run_once(
+    organization_id: str | None = None,
+    session_factory=None,
+) -> int:
     """Reclaim stale jobs, claim and execute queued jobs. Returns jobs completed."""
     settings = get_settings()
-    factory = get_session_factory()
+    factory = session_factory or get_session_factory()
     worker_id = f"worker_{organization_id or 'global'}"
+    done = 0
     async with factory() as session:
         try:
             from app.services.health import HealthService
@@ -75,12 +79,20 @@ async def run_once(organization_id: str | None = None) -> int:
             try:
                 finished = await execute_claimed_job(work_session, claimed)
             except Exception:
-                # execute_claimed_job is contractually total (it maps every
-                # failure to a safe terminal state), so reaching here means
-                # the database itself is unreachable. The job stays running
-                # and will be reclaimed by stale recovery; never touch the
-                # possibly-expired ORM object — log plain IDs only.
+                # If execution fails unexpectedly outside the engine, log the plain ID.
+                # Attempt to mark the job failed if max_attempts reached, or let stale recovery reclaim it.
                 logger.exception("Job %s execution raised outside the engine", job_id)
+                with contextlib.suppress(Exception):
+                    async with factory() as fail_session:
+                        fail_job = await InvestigationService.get_job(fail_session, job_id, org_id)
+                        if fail_job and fail_job.status == "running":
+                            if fail_job.attempt_count >= fail_job.max_attempts:
+                                await InvestigationService.fail_job(
+                                    fail_session,
+                                    fail_job,
+                                    "internal_error",
+                                    "Job execution failed unexpectedly outside the engine.",
+                                )
                 break
             logger.info("Job %s finished with status=%s", job_id, finished.status)
             done += 1

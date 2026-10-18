@@ -26,6 +26,16 @@ class InvestigationCreate(BaseModel):
         le=100,
         description="Maximum evidence items assembled for the investigation",
     )
+    provider: str | None = Field(
+        default=None,
+        max_length=64,
+        description="Optional provider override (e.g. mock, openai, anthropic, gemini)",
+    )
+    model: str | None = Field(
+        default=None,
+        max_length=128,
+        description="Optional model override",
+    )
 
 
 class InvestigationJobResponse(BaseModel):

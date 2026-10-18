@@ -6,6 +6,7 @@ services:
     dockerfilePath: ./backend/Dockerfile
     region: ohio
     plan: starter
+    preDeployCommand: alembic upgrade head
     healthCheckPath: /health
     envVars:
       - key: APP_ENV
@@ -21,10 +22,44 @@ services:
         fromDatabase:
           name: tracepilot-db
           property: connectionString
-      - key: SECRET_KEY
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: API_KEY_ENCRYPTION_KEY
         generateValue: true
       - key: EMBEDDING_PROVIDER
-        value: fastembed
+        value: local
+      - key: DEFAULT_LLM_PROVIDER
+        value: groq
+      - key: GROQ_API_KEY
+        sync: false # Fill in the Render Dashboard
+
+  # TracePilot Background Worker - Durable Investigation Processor
+  - type: worker
+    name: tracepilot-worker
+    env: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerCommand: python -m scripts.run_investigation_worker --loop --interval 2.0
+    region: ohio
+    plan: starter
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: tracepilot-db
+          property: connectionString
+      - key: JWT_SECRET_KEY
+        fromService:
+          type: web
+          name: tracepilot-backend
+          envVarKey: JWT_SECRET_KEY
+      - key: API_KEY_ENCRYPTION_KEY
+        fromService:
+          type: web
+          name: tracepilot-backend
+          envVarKey: API_KEY_ENCRYPTION_KEY
+      - key: EMBEDDING_PROVIDER
+        value: local
       - key: DEFAULT_LLM_PROVIDER
         value: groq
       - key: GROQ_API_KEY

@@ -42,6 +42,7 @@ RUN addgroup --system appgroup && adduser --system --group appuser
 COPY alembic.ini ./
 COPY alembic ./alembic
 COPY app ./app
+COPY scripts ./scripts
 
 # Change ownership to non-root user
 RUN chown -R appuser:appgroup /app
