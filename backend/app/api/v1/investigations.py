@@ -25,7 +25,6 @@ from app.schemas.investigations import (
     InvestigationCreate,
     InvestigationJobResponse,
 )
-from app.services.investigations.engine import execute_claimed_job
 from app.services.investigations.service import InvestigationService
 from app.services.investigations.streaming import stream_investigation_events
 
@@ -62,10 +61,13 @@ def _hypothesis_to_response(hyp: RootCauseHypothesis) -> HypothesisResponse:
 @router.post(
     "/incidents/{incident_id}/investigations",
     response_model=InvestigationJobResponse,
+    status_code=status.HTTP_202_ACCEPTED,
     summary="Request Incident Investigation",
     description=(
-        "Creates (or reuses, on duplicate requests) a durable investigation job and "
-        "executes it. Poll GET /investigations/{job_id} for progress."
+        "Creates (or reuses, on duplicate requests) a durable investigation job. "
+        "Returns HTTP 202 Accepted with a queued job for asynchronous execution "
+        "by the background worker. Poll GET /investigations/{job_id} or connect "
+        "to the SSE stream for progress."
     ),
 )
 async def request_investigation(
@@ -82,6 +84,8 @@ async def request_investigation(
         incident=_incident,
         organization_id=membership.organization_id,
         idempotency_key=payload.idempotency_key,
+        provider=payload.provider,
+        model=payload.model,
         app_version=settings.VERSION,
     )
     if not created:
@@ -89,14 +93,8 @@ async def request_investigation(
         response.headers["X-TracePilot-Duplicate"] = "true"
         return InvestigationJobResponse.model_validate(job)
 
-    response.status_code = status.HTTP_201_CREATED
-    claimed = await InvestigationService.claim_job(session, job.id, membership.organization_id)
-    if claimed is None:  # lost a concurrent claim race — return current state
-        current = await InvestigationService.get_job(session, job.id, membership.organization_id)
-        assert current is not None
-        return InvestigationJobResponse.model_validate(current)
-    finished = await execute_claimed_job(session, claimed)
-    return InvestigationJobResponse.model_validate(finished)
+    response.status_code = status.HTTP_202_ACCEPTED
+    return InvestigationJobResponse.model_validate(job)
 
 
 @router.get(

@@ -32,6 +32,7 @@ from app.services.investigations.service import InvestigationService
 from app.services.llm.errors import LLMErrorCode
 from app.services.llm.factory import LLMProviderFactory
 from app.services.llm.providers.mock import MockLLMProvider
+from scripts.run_investigation_worker import run_once
 
 
 @pytest.fixture
@@ -352,11 +353,14 @@ async def test_midflight_cancel_aborts_persistence(
         resp = await client.post(
             f"/api/v1/incidents/{incident_id}/investigations", headers=headers, json={}
         )
+        assert resp.status_code == status.HTTP_202_ACCEPTED
+        job_id = resp.json()["id"]
+        await run_once()
     finally:
         InvestigationRetrievalService.retrieve_evidence = real_retrieve
 
-    assert resp.json()["status"] == "cancelled"
-    job_id = resp.json()["id"]
+    job = (await client.get(f"/api/v1/investigations/{job_id}", headers=headers)).json()
+    assert job["status"] == "cancelled"
     hyps = await client.get(f"/api/v1/investigations/{job_id}/hypotheses", headers=headers)
     assert hyps.json()["total"] == 0
 
@@ -393,11 +397,13 @@ async def test_duplicate_and_dual_role_citations(
         )
 
     use_mock_llm._custom_responder = _responder  # noqa: SLF001
-    job = (
-        await client.post(
-            f"/api/v1/incidents/{incident_id}/investigations", headers=headers, json={}
-        )
-    ).json()
+    resp = await client.post(
+        f"/api/v1/incidents/{incident_id}/investigations", headers=headers, json={}
+    )
+    assert resp.status_code == status.HTTP_202_ACCEPTED
+    job_id = resp.json()["id"]
+    assert await run_once() == 1
+    job = (await client.get(f"/api/v1/investigations/{job_id}", headers=headers)).json()
     assert job["status"] == "completed"
     hyp = (
         await client.get(f"/api/v1/investigations/{job['id']}/hypotheses", headers=headers)
@@ -437,11 +443,13 @@ async def test_oversized_hypothesis_array_truncated(
         )
 
     use_mock_llm._custom_responder = _responder  # noqa: SLF001
-    job = (
-        await client.post(
-            f"/api/v1/incidents/{incident_id}/investigations", headers=headers, json={}
-        )
-    ).json()
+    resp = await client.post(
+        f"/api/v1/incidents/{incident_id}/investigations", headers=headers, json={}
+    )
+    assert resp.status_code == status.HTTP_202_ACCEPTED
+    job_id = resp.json()["id"]
+    assert await run_once() == 1
+    job = (await client.get(f"/api/v1/investigations/{job_id}", headers=headers)).json()
     assert job["status"] == "completed"  # valid work preserved, not discarded
     hyps = (
         await client.get(f"/api/v1/investigations/{job['id']}/hypotheses", headers=headers)
@@ -499,13 +507,15 @@ async def test_malformed_hypothesis_fails_safely(
             }
         )
     )
-    job = (
-        await client.post(
-            f"/api/v1/incidents/{incident_id}/investigations",
-            headers=headers,
-            json={"idempotency_key": f"mal-{uuid.uuid4()}"},
-        )
-    ).json()
+    resp = await client.post(
+        f"/api/v1/incidents/{incident_id}/investigations",
+        headers=headers,
+        json={"idempotency_key": f"mal-{uuid.uuid4()}"},
+    )
+    assert resp.status_code == status.HTTP_202_ACCEPTED
+    job_id = resp.json()["id"]
+    assert await run_once() == 1
+    job = (await client.get(f"/api/v1/investigations/{job_id}", headers=headers)).json()
     assert job["status"] == "failed"
     assert job["error_category"] == "invalid_provider_output"
 
@@ -539,11 +549,13 @@ async def test_unexpected_fields_tolerated(
             }
         )
     )
-    job = (
-        await client.post(
-            f"/api/v1/incidents/{incident_id}/investigations", headers=headers, json={}
-        )
-    ).json()
+    resp = await client.post(
+        f"/api/v1/incidents/{incident_id}/investigations", headers=headers, json={}
+    )
+    assert resp.status_code == status.HTTP_202_ACCEPTED
+    job_id = resp.json()["id"]
+    assert await run_once() == 1
+    job = (await client.get(f"/api/v1/investigations/{job_id}", headers=headers)).json()
     assert job["status"] == "completed"
 
 
@@ -590,11 +602,13 @@ async def test_risky_model_next_step_corrected_end_to_end(
         return json.dumps(payload)
 
     use_mock_llm._custom_responder = _responder  # noqa: SLF001
-    job = (
-        await client.post(
-            f"/api/v1/incidents/{incident_id}/investigations", headers=headers, json={}
-        )
-    ).json()
+    resp = await client.post(
+        f"/api/v1/incidents/{incident_id}/investigations", headers=headers, json={}
+    )
+    assert resp.status_code == status.HTTP_202_ACCEPTED
+    job_id = resp.json()["id"]
+    assert await run_once() == 1
+    job = (await client.get(f"/api/v1/investigations/{job_id}", headers=headers)).json()
     step = job["result_summary"]["recommended_next_steps"][0]
     assert step["requires_human_approval"] is True
 
@@ -645,11 +659,13 @@ async def test_injection_battery_stays_data(
         )
 
     use_mock_llm._custom_responder = _responder  # noqa: SLF001
-    job = (
-        await client.post(
-            f"/api/v1/incidents/{incident_id}/investigations", headers=headers, json={}
-        )
-    ).json()
+    resp = await client.post(
+        f"/api/v1/incidents/{incident_id}/investigations", headers=headers, json={}
+    )
+    assert resp.status_code == status.HTTP_202_ACCEPTED
+    job_id = resp.json()["id"]
+    assert await run_once() == 1
+    job = (await client.get(f"/api/v1/investigations/{job_id}", headers=headers)).json()
     assert job["status"] == "completed"
     summary = job["result_summary"]
     narrative = json.dumps(
@@ -716,11 +732,12 @@ async def test_second_org_membership_cannot_read_first_org_job(
         client, headers_a, incident_id, "pool timeout", "2026-10-04T14:03:12Z"
     )
     use_mock_llm._custom_responder = lambda _req: _hyp_output([ev_id])  # noqa: SLF001
-    job_id = (
-        await client.post(
-            f"/api/v1/incidents/{incident_id}/investigations", headers=headers_a, json={}
-        )
-    ).json()["id"]
+    resp = await client.post(
+        f"/api/v1/incidents/{incident_id}/investigations", headers=headers_a, json={}
+    )
+    assert resp.status_code == status.HTTP_202_ACCEPTED
+    job_id = resp.json()["id"]
+    assert await run_once() == 1
     hyp_id = (
         await client.get(f"/api/v1/investigations/{job_id}/hypotheses", headers=headers_a)
     ).json()["items"][0]["id"]

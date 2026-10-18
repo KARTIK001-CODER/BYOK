@@ -138,6 +138,13 @@ def _register_engine_listeners(sync_engine) -> None:
 def get_session_factory() -> async_sessionmaker[AsyncSession]:
     """Get or create the async sessionmaker."""
     global _session_factory
+    with contextlib.suppress(Exception):
+        from app.main import app
+
+        if get_session_factory in app.dependency_overrides:
+            override = app.dependency_overrides[get_session_factory]
+            return override() if callable(override) else override
+
     if _session_factory is None:
         engine = get_engine()
         _session_factory = async_sessionmaker(
